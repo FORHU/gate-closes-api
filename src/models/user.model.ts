@@ -3,9 +3,8 @@ import { ObjectId } from "mongodb";
 export type TUser = {
   _id?: ObjectId;
   email: string;
-  username?: string;
-  gender?: string;
-  avatar?: string;
+  gender?: "Male" | "Female";
+  isProfileCompleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -13,26 +12,23 @@ export type TUser = {
 export type TUserUpdateOptions = {
   _id?: ObjectId | string;
   email?: string;
-  username?: string;
-  gender?: string;
-  avatar?: string;
+  gender?: "Male" | "Female";
+  isProfileCompleted?: boolean;
 };
 
 export class MUser implements Partial<TUser> {
   _id?: ObjectId;
   email: string;
-  username?: string;
-  gender?: string;
-  avatar?: string;
+  gender?: "Male" | "Female";
+  isProfileCompleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), email = "", username = "", gender, avatar = "", createdAt = new Date(), updatedAt} = {} as TUser) {
+  constructor({_id = new ObjectId(), email = "", gender, isProfileCompleted = false, createdAt = new Date(), updatedAt} = {} as TUser) {
     this._id = _id;
     this.email = email;
-    this.username = username;
     this.gender = gender;
-    this.avatar = avatar;
+    this.isProfileCompleted = isProfileCompleted;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
