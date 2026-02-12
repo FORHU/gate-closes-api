@@ -1,19 +1,24 @@
-import { MailtrapClient } from "mailtrap";
+import { createTransport } from "nodemailer";
 
-const client = new MailtrapClient({ token: "b4ab36df2a05c5137278d0e07512fe39" });
 
 export async function sendOtpEmail(to: string, otp: string) {
-  return client.send({
-    from: { email: "hello@demomailtrap.co", name: "Mailtrap Test" },
-    to: [{ email: to }],
-    template_uuid: "02d66881-4fb6-46ed-ab9a-7822c7e5c042",
-    template_variables: {
-      "otp": otp,
-      "company_info_name": "Test_Company_info_name",
-      "company_info_address": "Test_Company_info_address",
-      "company_info_city": "Test_Company_info_city",
-      "company_info_zip_code": "Test_Company_info_zip_code",
-      "company_info_country": "Test_Company_info_country"
-    }
+  const transporter = createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      auth: {
+          user: 'devante.spencer@ethereal.email',
+          pass: 'SMCYsQP7hbDQ44wKkG'
+      }
+  });
+
+  return transporter.sendMail({
+    from: `"Verification" <devante.spencer@ethereal.email>`,
+    to,
+    subject: "Your verification code",
+    text: `Your verification code is: ${otp}. It expires in 5 minutes.`,
+    html: `
+      <p>Your verification code is: <strong>${otp}</strong></p>
+      <p>It expires in 5 minutes.</p>
+    `,
   });
 }

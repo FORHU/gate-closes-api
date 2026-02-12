@@ -19,3 +19,4 @@ export const REDIS_HOST = process.env.REDIS_HOST as string;
 export const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
 export const REDIS_PASSWORD = process.env.REDIS_PASSWORD as string;
 export const SERVICE_ACCOUNT = process.env.SERVICE_ACCOUNT as string;
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID as string;
