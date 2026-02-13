@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Joi from "joi";
 import UserSvc from "../services/user.service";
 import UserAuthSvc from "../services/user.auth.service";
+import { verifyRefreshToken, createAccessToken } from "../utils/jwt";
 
 export default class AuthController {
   static async registerEmail(req: Request, res: Response) {
@@ -67,6 +68,54 @@ export default class AuthController {
     }
   }
 
+  static async login(req: Request, res: Response) {
+    const { email, password } = req.body;
+    const schema = Joi.object({
+      email: Joi.string().email().required(),
+      password: Joi.string().required(),
+    });
+    const { error, value } = schema.validate({ email, password });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const { user, accessToken, refreshToken } = await UserAuthSvc.loginWithEmailPassword(
+        value.email,
+        value.password
+      );
+      return res.status(200).json({
+        message: "Login successful.",
+        user,
+        accessToken,
+        refreshToken,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      const status = message === "Invalid email or password." || message === "Email not verified." || message === "Password not set. Complete registration first." ? 401 : 500;
+      return res.status(status).json({ message });
+    }
+  }
+
+  static async refresh(req: Request, res: Response) {
+    const { refreshToken } = req.body;
+    const schema = Joi.object({
+      refreshToken: Joi.string().required(),
+    });
+    const { error, value } = schema.validate({ refreshToken });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const payload = verifyRefreshToken(value.refreshToken);
+      const accessToken = createAccessToken({ userId: payload.userId, email: payload.email });
+      return res.status(200).json({ accessToken });
+    } catch {
+      return res.status(401).json({ message: "Invalid or expired refresh token." });
+    }
+  }
+
   static async completeProfile(req: Request, res: Response) {
     const { userId, gender } = req.body;
     const schema = Joi.object({
@@ -100,8 +149,13 @@ export default class AuthController {
     }
 
     try {
-      const { user } = await UserAuthSvc.loginOrRegisterGoogle(value.idToken);
-      return res.status(200).json({ message: "Google login successful.", user });
+      const { user, accessToken, refreshToken } = await UserAuthSvc.loginOrRegisterGoogle(value.idToken);
+      return res.status(200).json({
+        message: "Google login successful.",
+        user,
+        accessToken,
+        refreshToken,
+      });
     } catch (error: any) {
       return res.status(500).json({ message: error.message || "Server error." });
     }

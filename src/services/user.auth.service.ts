@@ -4,6 +4,7 @@ import UserAuthRepo from "../repositories/user.auth.repository";
 import UserRepo from "../repositories/user.repository";
 import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { sendOtpEmail } from "./send.otp.service";
+import { createAccessToken, createRefreshToken } from "../utils/jwt";
 import { GOOGLE_CLIENT_ID } from "../config";
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -75,6 +76,31 @@ export default class UserAuthSvc {
     await UserAuthRepo.update({ userId, password: hashedPassword, hasPassword: true });
   }
 
+  static async loginWithEmailPassword(email: string, password: string) {
+    const user = await UserRepo.findByEmail(email);
+    if (!user) {
+      throw new Error("Invalid email or password.");
+    }
+    const auth = await UserAuthRepo.findByUserId(user._id!);
+    if (!auth) {
+      throw new Error("Invalid email or password.");
+    }
+    if (!auth.emailVerified) {
+      throw new Error("Email not verified.");
+    }
+    if (!auth.hasPassword || !auth.password) {
+      throw new Error("Password not set. Complete registration first.");
+    }
+    const isPasswordValid = await bcrypt.compare(password, auth.password);
+    if (!isPasswordValid) {
+      throw new Error("Invalid email or password.");
+    }
+    const userId = String(user._id);
+    const accessToken = createAccessToken({ userId, email: user.email });
+    const refreshToken = createRefreshToken({ userId, email: user.email });
+    return { user, accessToken, refreshToken };
+  }
+
   static async loginOrRegisterGoogle(idToken: string) {
     const ticket = await googleClient.verifyIdToken({
       idToken,
@@ -102,6 +128,9 @@ export default class UserAuthSvc {
       }
     }
 
-    return { user: user};
+    const userId = String(user!._id);
+    const accessToken = createAccessToken({ userId, email: user!.email });
+    const refreshToken = createRefreshToken({ userId, email: user!.email });
+    return { user, accessToken, refreshToken };
   }
 }
