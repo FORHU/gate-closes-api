@@ -1,10 +1,18 @@
 import { ObjectId } from "mongodb";
 
+export type SignupStep =
+  | "email_verification"
+  | "set_password"
+  | "completed";
+
 export type TUser = {
   _id?: ObjectId;
   email: string;
+  username?: string;
   gender?: "Male" | "Female";
-  isProfileCompleted?: boolean;
+  signupStep?: SignupStep;
+  signupCompleted?: boolean;
+  isCompleteProfile?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -12,23 +20,42 @@ export type TUser = {
 export type TUserUpdateOptions = {
   _id?: ObjectId | string;
   email?: string;
+  username?: string;
   gender?: "Male" | "Female";
-  isProfileCompleted?: boolean;
+  signupStep?: SignupStep;
+  signupCompleted?: boolean;
+  isCompleteProfile?: boolean;
 };
 
 export class MUser implements Partial<TUser> {
   _id?: ObjectId;
   email: string;
+  username?: string;
   gender?: "Male" | "Female";
-  isProfileCompleted?: boolean;
+  signupStep?: SignupStep;
+  signupCompleted?: boolean;
+  isCompleteProfile?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), email = "", gender, isProfileCompleted = false, createdAt = new Date(), updatedAt} = {} as TUser) {
+  constructor({
+    _id = new ObjectId(),
+    email = "",
+    username,
+    gender,
+    signupStep = "email_verification",
+    signupCompleted = false,
+    isCompleteProfile = false,
+    createdAt = new Date(),
+    updatedAt,
+  } = {} as TUser) {
     this._id = _id;
     this.email = email;
+    this.username = username;
     this.gender = gender;
-    this.isProfileCompleted = isProfileCompleted;
+    this.signupStep = signupStep;
+    this.signupCompleted = signupCompleted;
+    this.isCompleteProfile = isCompleteProfile;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
