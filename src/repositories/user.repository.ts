@@ -8,7 +8,11 @@ export default class UserRepo {
   }
 
   static async createForManualRegister(email: string) {
-    const user: TUser = { email, isProfileCompleted: false };
+    const user: TUser = {
+      email,
+      signupStep: "email_verification",
+      signupCompleted: false,
+    };
     return this.collection().insertOne(new MUser(user));
   }
 
@@ -29,6 +33,10 @@ export default class UserRepo {
     return this.collection().findOne({ email });
   }
 
+  static async findByUsername(username: string) {
+    return this.collection().findOne({ username });
+  }
+
   static async update(user: TUserUpdateOptions) {
     try {
       user._id = new ObjectId(user._id);
@@ -40,9 +48,12 @@ export default class UserRepo {
 
     const setFields: any = { updatedAt };
     if (user.email !== undefined) setFields.email = user.email;
+    if (user.username !== undefined) setFields.username = user.username;
     if (user.gender !== undefined) setFields.gender = user.gender;
-    if (user.isProfileCompleted !== undefined) setFields.isProfileCompleted = user.isProfileCompleted;
+    if (user.signupStep !== undefined) setFields.signupStep = user.signupStep;
+    if (user.signupCompleted !== undefined) setFields.signupCompleted = user.signupCompleted;
+    if (user.isCompleteProfile !== undefined) setFields.isCompleteProfile = user.isCompleteProfile;
 
-    return this.collection().updateOne({ _id: user._id },{ $set: setFields});
+    return this.collection().updateOne({ _id: user._id }, { $set: setFields });
   }
 }

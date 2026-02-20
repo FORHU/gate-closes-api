@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: gate-closes-api
+    env_file:
+      - .env
     restart: unless-stopped
     ports:
       - "${PORT:-3001}:3001"

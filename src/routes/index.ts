@@ -1,5 +1,7 @@
 import express from "express";
 import authRoutes from "./user.auth.route";
+import airportRoutes from "./airport.route";
+import sessionMiddleware from "../middleware/valid-session.middleware";
 
 const router = express.Router();
 
@@ -10,5 +12,8 @@ router.get("/v1", (_, res) => {
 });
 
 router.use("/auth", authRoutes);
+
+// Protected routes (require valid session: Authorization Bearer <accessToken>)
+router.use("/airport", sessionMiddleware, airportRoutes);
 
 export default router;

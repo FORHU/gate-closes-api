@@ -13,8 +13,7 @@ export default class UserAuthRepo {
     } catch (error) {
       return Promise.reject("Invalid user id.");
     }
-    const auth: TUserAuth = { userId, provider: "local", emailVerified: false, hasPassword: false,
-    };
+    const auth: TUserAuth = { userId, provider: "local" };
     return this.collection().insertOne(new MUserAuth(auth));
   }
 
@@ -45,8 +44,6 @@ export default class UserAuthRepo {
       userId,
       googleId,
       provider: "google",
-      emailVerified: true,
-      hasPassword: false,
     };
     return this.collection().insertOne(new MUserAuth(auth));
   }
@@ -57,7 +54,7 @@ export default class UserAuthRepo {
     } catch {
       return Promise.reject("Invalid user id.");
     }
-    return this.update({ userId, googleId, provider: "google", emailVerified: true });
+    return this.update({ userId, googleId, provider: "google" });
   }
 
   static async update(auth: TUserAuthUpdateOptions) {
@@ -73,8 +70,6 @@ export default class UserAuthRepo {
     if (auth.password != null) setFields.password = auth.password;
     if (auth.provider != null) setFields.provider = auth.provider;
     if (auth.googleId != null) setFields.googleId = auth.googleId;
-    if (auth.emailVerified != null) setFields.emailVerified = auth.emailVerified;
-    if (auth.hasPassword != null) setFields.hasPassword = auth.hasPassword;
     
     return this.collection().updateOne(
       { userId: auth.userId },
