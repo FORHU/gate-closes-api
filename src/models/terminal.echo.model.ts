@@ -6,6 +6,7 @@ export type TTerminalEcho = {
   audioUrl?: string;
   textMessage?: string;
   location?: { type: "Point", coordinates: [number, number]};
+  airportName?: string;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -23,6 +24,7 @@ export type TTerminalEchoUpdateOptions = {
   audioUrl?: string;
   textMessage?: string;
   location?: { type: "Point", coordinates: [number, number]};
+  airportName?: string;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -38,6 +40,7 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
   audioUrl?: string;
   textMessage?: string;
   location?: { type: "Point", coordinates: [number, number] };
+  airportName?: string;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -48,12 +51,13 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), senderId, audioUrl = "", textMessage = "", location = { type: "Point", coordinates: [0, 0] }, countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt} = {} as TTerminalEcho) {
+  constructor({_id = new ObjectId(), senderId, audioUrl = "", textMessage = "", location = { type: "Point", coordinates: [0, 0] }, airportName = "", countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt} = {} as TTerminalEcho) {
     this._id = _id;
     this.senderId = senderId;
     this.audioUrl = audioUrl;
     this.textMessage = textMessage;
     this.location = location;
+    this.airportName = airportName;
     this.countListens = countListens;
     this.countReactLike = countReactLike;
     this.countReactLove = countReactLove;
