@@ -2,28 +2,29 @@ import { ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 
 export default class TerminalEchoSvc {
-  static async createAudio(
+  static async create(
     userId: string | ObjectId,
     audioUrl: string,
     location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
+    airportName?: string,
+    textMessage?: string
   ) {
-    const result = await TerminalEchoRepo.createForAudio(userId, audioUrl, location, airportName);
-    return result;
-  }
+    let senderId: ObjectId;
+    try {
+      senderId = new ObjectId(userId);
+    } catch (error) {
+      return Promise.reject("Invalid sender id.");
+    }
 
-  static async createTextMessage(
-    userId: string | ObjectId,
-    textMessage: string,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    const result = await TerminalEchoRepo.createForTextMessage(
-      userId,
+    const echo = {
+      senderId,
+      audioUrl,
       textMessage,
       location,
-      airportName
-    );
+      airportName,
+    };
+
+    const result = await TerminalEchoRepo.create(echo);
     return result;
   }
 }

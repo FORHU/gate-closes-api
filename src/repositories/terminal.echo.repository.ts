@@ -7,46 +7,6 @@ export default class TerminalEchoRepo {
     return getDB().collection("terminal.echo");
   }
 
-  static async createForAudio(
-    senderId: string | ObjectId,
-    audioUrl: string,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    try {
-      senderId = new ObjectId(senderId);
-    } catch (error) {
-      return Promise.reject("Invalid sender id.");
-    }
-    const echo: TTerminalEcho = {
-      senderId,
-      airportName,
-      audioUrl,
-      location: location ?? { type: "Point", coordinates: [0, 0] },
-    };
-    return this.collection().insertOne(new MTerminalEcho(echo));
-  }
-
-  static async createForTextMessage(
-    senderId: string | ObjectId,
-    textMessage: string,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    try {
-      senderId = new ObjectId(senderId);
-    } catch (error) {
-      return Promise.reject("Invalid sender id.");
-    }
-    const echo: TTerminalEcho = {
-      senderId,
-      airportName,
-      textMessage,
-      location: location ?? { type: "Point", coordinates: [0, 0] },
-    };
-    return this.collection().insertOne(new MTerminalEcho(echo));
-  }
-
   static async create(echo: TTerminalEcho) {
     return this.collection().insertOne(new MTerminalEcho(echo));
   }
