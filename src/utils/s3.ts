@@ -5,6 +5,7 @@ import {
   AWS_SECRET_ACCESS_KEY,
   AWS_REGION,
   AWS_S3_BUCKET,
+  CLOUD_FRONT_DOMAIN,
 } from "../config";
 
 const s3Client = new S3Client({
@@ -36,6 +37,12 @@ export async function getGetObjectPresignedUrl(params: {
   key: string;
 }) {
   const { key } = params;
+
+  if (CLOUD_FRONT_DOMAIN) {
+    const normalizedDomain = CLOUD_FRONT_DOMAIN.replace(/\/+$/, "");
+    const normalizedKey = key.replace(/^\/+/, "");
+    return `${normalizedDomain}/${normalizedKey}`;
+  }
 
   const command = new GetObjectCommand({
     Bucket: AWS_S3_BUCKET,

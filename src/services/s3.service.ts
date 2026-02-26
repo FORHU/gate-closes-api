@@ -16,14 +16,14 @@ export default class S3Svc {
     }
 
     if (!sizeOfFile || sizeOfFile > 10 * 1024 * 1024) {
-      throw new Error("Audio file size must be 10MB or less");
+      throw new Error("Audio file size must be 10MB or below");
     }
 
     const key = `users/${userId}/uploads/${crypto.randomUUID()}.${ext}`;
 
     const url = await getPutObjectPresignedUrl({
       key,
-      contentType
+      contentType,
     });
 
     return { url, key };
