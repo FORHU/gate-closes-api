@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 export type TTerminalEcho = {
   _id?: ObjectId;
   senderId: ObjectId;
-  audioUrl?: string;
+  fileId?: ObjectId;
   textMessage?: string;
   location?: { type: "Point", coordinates: [number, number]};
   airportName?: string;
@@ -21,7 +21,7 @@ export type TTerminalEcho = {
 export type TTerminalEchoUpdateOptions = {
   _id?: ObjectId | string;
   senderId: ObjectId | string;
-  audioUrl?: string;
+  fileId?: ObjectId | string;
   textMessage?: string;
   location?: { type: "Point", coordinates: [number, number]};
   airportName?: string;
@@ -37,7 +37,7 @@ export type TTerminalEchoUpdateOptions = {
 export class MTerminalEcho implements Partial<TTerminalEcho> {
   _id?: ObjectId;
   senderId: ObjectId;
-  audioUrl?: string;
+  fileId?: ObjectId;
   textMessage?: string;
   location?: { type: "Point", coordinates: [number, number] };
   airportName?: string;
@@ -51,10 +51,10 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), senderId, audioUrl = "", textMessage = "", location = { type: "Point", coordinates: [0, 0] }, airportName = "", countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt} = {} as TTerminalEcho) {
+  constructor({_id = new ObjectId(), senderId, fileId, textMessage = "", location = { type: "Point", coordinates: [0, 0] }, airportName = "", countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt} = {} as TTerminalEcho) {
     this._id = _id;
     this.senderId = senderId;
-    this.audioUrl = audioUrl;
+    this.fileId = fileId;
     this.textMessage = textMessage;
     this.location = location;
     this.airportName = airportName;

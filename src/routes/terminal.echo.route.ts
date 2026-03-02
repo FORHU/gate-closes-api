@@ -3,8 +3,8 @@ const router = express.Router();
 
 import TerminalEchoCtrl from "../controllers/terminal.echo.controller";
 
-router.post("/audio", TerminalEchoCtrl.createAudio);
-router.post("/text-message", TerminalEchoCtrl.createTextMessage);
+router.get("/", TerminalEchoCtrl.search);
+router.post("/", TerminalEchoCtrl.create);
 
 export default router;
 
