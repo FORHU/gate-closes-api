@@ -9,19 +9,20 @@ export default class TerminalEchoRepo {
 
   static async createForAudio(
     senderId: string | ObjectId,
-    audioUrl: string,
+    fileId: string | ObjectId,
     location?: { type: "Point"; coordinates: [number, number] },
     airportName?: string
   ) {
     try {
       senderId = new ObjectId(senderId);
+      fileId = new ObjectId(fileId);
     } catch (error) {
-      return Promise.reject("Invalid sender id.");
+      return Promise.reject("Invalid sender id or file id.");
     }
     const echo: TTerminalEcho = {
       senderId,
       airportName,
-      audioUrl,
+      fileId,
       location: location ?? { type: "Point", coordinates: [0, 0] },
     };
     return this.collection().insertOne(new MTerminalEcho(echo));
@@ -69,6 +70,29 @@ export default class TerminalEchoRepo {
     return this.collection().find({ senderId }).toArray();
   }
 
+  static async findByAirportNameWithFile(airportName: string) {
+    const regex = new RegExp(airportName, "i");
+    return this.collection()
+      .aggregate([
+        { $match: { airportName: regex } },
+        {
+          $lookup: {
+            from: "file",
+            localField: "fileId",
+            foreignField: "_id",
+            as: "file",
+          },
+        },
+        {
+          $unwind: {
+            path: "$file",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
+      .toArray();
+  }
+
   static async update(echo: TTerminalEchoUpdateOptions) {
     try {
       echo._id = new ObjectId(echo._id as string);
@@ -80,7 +104,7 @@ export default class TerminalEchoRepo {
     const setFields: any = { updatedAt };
     if (echo.senderId !== undefined) setFields.senderId = new ObjectId(echo.senderId as string);
     if (echo.airportName !== undefined) setFields.airportName = echo.airportName;
-    if (echo.audioUrl !== undefined) setFields.audioUrl = echo.audioUrl;
+    if (echo.fileId !== undefined) setFields.fileId = new ObjectId(echo.fileId as string);
     if (echo.textMessage !== undefined) setFields.textMessage = echo.textMessage;
     if (echo.location !== undefined) setFields.location = echo.location;
     if (echo.countListens !== undefined) setFields.countListens = echo.countListens;

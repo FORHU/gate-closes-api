@@ -1,30 +1,35 @@
 import { ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
+import FileSvc from "./file.service";
 
 export default class TerminalEchoSvc {
-  static async createAudio(
-    userId: string | ObjectId,
-    audioUrl: string,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    const result = await TerminalEchoRepo.createForAudio(userId, audioUrl, location, airportName);
-    return result;
+  static async createTerminalEcho(params: {
+    userId: string | ObjectId;
+    fileUrl: string;
+    fileName: string;
+    textMessage?: string;
+    location?: { type: "Point"; coordinates: [number, number] };
+    airportName?: string;
+  }) {
+    const { userId, fileUrl, fileName, textMessage, location, airportName } =
+      params;
+
+    const fileCreateResult = await FileSvc.create({
+      fileUrl,
+      fileName,
+    });
+
+    return TerminalEchoRepo.create({
+      senderId: new ObjectId(userId),
+      fileId: fileCreateResult.insertedId,
+      textMessage,
+      location: location ?? { type: "Point", coordinates: [0, 0] },
+      airportName,
+    });
   }
 
-  static async createTextMessage(
-    userId: string | ObjectId,
-    textMessage: string,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    const result = await TerminalEchoRepo.createForTextMessage(
-      userId,
-      textMessage,
-      location,
-      airportName
-    );
-    return result;
+  static async findByAirportName(airportName: string) {
+    return TerminalEchoRepo.findByAirportNameWithFile(airportName);
   }
 }
 
