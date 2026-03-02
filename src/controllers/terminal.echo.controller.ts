@@ -19,7 +19,7 @@ export default class TerminalEchoCtrl {
     const schema = Joi.object({
       fileUrl: Joi.string().uri().required(),
       fileName: Joi.string().min(1).required(),
-      textMessage: Joi.string().max(128).optional(),
+      textMessage: Joi.string().optional().allow(""),
       location: locationSchema.required(),
       airportName: Joi.string().min(1).required(),
     });
