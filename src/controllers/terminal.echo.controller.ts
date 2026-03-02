@@ -19,7 +19,7 @@ export default class TerminalEchoCtrl {
     const schema = Joi.object({
       fileUrl: Joi.string().uri().required(),
       fileName: Joi.string().min(1).required(),
-      textMessage: Joi.string().min(1).max(128).optional(),
+      textMessage: Joi.string().max(128).optional(),
       location: locationSchema.required(),
       airportName: Joi.string().min(1).required(),
     });
@@ -70,6 +70,59 @@ export default class TerminalEchoCtrl {
         value.airportName as string
       );
       return res.json({ data: echoes });
+    } catch (err: any) {
+      return res
+        .status(500)
+        .json({ message: err.message || "Server error." });
+    }
+  }
+
+  static async incrementListen(req: Request, res: Response) {
+    const { id } = req.params;
+
+    const schema = Joi.object({
+      id: Joi.string().hex().length(24).required(),
+    });
+
+    const { error, value } = schema.validate({ id });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const result = await TerminalEchoSvc.incrementListen(value.id);
+      return res.json({ data: result?.value ?? null });
+    } catch (err: any) {
+      return res
+        .status(500)
+        .json({ message: err.message || "Server error." });
+    }
+  }
+
+  static async updateReaction(req: Request, res: Response) {
+    const { id } = req.params;
+    const { reaction, action } = req.body;
+
+    const schema = Joi.object({
+      id: Joi.string().hex().length(24).required(),
+      reaction: Joi.string()
+        .valid("like", "love", "haha", "wow", "sad", "angry")
+        .required(),
+      action: Joi.string().valid("increment", "decrement").required(),
+    });
+
+    const { error, value } = schema.validate({ id, reaction, action });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const result = await TerminalEchoSvc.updateReaction({
+        terminalEchoId: value.id,
+        reaction: value.reaction,
+        action: value.action,
+      });
+      return res.json({ data: result?.value ?? null });
     } catch (err: any) {
       return res
         .status(500)

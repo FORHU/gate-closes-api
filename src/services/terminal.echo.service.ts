@@ -31,5 +31,18 @@ export default class TerminalEchoSvc {
   static async findByAirportName(airportName: string) {
     return TerminalEchoRepo.findByAirportNameWithFile(airportName);
   }
+
+  static async incrementListen(terminalEchoId: string) {
+    return TerminalEchoRepo.incrementListen(terminalEchoId);
+  }
+
+  static async updateReaction(params: {
+    terminalEchoId: string;
+    reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry";
+    action: "increment" | "decrement";
+  }) {
+    const { terminalEchoId, reaction, action } = params;
+    return TerminalEchoRepo.updateReaction(terminalEchoId, reaction, action);
+  }
 }
 

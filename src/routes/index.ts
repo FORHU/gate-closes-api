@@ -15,10 +15,9 @@ router.get("/v1", (_, res) => {
 
 router.use("/auth", authRoutes);
 router.use("/s3", s3Routes);
-
+router.use("/terminal-echo", terminalEchoRoutes);
 
 // Protected routes (require valid session: Authorization Bearer <accessToken>)
-router.use("/terminal-echo", sessionMiddleware, terminalEchoRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 
 export default router;

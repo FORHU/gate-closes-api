@@ -89,8 +89,101 @@ export default class TerminalEchoRepo {
             preserveNullAndEmptyArrays: true,
           },
         },
+        {
+          $lookup: {
+            from: "user",
+            let: { senderId: "$senderId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$_id", "$$senderId"] },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  username: 1,
+                  gender: 1,
+                },
+              },
+            ],
+            as: "user",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
       ])
       .toArray();
+  }
+
+  static async incrementListen(_id: string | ObjectId) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return Promise.reject("Invalid terminal echo id.");
+    }
+
+    return this.collection().findOneAndUpdate(
+      { _id },
+      {
+        $inc: { countListens: 1 },
+        $set: { updatedAt: new Date() },
+      },
+      { returnDocument: "after" }
+    );
+  }
+
+  static async updateReaction(
+    _id: string | ObjectId,
+    reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry",
+    action: "increment" | "decrement"
+  ) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return Promise.reject("Invalid terminal echo id.");
+    }
+  
+    const reactionFieldMap = {
+      like: "countReactLike",
+      love: "countReactLove",
+      haha: "countReactHaha",
+      wow: "countReactWow",
+      sad: "countReactSad",
+      angry: "countReactAngry",
+    } as const;
+  
+    const fieldName = reactionFieldMap[reaction];
+  
+    if (!fieldName) {
+      return Promise.reject("Invalid reaction type.");
+    }
+  
+    const delta = action === "increment" ? 1 : -1;
+  
+    return this.collection().findOneAndUpdate(
+      { _id },
+      [
+        { $set: { updatedAt: new Date() } },
+        {
+          $set: {
+            [fieldName]: {
+              $max: [
+                0,
+                {
+                  $add: [{ $ifNull: [`$${fieldName}`, 0] }, delta],
+                },
+              ],
+            },
+          },
+        },
+      ],
+      { returnDocument: "after" }
+    );
   }
 
   static async update(echo: TTerminalEchoUpdateOptions) {
