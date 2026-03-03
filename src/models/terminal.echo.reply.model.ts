@@ -3,8 +3,9 @@ import { ObjectId } from "mongodb";
 export type TTerminalEchoReply = {
   _id?: ObjectId;
   terminalEchoId: ObjectId;
-  audioUrl?: string;
-  textMessage?: string;
+  senderId: ObjectId;
+  fileId?: ObjectId;
+  countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
   countReactHaha?: number;
@@ -18,8 +19,9 @@ export type TTerminalEchoReply = {
 export type TTerminalEchoReplyUpdateOptions = {
   _id?: ObjectId | string;
   terminalEchoId: ObjectId | string;
-  audioUrl?: string;
-  textMessage?: string;
+  senderId: ObjectId | string;
+  fileId?: ObjectId | string;
+  countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
   countReactHaha?: number;
@@ -31,8 +33,9 @@ export type TTerminalEchoReplyUpdateOptions = {
 export class MTerminalEchoReply implements Partial<TTerminalEchoReply> {
   _id?: ObjectId;
   terminalEchoId: ObjectId;
-  audioUrl?: string;
-  textMessage?: string;
+  senderId: ObjectId;
+  fileId?: ObjectId;
+  countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
   countReactHaha?: number;
@@ -42,11 +45,12 @@ export class MTerminalEchoReply implements Partial<TTerminalEchoReply> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({ _id = new ObjectId(), terminalEchoId, audioUrl = "", textMessage = "", countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt } = {} as TTerminalEchoReply) {
+  constructor({ _id = new ObjectId(), terminalEchoId, senderId, fileId, countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt } = {} as TTerminalEchoReply) {
     this._id = _id;
     this.terminalEchoId = terminalEchoId;
-    this.audioUrl = audioUrl;
-    this.textMessage = textMessage;
+    this.senderId = senderId;
+    this.fileId = fileId;
+    this.countListens = countListens;
     this.countReactLike = countReactLike;
     this.countReactLove = countReactLove;
     this.countReactHaha = countReactHaha;

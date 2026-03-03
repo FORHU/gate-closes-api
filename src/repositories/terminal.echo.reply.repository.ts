@@ -7,32 +7,6 @@ export default class TerminalEchoReplyRepo {
     return getDB().collection("terminal.echo.reply");
   }
 
-  static async createForAudio(terminalEchoId: string | ObjectId, audioUrl: string) {
-    try {
-      terminalEchoId = new ObjectId(terminalEchoId);
-    } catch (error) {
-      return Promise.reject("Invalid terminal echo id.");
-    }
-    const reply: TTerminalEchoReply = {
-      terminalEchoId,
-      audioUrl
-    };
-    return this.collection().insertOne(new MTerminalEchoReply(reply));
-  }
-
-  static async createForTextMessage(terminalEchoId: string | ObjectId, textMessage: string) {
-    try {
-      terminalEchoId = new ObjectId(terminalEchoId);
-    } catch (error) {
-      return Promise.reject("Invalid terminal echo id.");
-    }
-    const reply: TTerminalEchoReply = {
-      terminalEchoId,
-      textMessage
-    };
-    return this.collection().insertOne(new MTerminalEchoReply(reply));
-  }
-
   static async create(reply: TTerminalEchoReply) {
     return this.collection().insertOne(new MTerminalEchoReply(reply));
   }
@@ -55,6 +29,61 @@ export default class TerminalEchoReplyRepo {
     return this.collection().find({ terminalEchoId }).toArray();
   }
 
+  static async findByTerminalEchoIdWithFile(terminalEchoId: string | ObjectId) {
+    try {
+      terminalEchoId = new ObjectId(terminalEchoId);
+    } catch {
+      return Promise.reject("Invalid terminal echo id.");
+    }
+
+    return this.collection()
+      .aggregate([
+        { $match: { terminalEchoId } },
+        {
+          $lookup: {
+            from: "file",
+            localField: "fileId",
+            foreignField: "_id",
+            as: "file",
+          },
+        },
+        {
+          $unwind: {
+            path: "$file",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "user",
+            let: { senderId: "$senderId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$_id", "$$senderId"] },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  username: 1,
+                  gender: 1,
+                },
+              },
+            ],
+            as: "user",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
+      .toArray();
+  }
+
   static async update(reply: TTerminalEchoReplyUpdateOptions) {
     try {
       reply._id = new ObjectId(reply._id as string);
@@ -66,8 +95,11 @@ export default class TerminalEchoReplyRepo {
     const setFields: any = { updatedAt };
     if (reply.terminalEchoId !== undefined)
       setFields.terminalEchoId = new ObjectId(reply.terminalEchoId as string);
-    if (reply.audioUrl !== undefined) setFields.audioUrl = reply.audioUrl;
-    if (reply.textMessage !== undefined) setFields.textMessage = reply.textMessage;
+    if (reply.senderId !== undefined)
+      setFields.senderId = new ObjectId(reply.senderId as string);
+    if (reply.fileId !== undefined)
+      setFields.fileId = new ObjectId(reply.fileId as string);
+    if (reply.countListens !== undefined) setFields.countListens = reply.countListens;
     if (reply.countReactLike !== undefined) setFields.countReactLike = reply.countReactLike;
     if (reply.countReactLove !== undefined) setFields.countReactLove = reply.countReactLove;
     if (reply.countReactHaha !== undefined) setFields.countReactHaha = reply.countReactHaha;
@@ -76,6 +108,72 @@ export default class TerminalEchoReplyRepo {
     if (reply.countReactAngry !== undefined) setFields.countReactAngry = reply.countReactAngry;
 
     return this.collection().updateOne({ _id: reply._id }, { $set: setFields });
+  }
+
+  static async incrementListen(_id: string | ObjectId) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return Promise.reject("Invalid terminal echo reply id.");
+    }
+
+    return this.collection().findOneAndUpdate(
+      { _id },
+      {
+        $inc: { countListens: 1 },
+        $set: { updatedAt: new Date() },
+      },
+      { returnDocument: "after" }
+    );
+  }
+
+  static async updateReaction(
+    _id: string | ObjectId,
+    reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry",
+    action: "increment" | "decrement"
+  ) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return Promise.reject("Invalid terminal echo reply id.");
+    }
+
+    const reactionFieldMap = {
+      like: "countReactLike",
+      love: "countReactLove",
+      haha: "countReactHaha",
+      wow: "countReactWow",
+      sad: "countReactSad",
+      angry: "countReactAngry",
+    } as const;
+
+    const fieldName = reactionFieldMap[reaction];
+
+    if (!fieldName) {
+      return Promise.reject("Invalid reaction type.");
+    }
+
+    const delta = action === "increment" ? 1 : -1;
+
+    return this.collection().findOneAndUpdate(
+      { _id },
+      [
+        { $set: { updatedAt: new Date() } },
+        {
+          $set: {
+            [fieldName]: {
+              $max: [
+                0,
+                {
+                  $add: [{ $ifNull: [`$${fieldName}`, 0] }, delta],
+                },
+              ],
+            },
+          },
+        },
+      ],
+      { returnDocument: "after" }
+    );
   }
 
   static async delete(_id: string | ObjectId) {
