@@ -2,6 +2,7 @@ import express from "express";
 import authRoutes from "./user.auth.route";
 import airportRoutes from "./airport.route";
 import terminalEchoRoutes from "./terminal.echo.route";
+import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
@@ -15,7 +16,8 @@ router.get("/v1", (_, res) => {
 
 router.use("/auth", authRoutes);
 router.use("/s3", s3Routes);
-router.use("/terminal-echo", terminalEchoRoutes);
+router.use("/terminal-echo", sessionMiddleware, terminalEchoRoutes);
+router.use("/terminal-echo-reply", sessionMiddleware, terminalEchoReplyRoutes);
 
 // Protected routes (require valid session: Authorization Bearer <accessToken>)
 router.use("/airport", sessionMiddleware, airportRoutes);
