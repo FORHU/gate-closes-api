@@ -116,6 +116,24 @@ export default class TerminalEchoRepo {
             preserveNullAndEmptyArrays: true,
           },
         },
+        {
+          $lookup: {
+            from: "terminal.echo.reply",
+            localField: "_id",
+            foreignField: "terminalEchoId",
+            as: "replies",
+          },
+        },
+        {
+          $addFields: {
+            replyCount: { $size: "$replies" },
+          },
+        },
+        {
+          $project: {
+            replies: 0,
+          },
+        },
       ])
       .toArray();
   }
