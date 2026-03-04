@@ -59,8 +59,10 @@ export default class TerminalEchoReplyCtrl {
     }
 
     try {
+      const userId = req.user?.userId as string | undefined;
       const replies = await TerminalEchoReplySvc.findByTerminalEchoId(
-        value.terminalEchoId as string
+        value.terminalEchoId as string,
+        userId
       );
       return res.json({ data: replies });
     } catch (err: any) {
@@ -95,18 +97,22 @@ export default class TerminalEchoReplyCtrl {
 
   // PATCH /terminal-echo-reply/:id/reaction
   static async updateReaction(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { id } = req.params;
-    const { reaction, action } = req.body;
+    const { reaction } = req.body;
 
     const schema = Joi.object({
       id: Joi.string().hex().length(24).required(),
       reaction: Joi.string()
         .valid("like", "love", "haha", "wow", "sad", "angry")
         .required(),
-      action: Joi.string().valid("increment", "decrement").required(),
     });
 
-    const { error, value } = schema.validate({ id, reaction, action });
+    const { error, value } = schema.validate({ id, reaction });
     if (error) {
       return res.status(400).json({ message: error.message });
     }
@@ -115,7 +121,7 @@ export default class TerminalEchoReplyCtrl {
       const result = await TerminalEchoReplySvc.updateReaction({
         replyId: value.id,
         reaction: value.reaction,
-        action: value.action,
+        userId,
       });
       return res.json({ data: result?.value ?? null });
     } catch (err: any) {
