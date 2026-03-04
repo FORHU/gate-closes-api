@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import TerminalEchoReplyRepo from "../repositories/terminal.echo.reply.repository";
 import FileSvc from "./file.service";
+import TerminalEchoReplyReactionRepo from "../repositories/terminal.echo.reply.reaction.repository";
 
 export default class TerminalEchoReplySvc {
   static async createReply(params: {
@@ -23,8 +24,34 @@ export default class TerminalEchoReplySvc {
     });
   }
 
-  static async findByTerminalEchoId(terminalEchoId: string) {
-    return TerminalEchoReplyRepo.findByTerminalEchoIdWithFile(terminalEchoId);
+  static async findByTerminalEchoId(
+    terminalEchoId: string,
+    userId?: string
+  ): Promise<any[]> {
+    const replies =
+      await TerminalEchoReplyRepo.findByTerminalEchoIdWithFile(terminalEchoId);
+    if (!userId || !replies.length) {
+      return replies.map((r) => ({
+        ...r,
+        currentUserReactions: r.currentUserReactions ?? [],
+      }));
+    }
+    const replyIds = replies.map((r) => r._id);
+    const reactions =
+      await TerminalEchoReplyReactionRepo.findByUserIdAndReplyIds(
+        userId,
+        replyIds
+      );
+    const byReplyId = new Map<string, string[]>();
+    for (const r of reactions) {
+      const id = (r.terminalEchoReplyId as ObjectId).toString();
+      if (!byReplyId.has(id)) byReplyId.set(id, []);
+      byReplyId.get(id)!.push(r.reaction);
+    }
+    return replies.map((r) => ({
+      ...r,
+      currentUserReactions: byReplyId.get(r._id.toString()) ?? [],
+    }));
   }
 
   static async incrementListen(replyId: string) {
@@ -34,10 +61,36 @@ export default class TerminalEchoReplySvc {
   static async updateReaction(params: {
     replyId: string;
     reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry";
-    action: "increment" | "decrement";
+    userId: string;
   }) {
-    const { replyId, reaction, action } = params;
-    return TerminalEchoReplyRepo.updateReaction(replyId, reaction, action);
+    const { replyId, reaction, userId } = params;
+
+    const existing = await TerminalEchoReplyReactionRepo.findOne({
+      terminalEchoReplyId: replyId,
+      userId,
+      reaction,
+    });
+
+    if (existing) {
+      await TerminalEchoReplyReactionRepo.deleteOne({
+        terminalEchoReplyId: replyId,
+        userId,
+        reaction,
+      });
+      return TerminalEchoReplyRepo.updateReaction(
+        replyId,
+        reaction,
+        "decrement"
+      );
+    }
+
+    await TerminalEchoReplyReactionRepo.create({
+      terminalEchoReplyId: new ObjectId(replyId),
+      userId: new ObjectId(userId),
+      reaction,
+    });
+
+    return TerminalEchoReplyRepo.updateReaction(replyId, reaction, "increment");
   }
 }
 
