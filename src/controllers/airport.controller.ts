@@ -35,4 +35,32 @@ export default class AirportCtrl {
       return res.status(500).json({ message: error });
     }
   }
+
+  // GET /airport/where-am-i?lat=14.5995&lng=120.9842
+  static async whereAmI(req: Request, res: Response) {
+    const { lat, lng } = req.query;
+
+    const schema = Joi.object({
+      lat: Joi.number().min(-90).max(90).required(),
+      lng: Joi.number().min(-180).max(180).required(),
+    });
+
+    const { error } = schema.validate({
+      lat: Number(lat),
+      lng: Number(lng),
+    });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const nearest = await AirportSvc.whereAmI({
+        lat: Number(lat),
+        lng: Number(lng),
+      });
+      return res.json({ data: nearest });
+    } catch (error: any) {
+      return res.status(500).json({ message: error?.message ?? error });
+    }
+  }
 }

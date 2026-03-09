@@ -80,6 +80,10 @@ export default class AirportSvc {
     return mapped;
   }
 
+  static async whereAmI(params: { lat: number; lng: number }) {
+    return AirportRepo.findNearestWithDistance(params);
+  }
+
   private static toStringOrNull(
     value?: string | number
   ): string | null | undefined {
