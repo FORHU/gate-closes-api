@@ -7,7 +7,7 @@ import sessionMiddleware from "../middleware/valid-session.middleware";
 router.get("/", TerminalEchoCtrl.search);
 router.post("/", sessionMiddleware, TerminalEchoCtrl.create);
 router.patch("/:id/listen", TerminalEchoCtrl.incrementListen);
-router.patch("/:id/reaction", TerminalEchoCtrl.updateReaction);
+router.patch("/:id/reaction", sessionMiddleware, TerminalEchoCtrl.updateReaction);
 
 export default router;
 

@@ -16,7 +16,7 @@ router.get("/v1", (_, res) => {
 
 router.use("/auth", authRoutes);
 router.use("/s3", s3Routes);
-router.use("/terminal-echo", sessionMiddleware, terminalEchoRoutes);
+router.use("/terminal-echo", terminalEchoRoutes);
 router.use("/terminal-echo-reply", sessionMiddleware, terminalEchoReplyRoutes);
 
 // Protected routes (require valid session: Authorization Bearer <accessToken>)
