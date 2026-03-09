@@ -7,6 +7,6 @@ import AirportCtrl from "../controllers/airport.controller";
 router.get("/nearby", AirportCtrl.findNearby);
 
 // Find nearest airport and check radius
-router.get("/where-am-i", AirportCtrl.whereAmI);
+router.get("/check-inside-airport", AirportCtrl.checkInsideAirport);
 
 export default router;

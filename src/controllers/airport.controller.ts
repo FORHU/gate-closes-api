@@ -36,8 +36,8 @@ export default class AirportCtrl {
     }
   }
 
-  // GET /airport/where-am-i?lat=14.5995&lng=120.9842
-  static async whereAmI(req: Request, res: Response) {
+  // GET /airport/check-inside-airport?lat=14.5995&lng=120.9842
+  static async checkInsideAirport(req: Request, res: Response) {
     const { lat, lng } = req.query;
 
     const schema = Joi.object({
@@ -54,7 +54,7 @@ export default class AirportCtrl {
     }
 
     try {
-      const nearest = await AirportSvc.whereAmI({
+      const nearest = await AirportSvc.checkInsideAirport({
         lat: Number(lat),
         lng: Number(lng),
       });
