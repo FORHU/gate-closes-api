@@ -63,4 +63,36 @@ export default class AirportCtrl {
       return res.status(500).json({ message: error?.message ?? error });
     }
   }
+
+  // GET /airport/check-inside-specific?airportName=NAIA%20Terminal%201&lat=14.5995&lng=120.9842
+  static async checkInsideSpecificAirport(req: Request, res: Response) {
+    const { airportName, lat, lng } = req.query;
+
+    const schema = Joi.object({
+      airportName: Joi.string().min(1).required(),
+      lat: Joi.number().min(-90).max(90).required(),
+      lng: Joi.number().min(-180).max(180).required(),
+    });
+
+    const { error } = schema.validate({
+      airportName,
+      lat: Number(lat),
+      lng: Number(lng),
+    });
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const result = await AirportSvc.checkInsideSpecificAirport({
+        airportName: String(airportName),
+        lat: Number(lat),
+        lng: Number(lng),
+      });
+      return res.json({ data: result });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
 }

@@ -133,5 +133,58 @@ export default class AirportRepo {
 
     return results[0] ?? null;
   }
+
+  static async findNearestForAirport(params: {
+    lat: number;
+    lng: number;
+    airportName: string;
+  }) {
+    const { lat, lng, airportName } = params;
+
+    const results = await this.collection()
+      .aggregate([
+        {
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [lng, lat],
+            },
+            key: "location",
+            distanceField: "distanceMeters",
+            spherical: true,
+            query: {
+              location: { $exists: true },
+              airport: airportName,
+            },
+          },
+        },
+        {
+          $addFields: {
+            distanceKm: { $divide: ["$distanceMeters", 1000] },
+            radiusKmSafe: { $ifNull: ["$radiusKm", 0] },
+          },
+        },
+        {
+          $addFields: {
+            insideRadius: { $lte: ["$distanceKm", "$radiusKmSafe"] },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            iata: 1,
+            icao: 1,
+            airport: 1,
+            radiusKm: 1,
+            distanceKm: 1,
+            insideRadius: 1,
+          },
+        },
+        { $limit: 1 },
+      ])
+      .toArray();
+
+    return results[0] ?? null;
+  }
 }
 
