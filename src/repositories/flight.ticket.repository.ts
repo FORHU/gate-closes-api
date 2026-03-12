@@ -11,6 +11,54 @@ export default class FlightTicketRepo {
     return this.collection().insertOne(new MFlightTicket(ticket));
   }
 
+  static async findActiveOrLatestByUserId(userId: ObjectId) {
+    const now = new Date();
+
+    const upcoming = await this.collection().findOne(
+      { userId, departureDateTime: { $gte: now } },
+      { sort: { departureDateTime: 1 } }
+    );
+    if (upcoming) return upcoming as any;
+
+    const latest = await this.collection().findOne(
+      { userId },
+      { sort: { departureDateTime: -1 } }
+    );
+    return (latest as any) ?? null;
+  }
+
+  static async findUserIdsByFlight(params: {flightNumber: string; departureDateTime: Date; excludeUserId?: ObjectId; }): Promise<ObjectId[]> {
+    const { flightNumber, departureDateTime, excludeUserId } = params;
+
+    const filter: any = { flightNumber, departureDateTime };
+    if (excludeUserId) filter.userId = { $ne: excludeUserId };
+
+    const docs = await this.collection()
+      .find(filter, { projection: { userId: 1 } })
+      .toArray();
+
+    const seen = new Set<string>();
+    const ids: ObjectId[] = [];
+    for (const d of docs as any[]) {
+      const id = d.userId as ObjectId | undefined;
+      if (!id) continue;
+      const key = String(id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ids.push(id);
+    }
+    return ids;
+  }
+
+  static async userHasFlight(params: {userId: ObjectId; flightNumber: string; departureDateTime: Date}): Promise<boolean> {
+    const { userId, flightNumber, departureDateTime } = params;
+    const doc = await this.collection().findOne(
+      { userId, flightNumber, departureDateTime },
+      { projection: { _id: 1 } }
+    );
+    return !!doc;
+  }
+
   static parseObjectId(id: string, message: string) {
     try {
       return new ObjectId(id);

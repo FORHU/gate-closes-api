@@ -4,7 +4,7 @@ export type TPsConversationMessage = {
   _id?: ObjectId;
   psSenderId: ObjectId;
   psConversationId: ObjectId;
-  audioUrl: string;
+  fileId: ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -13,22 +13,29 @@ export type TPsConversationMessageUpdateOptions = {
   _id?: ObjectId | string;
   psSenderId: ObjectId | string;
   psConversationId: ObjectId | string;
-  audioUrl: string;
+  fileId: ObjectId | string;
 };
 
 export class MPsConversationMessage implements Partial<TPsConversationMessage> {
   _id?: ObjectId;
   psSenderId: ObjectId;
   psConversationId: ObjectId;
-  audioUrl: string;
+  fileId: ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({ _id = new ObjectId(), psSenderId, psConversationId, audioUrl = "", createdAt = new Date(), updatedAt } = {} as TPsConversationMessage) {
+  constructor({
+    _id = new ObjectId(),
+    psSenderId,
+    psConversationId,
+    fileId,
+    createdAt = new Date(),
+    updatedAt,
+  } = {} as TPsConversationMessage) {
     this._id = _id;
     this.psSenderId = psSenderId;
     this.psConversationId = psConversationId;
-    this.audioUrl = audioUrl;
+    this.fileId = fileId;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
