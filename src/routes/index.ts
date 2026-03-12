@@ -4,6 +4,7 @@ import airportRoutes from "./airport.route";
 import terminalEchoRoutes from "./terminal.echo.route";
 import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
+import flightTicketRoutes from "./flight.ticket.route";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.use("/terminal-echo-reply", sessionMiddleware, terminalEchoReplyRoutes);
 
 // Protected routes (require valid session: Authorization Bearer <accessToken>)
 router.use("/airport", sessionMiddleware, airportRoutes);
+router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
 
 export default router;

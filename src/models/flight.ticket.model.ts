@@ -2,7 +2,6 @@ import { ObjectId } from "mongodb";
 
 export type TFlightTicket = {
   _id?: ObjectId;
-  flightTicketId?: string;
   userId: ObjectId;
   flightNumber?: string;
   fromCity?: string;
@@ -15,12 +14,10 @@ export type TFlightTicket = {
 
 export type TFlightTicketUpdateOptions = {
   _id?: ObjectId | string;
-  flightTicketId?: string;
 };
 
 export class MFlightTicket implements Partial<TFlightTicket> {
   _id?: ObjectId;
-  flightTicketId?: string;
   userId: ObjectId;
   flightNumber?: string;
   fromCity?: string;
@@ -30,9 +27,8 @@ export class MFlightTicket implements Partial<TFlightTicket> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), flightTicketId, userId, flightNumber = "", fromCity = "", toCity = "", departureDateTime, returnDateTime, createdAt = new Date(), updatedAt} = {} as TFlightTicket) {
+  constructor({_id = new ObjectId(), userId, flightNumber = "", fromCity = "", toCity = "", departureDateTime, returnDateTime, createdAt = new Date(), updatedAt} = {} as TFlightTicket) {
     this._id = _id;
-    this.flightTicketId = flightTicketId;
     this.userId = userId;
     this.flightNumber = flightNumber;
     this.fromCity = fromCity;
