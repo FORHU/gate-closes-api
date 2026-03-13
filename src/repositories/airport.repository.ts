@@ -7,6 +7,36 @@ export default class AirportRepo {
     return getDB().collection("airport");
   }
 
+  private static escapeRegex(input: string) {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  static async searchByText(q: string, limit = 10) {
+    const trimmed = q.trim();
+    const safeLimit = Math.min(Math.max(limit, 1), 50);
+    const rx = new RegExp(this.escapeRegex(trimmed), "i");
+
+    return this.collection()
+      .find(
+        {
+          $or: [{ airport: rx }, { iata: rx }, { icao: rx }],
+        },
+        {
+          projection: {
+            _id: 1,
+            airport: 1,
+            iata: 1,
+            icao: 1,
+            countryCode: 1,
+            location: 1,
+            radiusKm: 1,
+          },
+        }
+      )
+      .limit(safeLimit)
+      .toArray();
+  }
+
   static async create(airport: TAirport) {
     return this.collection().insertOne(new MAirport(airport));
   }

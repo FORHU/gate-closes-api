@@ -88,6 +88,10 @@ export default class AirportSvc {
     return AirportRepo.findNearestForAirport(params);
   }
 
+  static async search(q: string, limit: number): Promise<TAirport[]> {
+    return AirportRepo.searchByText(q, limit) as Promise<TAirport[]>;
+  }
+
   private static toStringOrNull(
     value?: string | number
   ): string | null | undefined {

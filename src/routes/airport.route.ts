@@ -3,6 +3,9 @@ const router = express.Router();
 
 import AirportCtrl from "../controllers/airport.controller";
 
+// Search airports by name/IATA/ICAO
+router.get("/search", AirportCtrl.search);
+
 // Find nearby airports by coordinates
 router.get("/nearby", AirportCtrl.findNearby);
 
