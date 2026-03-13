@@ -4,6 +4,31 @@ import AirportSvc from "../services/airport.service";
     
 export default class AirportCtrl {
 
+  // GET /airports/search?q=ninoy&limit=10
+  static async search(req: Request, res: Response) {
+    const { q, limit } = req.query;
+
+    const schema = Joi.object({
+      q: Joi.string().trim().min(1).required(),
+      limit: Joi.number().integer().min(1).max(50).optional(),
+    });
+
+    const { error, value } = schema.validate(
+      { q, limit: limit !== undefined ? Number(limit) : undefined },
+      { convert: true }
+    );
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const results = await AirportSvc.search(value.q, value.limit ?? 10);
+      return res.json({ data: results });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
+
   // GET /airports/nearby?lat=1.35&lng=103.99&radius=50
   static async findNearby(req: Request, res: Response) {
     const { lat, lng, radius } = req.query;
