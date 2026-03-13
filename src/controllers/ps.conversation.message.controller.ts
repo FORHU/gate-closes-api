@@ -3,6 +3,7 @@ import Joi from "joi";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationSvc from "../services/ps.conversation.service";
+import { io } from "../app";
 
 export default class PsConversationMessageCtrl {
 
@@ -43,6 +44,17 @@ export default class PsConversationMessageCtrl {
         fileUrl: value.fileUrl,
         fileName: value.fileName,
       });
+
+      // Fetch the latest message (including file and sender lookups)
+      const [latestMessage] = await PsConversationSvc.listMessages({
+        psConversationId,
+        limit: 1,
+      });
+
+      // Realtime update for both participants in this conversation room
+      if (latestMessage) {
+        io.of("/ps").to(value.conversationId).emit("ps:new_message", latestMessage);
+      }
 
       return res.json({ message: result });
     } catch (err: any) {
