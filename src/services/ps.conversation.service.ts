@@ -2,7 +2,9 @@ import { ObjectId } from "mongodb";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationMessageRepo from "../repositories/ps.conversation.message.repository";
+import PsConversationMessageReactionRepo from "../repositories/ps.conversation.message.reaction.repository";
 import FileSvc from "./file.service";
+import { ObjectId as MongoObjectId } from "mongodb";
 
 export default class PsConversationSvc {
   static dmKeyForUsers(a: ObjectId, b: ObjectId) {
@@ -112,11 +114,79 @@ export default class PsConversationSvc {
     } as any);
   }
 
-  static async listMessages(params: { psConversationId: ObjectId; limit: number }) {
-    return PsConversationMessageRepo.listByConversationId(
+  static async listMessages(params: {
+    psConversationId: ObjectId;
+    limit: number;
+    requesterId?: ObjectId;
+  }) {
+    const messages = await PsConversationMessageRepo.listByConversationId(
       params.psConversationId,
       params.limit
     );
+
+    if (!params.requesterId || !messages.length) {
+      return messages.map((m: any) => ({
+        ...m,
+        currentUserReactions: m.currentUserReactions ?? [],
+      }));
+    }
+
+    const messageIds = messages.map((m: any) => m._id);
+    const reactions =
+      await PsConversationMessageReactionRepo.findByUserIdAndMessageIds(
+        params.requesterId,
+        messageIds
+      );
+
+    const byMessageId = new Map<string, string[]>();
+    for (const r of reactions as any[]) {
+      const id = (r.psConversationMessageId as MongoObjectId).toString();
+      if (!byMessageId.has(id)) byMessageId.set(id, []);
+      byMessageId.get(id)!.push(r.reaction);
+    }
+
+    return messages.map((m: any) => ({
+      ...m,
+      currentUserReactions: byMessageId.get(m._id.toString()) ?? [],
+    }));
+  }
+
+  static async updateMessageReaction(params: {
+    psConversationMessageId: string;
+    reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry";
+    userId: ObjectId;
+  }) {
+    const { psConversationMessageId, reaction, userId } = params;
+
+    const existing = await PsConversationMessageReactionRepo.findOne({
+      psConversationMessageId,
+      userId,
+      reaction,
+    });
+
+    if (existing) {
+      await PsConversationMessageReactionRepo.deleteOne({
+        psConversationMessageId,
+        userId,
+        reaction,
+      });
+      return PsConversationMessageRepo.updateReaction(
+        psConversationMessageId,
+        reaction,
+        "decrement"
+      );
+    }
+
+    await PsConversationMessageReactionRepo.create({
+      psConversationMessageId: new ObjectId(psConversationMessageId),
+      userId,
+      reaction,
+    } as any);
+
+    return PsConversationMessageRepo.updateReaction(
+      psConversationMessageId,
+      reaction,
+      "increment"
+    );
   }
 }
-
