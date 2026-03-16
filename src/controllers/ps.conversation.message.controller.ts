@@ -153,6 +153,20 @@ export default class PsConversationMessageCtrl {
         reaction: value.reaction,
         userId: requesterId,
       });
+      
+      // Fetch updated message (including file, sender, and currentUserReactions)
+      const [updatedMessage] = await PsConversationSvc.listMessages({
+        psConversationId,
+        limit: 1,
+        requesterId,
+      });
+
+      if (updatedMessage) {
+        io
+          .of("/ps")
+          .to(value.conversationId)
+          .emit("ps:message_reaction_updated", updatedMessage);
+      }
 
       return res.json({ data: result?.value ?? null });
     } catch (err: any) {
