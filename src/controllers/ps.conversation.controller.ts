@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import Joi from "joi";
-import UserRepo from "../repositories/user.repository";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationSvc from "../services/ps.conversation.service";
@@ -13,21 +12,12 @@ export default class PsConversationCtrl {
     try {
       const requesterId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
 
-      const ids = await PsConversationSvc.listEligibleUsers({
+      const users = await PsConversationSvc.listEligibleUsersWithLatestEcho({
         requesterId,
       });
 
-      const users = await Promise.all(ids.map((id) => UserRepo.findById(id)));
-
       return res.json({
-        data: users
-          .filter(Boolean)
-          .map((u: any) => ({
-            _id: u._id,
-            email: u.email,
-            username: u.username,
-            gender: u.gender,
-          })),
+        data: users,
       });
     } catch (err: any) {
       return res.status(500).json({ message: err?.message ?? err });

@@ -70,6 +70,38 @@ export default class TerminalEchoRepo {
     return this.collection().find({ senderId }).toArray();
   }
 
+  static async findLatestBySenderIdsWithFile(senderIds: ObjectId[]) {
+    if (!senderIds?.length) return [];
+
+    return this.collection()
+      .aggregate([
+        { $match: { senderId: { $in: senderIds } } },
+        { $sort: { createdAt: -1, _id: -1 } },
+        {
+          $group: {
+            _id: "$senderId",
+            echo: { $first: "$$ROOT" },
+          },
+        },
+        { $replaceRoot: { newRoot: "$echo" } },
+        {
+          $lookup: {
+            from: "file",
+            localField: "fileId",
+            foreignField: "_id",
+            as: "file",
+          },
+        },
+        {
+          $unwind: {
+            path: "$file",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
+      .toArray();
+  }
+
   static async findByAirportNameWithFile(airportName: string) {
     const regex = new RegExp(airportName, "i");
     return this.collection()
