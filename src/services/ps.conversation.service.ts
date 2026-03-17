@@ -44,13 +44,15 @@ export default class PsConversationSvc {
     const ids = await this.listEligibleUsers(params);
     if (!ids.length) return [];
 
-    const latestEchoes = await TerminalEchoRepo.findLatestBySenderIdsWithFile(ids);
-    const echoBySenderId = new Map<string, any>();
-    for (const e of latestEchoes as any[]) {
-      echoBySenderId.set(String(e.senderId), e);
+    const echoes = await TerminalEchoRepo.findBySenderIdsWithFileSorted(ids);
+    const echoesBySenderId = new Map<string, any[]>();
+    for (const e of echoes as any[]) {
+      const key = String(e.senderId);
+      if (!echoesBySenderId.has(key)) echoesBySenderId.set(key, []);
+      echoesBySenderId.get(key)!.push(e);
     }
 
-    const eligibleIds = ids.filter((id) => echoBySenderId.has(String(id)));
+    const eligibleIds = ids.filter((id) => echoesBySenderId.has(String(id)));
     if (!eligibleIds.length) return [];
 
     const users = await Promise.all(eligibleIds.map((id) => UserRepo.findById(id)));
@@ -62,7 +64,7 @@ export default class PsConversationSvc {
         email: u.email,
         username: u.username,
         gender: u.gender,
-        latestTerminalEcho: echoBySenderId.get(String(u._id)) ?? null,
+        terminalEchoes: echoesBySenderId.get(String(u._id)) ?? [],
       }));
   }
 
