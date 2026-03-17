@@ -3,6 +3,8 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationMessageRepo from "../repositories/ps.conversation.message.repository";
 import PsConversationMessageReactionRepo from "../repositories/ps.conversation.message.reaction.repository";
+import TerminalEchoRepo from "../repositories/terminal.echo.repository";
+import UserRepo from "../repositories/user.repository";
 import FileSvc from "./file.service";
 import { ObjectId as MongoObjectId } from "mongodb";
 
@@ -32,6 +34,38 @@ export default class PsConversationSvc {
     });
 
     return ids;
+  }
+
+  /**
+   * Eligible = same-flight users AND they must have at least one terminal echo.
+   * Returns basic user info plus their latest terminal echo (with file lookup).
+   */
+  static async listEligibleUsersWithLatestEcho(params: { requesterId: ObjectId }) {
+    const ids = await this.listEligibleUsers(params);
+    if (!ids.length) return [];
+
+    const echoes = await TerminalEchoRepo.findBySenderIdsWithFileSorted(ids);
+    const echoesBySenderId = new Map<string, any[]>();
+    for (const e of echoes as any[]) {
+      const key = String(e.senderId);
+      if (!echoesBySenderId.has(key)) echoesBySenderId.set(key, []);
+      echoesBySenderId.get(key)!.push(e);
+    }
+
+    const eligibleIds = ids.filter((id) => echoesBySenderId.has(String(id)));
+    if (!eligibleIds.length) return [];
+
+    const users = await Promise.all(eligibleIds.map((id) => UserRepo.findById(id)));
+
+    return users
+      .filter(Boolean)
+      .map((u: any) => ({
+        _id: u._id,
+        email: u.email,
+        username: u.username,
+        gender: u.gender,
+        terminalEchoes: echoesBySenderId.get(String(u._id)) ?? [],
+      }));
   }
 
   static async createOrGetDm(params: {
