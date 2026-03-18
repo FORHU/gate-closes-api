@@ -5,25 +5,7 @@ import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationSvc from "../services/ps.conversation.service";
 
 export default class PsConversationCtrl {
-  static async listEligibleUsers(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-    try {
-      const requesterId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
-
-      const users = await PsConversationSvc.listEligibleUsersWithLatestEcho({
-        requesterId,
-      });
-
-      return res.json({
-        data: users,
-      });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
-    }
-  }
-
+  
   static async createOrGetDm(req: Request, res: Response) {
     const userId = req.user?.userId as string | undefined;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
