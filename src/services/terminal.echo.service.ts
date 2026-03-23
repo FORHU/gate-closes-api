@@ -2,8 +2,80 @@ import { ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
 import FileSvc from "./file.service";
+import FlightTicketRepo from "../repositories/flight.ticket.repository";
 
 export default class TerminalEchoSvc {
+  private static dateKey(d?: Date) {
+    if (!d) return "";
+    const dd = d instanceof Date ? d : new Date(d as any);
+    if (Number.isNaN(dd.getTime())) return "";
+    return dd.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  }
+
+  private static computeType(params: {
+    authTicket: any;
+    otherTicket: any;
+  }):
+    | "parallel_soul"
+    | "destination_thread"
+    | "baton_touch"
+    | "terminal_echo" {
+    const { authTicket, otherTicket } = params;
+
+    if (!authTicket) return "terminal_echo";
+    if (!otherTicket) return "terminal_echo";
+
+    const authDeparture = this.dateKey(authTicket.departureDateTime);
+    const authReturn = this.dateKey(authTicket.returnDateTime);
+    const otherDeparture = this.dateKey(otherTicket.departureDateTime);
+    const otherReturn = this.dateKey(otherTicket.returnDateTime);
+
+    const authFlightNumber = (authTicket.flightNumber ?? "").trim();
+    const authFromCity = (authTicket.fromCity ?? "").trim();
+    const authToCity = (authTicket.toCity ?? "").trim();
+
+    const otherFlightNumber = (otherTicket.flightNumber ?? "").trim();
+    const otherFromCity = (otherTicket.fromCity ?? "").trim();
+    const otherToCity = (otherTicket.toCity ?? "").trim();
+
+    // parallel_soul: same flight number, toCity, and departureDate
+    if (
+      authFlightNumber &&
+      authToCity &&
+      authDeparture &&
+      authFlightNumber === otherFlightNumber &&
+      authToCity === otherToCity &&
+      authDeparture === otherDeparture
+    ) {
+      return "parallel_soul";
+    }
+
+    // destination_thread: same toCity
+    if (authToCity && authToCity === otherToCity) {
+      return "destination_thread";
+    }
+
+    // baton_touch:
+    // auth.toCity == other.fromCity
+    // auth.fromCity == other.toCity
+    // auth.departureDate == other.returnDate
+    // auth.returnDate == other.departureDate
+    if (
+      authFromCity &&
+      authToCity &&
+      authDeparture &&
+      authReturn &&
+      authToCity === otherFromCity &&
+      authFromCity === otherToCity &&
+      authDeparture === otherReturn &&
+      authReturn === otherDeparture
+    ) {
+      return "baton_touch";
+    }
+
+    return "terminal_echo";
+  }
+
   static async createTerminalEcho(params: {
     userId: string | ObjectId;
     fileUrl: string;
@@ -55,6 +127,77 @@ export default class TerminalEchoSvc {
       ...e,
       currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
     }));
+  }
+
+  static async findAllWithType(userId: string): Promise<any[]> {
+    const echoes = await TerminalEchoRepo.findAllWithFile();
+    if (!echoes.length) return [];
+
+    // Reactions enrichment (same pattern as airport search)
+    const echoIds = echoes.map((e) => e._id);
+    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
+      userId,
+      echoIds
+    );
+    const byEchoId = new Map<string, string[]>();
+    for (const r of reactions as any[]) {
+      const id = (r.terminalEchoId as ObjectId).toString();
+      if (!byEchoId.has(id)) byEchoId.set(id, []);
+      byEchoId.get(id)!.push(r.reaction);
+    }
+
+    // Ticket logic
+    const authUserObjectId = FlightTicketRepo.parseObjectId(
+      userId,
+      "Invalid user id."
+    );
+    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
+      authUserObjectId
+    );
+
+    // If auth user has no flight ticket -> all terminal_echo
+    if (!authTicket) {
+      return echoes.map((e: any) => ({
+        ...e,
+        type: "terminal_echo",
+        currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+      }));
+    }
+
+    const senderIds = Array.from(
+      new Set(
+        echoes
+          .map((e: any) => (e.senderId as ObjectId | undefined)?.toString?.())
+          .filter(Boolean) as string[]
+      )
+    )
+      .filter((id) => id !== authUserObjectId.toString())
+      .map((id) => new ObjectId(id));
+
+    const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds(
+      senderIds
+    );
+
+    return echoes.map((e: any) => {
+      const senderIdStr = (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
+
+      // Only compare against "other users"
+      if (!senderIdStr || senderIdStr === authUserObjectId.toString()) {
+        return {
+          ...e,
+          type: "terminal_echo",
+          currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+        };
+      }
+
+      const otherTicket = ticketsByUserId.get(senderIdStr) ?? null;
+
+      return {
+        ...e,
+        type: this.computeType({ authTicket, otherTicket }),
+        currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+      };
+    });
   }
 
   static async incrementListen(terminalEchoId: string) {

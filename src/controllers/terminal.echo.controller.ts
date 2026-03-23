@@ -79,6 +79,22 @@ export default class TerminalEchoCtrl {
     }
   }
 
+  static async getAll(req: Request, res: Response) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const echoes = await TerminalEchoSvc.findAllWithType(userId);
+      return res.json({ data: echoes });
+    } catch (err: any) {
+      return res
+        .status(500)
+        .json({ message: err.message || "Server error." });
+    }
+  }
+
   static async incrementListen(req: Request, res: Response) {
     const { id } = req.params;
 

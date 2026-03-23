@@ -7,6 +7,77 @@ export default class TerminalEchoRepo {
     return getDB().collection("terminal.echo");
   }
 
+  /**
+   * Returns all terminal echoes sorted latest -> oldest.
+   * Includes file + user lookup and replyCount like airport search.
+   */
+  static async findAllWithFile() {
+    return this.collection()
+      .aggregate([
+        { $sort: { createdAt: -1, _id: -1 } },
+        {
+          $lookup: {
+            from: "file",
+            localField: "fileId",
+            foreignField: "_id",
+            as: "file",
+          },
+        },
+        {
+          $unwind: {
+            path: "$file",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "user",
+            let: { senderId: "$senderId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$_id", "$$senderId"] },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  username: 1,
+                  gender: 1,
+                },
+              },
+            ],
+            as: "user",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "terminal.echo.reply",
+            localField: "_id",
+            foreignField: "terminalEchoId",
+            as: "replies",
+          },
+        },
+        {
+          $addFields: {
+            replyCount: { $size: "$replies" },
+          },
+        },
+        {
+          $project: {
+            replies: 0,
+          },
+        },
+      ])
+      .toArray();
+  }
+
   static async createForAudio(
     senderId: string | ObjectId,
     fileId: string | ObjectId,
