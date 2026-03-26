@@ -4,12 +4,12 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationSvc from "../services/ps.conversation.service";
 import { io } from "../app";
+import { ERROR_MESSAGE } from "../const";
 
 export default class PsConversationMessageCtrl {
 
   static async send(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.userId as string;
 
     const { fileUrl, fileName } = req.body;
     const conversationId = req.params.conversationId as string;
@@ -24,10 +24,13 @@ export default class PsConversationMessageCtrl {
     if (error) return res.status(400).json({ message: error.message });
 
     try {
-      const senderId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+      const senderId = FlightTicketRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
       const psConversationId = PsConversationRepo.parseObjectId(
         value.conversationId,
-        "Invalid conversation id."
+        ERROR_MESSAGE.INVALID_CONVERSATION_ID
       );
 
       const convo = await PsConversationRepo.collection().findOne({
@@ -63,8 +66,7 @@ export default class PsConversationMessageCtrl {
   }
 
   static async list(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.userId as string;
 
     const conversationId = req.params.conversationId as string;
     const { limit } = req.query;
@@ -81,10 +83,13 @@ export default class PsConversationMessageCtrl {
     if (error) return res.status(400).json({ message: error.message });
 
     try {
-      const requesterId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+      const requesterId = FlightTicketRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
       const psConversationId = PsConversationRepo.parseObjectId(
         value.conversationId,
-        "Invalid conversation id."
+        ERROR_MESSAGE.INVALID_CONVERSATION_ID
       );
 
       const convo = await PsConversationRepo.collection().findOne({
@@ -108,8 +113,7 @@ export default class PsConversationMessageCtrl {
   }
 
   static async updateReaction(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.userId as string;
 
     const conversationId = req.params.conversationId as string;
     const messageId = req.params.messageId as string;
@@ -133,11 +137,11 @@ export default class PsConversationMessageCtrl {
     try {
       const requesterId = FlightTicketRepo.parseObjectId(
         userId,
-        "Invalid user id."
+        ERROR_MESSAGE.INVALID_USER_ID
       );
       const psConversationId = PsConversationRepo.parseObjectId(
         value.conversationId,
-        "Invalid conversation id."
+        ERROR_MESSAGE.INVALID_CONVERSATION_ID
       );
 
       const convo = await PsConversationRepo.collection().findOne({

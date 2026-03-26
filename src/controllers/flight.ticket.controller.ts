@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import Joi from "joi";
 import FlightTicketSvc from "../services/flight.ticket.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
+import { ERROR_MESSAGE } from "../const";
 
 export default class FlightTicketCtrl {
   // POST /flight-ticket
   static async create(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.userId as string;
 
     const {
       flightNumber,
@@ -43,7 +43,7 @@ export default class FlightTicketCtrl {
     try {
       const userObjectId = FlightTicketRepo.parseObjectId(
         userId,
-        "Invalid user id."
+        ERROR_MESSAGE.INVALID_USER_ID
       );
 
       const result = await FlightTicketSvc.create({

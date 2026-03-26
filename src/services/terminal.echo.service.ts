@@ -3,6 +3,7 @@ import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
+import {TERMINAL_ECHO_TYPE, type TerminalEchoType} from "../const";
 
 export default class TerminalEchoSvc {
   private static dateKey(d?: Date) {
@@ -16,14 +17,11 @@ export default class TerminalEchoSvc {
     authTicket: any;
     otherTicket: any;
   }):
-    | "parallel_soul"
-    | "destination_thread"
-    | "baton_touch"
-    | "terminal_echo" {
+    TerminalEchoType {
     const { authTicket, otherTicket } = params;
 
-    if (!authTicket) return "terminal_echo";
-    if (!otherTicket) return "terminal_echo";
+    if (!authTicket) return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
+    if (!otherTicket) return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
 
     const authDeparture = this.dateKey(authTicket.departureDateTime);
     const authReturn = this.dateKey(authTicket.returnDateTime);
@@ -47,12 +45,12 @@ export default class TerminalEchoSvc {
       authToCity === otherToCity &&
       authDeparture === otherDeparture
     ) {
-      return "parallel_soul";
+      return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
     // destination_thread: same toCity
     if (authToCity && authToCity === otherToCity) {
-      return "destination_thread";
+      return TERMINAL_ECHO_TYPE.DESTINATION_THREAD;
     }
 
     // baton_touch:
@@ -64,10 +62,10 @@ export default class TerminalEchoSvc {
       authToCity === otherFromCity &&
       authFromCity === otherToCity
     ) {
-      return "baton_touch";
+      return TERMINAL_ECHO_TYPE.BATON_TOUCH;
     }
 
-    return "terminal_echo";
+    return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
   }
 
   static async createTerminalEcho(params: {
@@ -153,7 +151,7 @@ export default class TerminalEchoSvc {
     if (!authTicket) {
       return echoes.map((e: any) => ({
         ...e,
-        type: "terminal_echo",
+        type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
         currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
       }));
     }
@@ -179,7 +177,7 @@ export default class TerminalEchoSvc {
       if (!senderIdStr || senderIdStr === authUserObjectId.toString()) {
         return {
           ...e,
-          type: "terminal_echo",
+          type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
           currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
         };
       }

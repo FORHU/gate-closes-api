@@ -5,10 +5,7 @@ import TerminalEchoReplySvc from "../services/terminal.echo.reply.service";
 export default class TerminalEchoReplyCtrl {
   // POST /terminal-echo-reply
   static async create(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     const { terminalEchoId, fileUrl, fileName } = req.body;
 
@@ -97,10 +94,7 @@ export default class TerminalEchoReplyCtrl {
 
   // PATCH /terminal-echo-reply/:id/reaction
   static async updateReaction(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     const { id } = req.params;
     const { reaction } = req.body;

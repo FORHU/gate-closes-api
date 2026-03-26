@@ -4,10 +4,7 @@ import TerminalEchoSvc from "../services/terminal.echo.service";
 
 export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     const { fileUrl, fileName, textMessage, location, airportName } = req.body;
 
@@ -80,10 +77,7 @@ export default class TerminalEchoCtrl {
   }
 
   static async getAll(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     try {
       const echoes = await TerminalEchoSvc.findAllWithType(userId);
@@ -118,10 +112,7 @@ export default class TerminalEchoCtrl {
   }
 
   static async updateReaction(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     const { id } = req.params;
     const { reaction } = req.body;

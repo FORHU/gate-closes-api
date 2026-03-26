@@ -5,10 +5,7 @@ import S3Svc from "../services/s3.service";
 
 export default class S3Controller {
   static async getPutUrl(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     const { originalFilename, contentType, sizeOfFile } = req.body;
 
@@ -44,10 +41,7 @@ export default class S3Controller {
   }
 
   static async getGetUrl(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
 
     const { key } = req.query;
 

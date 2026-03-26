@@ -3,12 +3,12 @@ import Joi from "joi";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationSvc from "../services/ps.conversation.service";
+import { ERROR_MESSAGE } from "../const";
 
 export default class PsConversationCtrl {
   
   static async createOrGetDm(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.userId as string;
 
     const { otherUserId } = req.body;
 
@@ -20,10 +20,13 @@ export default class PsConversationCtrl {
     if (error) return res.status(400).json({ message: error.message });
 
     try {
-      const requesterId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+      const requesterId = FlightTicketRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
       const otherId = PsConversationRepo.parseObjectId(
         value.otherUserId,
-        "Invalid other user id."
+        ERROR_MESSAGE.INVALID_OTHER_USER_ID
       );
 
       const convo = await PsConversationSvc.createOrGetDm({
@@ -38,11 +41,13 @@ export default class PsConversationCtrl {
   }
 
   static async listMyConversations(req: Request, res: Response) {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.userId as string;
 
     try {
-      const requesterId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+      const requesterId = FlightTicketRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
       const convos = await PsConversationSvc.listMyConversations(requesterId);
       return res.json({ data: convos });
     } catch (err: any) {

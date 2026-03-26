@@ -328,10 +328,7 @@ export default class AuthController {
 
   /** Change password (authenticated). Body: currentPassword, newPassword, confirmPassword. */
   static async changePassword(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
     const { currentPassword, newPassword, confirmPassword } = req.body;
     const schema = Joi.object({
       currentPassword: Joi.string().required(),
@@ -370,10 +367,7 @@ export default class AuthController {
 
   /** Change username (authenticated). Body: username (format e.g. A123.45). */
   static async changeUsername(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
     const { username } = req.body;
     const schema = Joi.object({
       username: Joi.string().pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/).required(),
@@ -399,10 +393,7 @@ export default class AuthController {
 
   /** Get current user (requires valid session). */
   static async me(req: Request, res: Response) {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const userId = req.user?.userId as string;
     try {
       const user = await UserRepo.findById(userId);
       if (!user) {
