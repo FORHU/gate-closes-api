@@ -58,17 +58,11 @@ export default class TerminalEchoSvc {
     // baton_touch:
     // auth.toCity == other.fromCity
     // auth.fromCity == other.toCity
-    // auth.departureDate == other.returnDate
-    // auth.returnDate == other.departureDate
     if (
       authFromCity &&
       authToCity &&
-      authDeparture &&
-      authReturn &&
       authToCity === otherFromCity &&
-      authFromCity === otherToCity &&
-      authDeparture === otherReturn &&
-      authReturn === otherDeparture
+      authFromCity === otherToCity
     ) {
       return "baton_touch";
     }
