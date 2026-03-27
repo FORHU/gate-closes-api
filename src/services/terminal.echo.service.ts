@@ -6,6 +6,41 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import {TERMINAL_ECHO_TYPE, type TerminalEchoType} from "../const";
 
 export default class TerminalEchoSvc {
+  private static isPointGeometry(location: any): location is {
+    type: "Point";
+    coordinates: [number, number];
+  } {
+    return (
+      location?.type === "Point" &&
+      Array.isArray(location?.coordinates) &&
+      location.coordinates.length === 2 &&
+      typeof location.coordinates[0] === "number" &&
+      typeof location.coordinates[1] === "number"
+    );
+  }
+
+  static toFeatureCollection(echoes: any[]) {
+    const features = (echoes ?? [])
+      .filter((echo) => this.isPointGeometry(echo?.location))
+      .map((echo) => {
+        const { location, _id, ...rest } = echo;
+        return {
+          type: "Feature" as const,
+          id: _id?.toString?.() ?? String(_id),
+          geometry: location,
+          properties: {
+            _id,
+            ...rest,
+          },
+        };
+      });
+
+    return {
+      type: "FeatureCollection" as const,
+      features,
+    };
+  }
+
   private static dateKey(d?: Date) {
     if (!d) return "";
     const dd = d instanceof Date ? d : new Date(d as any);
@@ -190,6 +225,20 @@ export default class TerminalEchoSvc {
         currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
       };
     });
+  }
+
+  static async findAllWithTypeAsGeoJson(userId: string) {
+    const echoes = await this.findAllWithType(userId);
+    return this.toFeatureCollection(echoes);
+  }
+
+  static async findOneWithType(userId: string, terminalEchoId: string) {
+    const echoes = await this.findAllWithType(userId);
+    return (
+      echoes.find(
+        (echo: any) => echo?._id?.toString?.() === terminalEchoId
+      ) ?? null
+    );
   }
 
   static async incrementListen(terminalEchoId: string) {

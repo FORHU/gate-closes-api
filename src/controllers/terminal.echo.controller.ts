@@ -76,12 +76,38 @@ export default class TerminalEchoCtrl {
     }
   }
 
-  static async getAll(req: Request, res: Response) {
+  static async getMap(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
     try {
-      const echoes = await TerminalEchoSvc.findAllWithType(userId);
-      return res.json({ data: echoes });
+      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId);
+      return res.json({ data: geojson });
+    } catch (err: any) {
+      return res
+        .status(500)
+        .json({ message: err.message || "Server error." });
+    }
+  }
+
+  static async getById(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { id } = req.params;
+
+    const schema = Joi.object({
+      id: Joi.string().hex().length(24).required(),
+    });
+
+    const { error, value } = schema.validate({ id });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const echo = await TerminalEchoSvc.findOneWithType(userId, value.id);
+      if (!echo) {
+        return res.status(404).json({ message: "Terminal echo not found." });
+      }
+      return res.json({ data: echo });
     } catch (err: any) {
       return res
         .status(500)
