@@ -107,7 +107,7 @@ export default class TerminalEchoCtrl {
       if (!echo) {
         return res.status(404).json({ message: "Terminal echo not found." });
       }
-      return res.json({ data: echo });
+      return res.json({ data: { properties: echo } });
     } catch (err: any) {
       return res
         .status(500)

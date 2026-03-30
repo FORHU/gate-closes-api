@@ -23,14 +23,13 @@ export default class TerminalEchoSvc {
     const features = (echoes ?? [])
       .filter((echo) => this.isPointGeometry(echo?.location))
       .map((echo) => {
-        const { location, _id, ...rest } = echo;
+        const { location, _id, type } = echo;
         return {
           type: "Feature" as const,
           id: _id?.toString?.() ?? String(_id),
           geometry: location,
           properties: {
-            _id,
-            ...rest,
+            type: type ?? null,
           },
         };
       });
@@ -59,9 +58,7 @@ export default class TerminalEchoSvc {
     if (!otherTicket) return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
 
     const authDeparture = this.dateKey(authTicket.departureDateTime);
-    const authReturn = this.dateKey(authTicket.returnDateTime);
     const otherDeparture = this.dateKey(otherTicket.departureDateTime);
-    const otherReturn = this.dateKey(otherTicket.returnDateTime);
 
     const authFlightNumber = (authTicket.flightNumber ?? "").trim();
     const authFromCity = (authTicket.fromCity ?? "").trim();
