@@ -60,5 +60,33 @@ export default class FlightTicketCtrl {
       return res.status(500).json({ message: err?.message ?? err });
     }
   }
+
+  // GET /flight-ticket
+  static async getByUserId(req: Request, res: Response) {
+    const userId = req.user?.userId as string | undefined;
+
+    const schema = Joi.object({
+      userId: Joi.string().hex().length(24).required(),
+    });
+
+    const { error, value } = schema.validate({ userId });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const userObjectId = FlightTicketRepo.parseObjectId(
+        value.userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
+
+      const ticket = await FlightTicketSvc.getByUserId(userObjectId);
+      return res.json({ data: ticket });
+    } catch (err: any) {
+      const message = err?.message ?? err;
+      const status = message === ERROR_MESSAGE.INVALID_USER_ID ? 400 : 500;
+      return res.status(status).json({ message });
+    }
+  }
 }
 
