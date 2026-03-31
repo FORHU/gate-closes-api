@@ -89,6 +89,39 @@ export default class AirportCtrl {
     }
   }
 
+  // GET /airport/check-inside-airport-boundary?lat=14.5995&lng=120.9842
+  static async checkInsideAirportByBoundary(req: Request, res: Response) {
+    const { lat, lng } = req.query;
+
+    const schema = Joi.object({
+      lat: Joi.number().min(-90).max(90).required(),
+      lng: Joi.number().min(-180).max(180).required(),
+    });
+
+    const { error } = schema.validate({
+      lat: Number(lat),
+      lng: Number(lng),
+    });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const result = await AirportSvc.checkInsideAirportByBoundary({
+        lat: Number(lat),
+        lng: Number(lng),
+      });
+
+      if (!result) {
+        return res.status(404).json({ message: "No airport boundary contains this point." });
+      }
+
+      return res.json({ data: result });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
+
   // GET /airport/check-inside-specific?airportName=NAIA%20Terminal%201&lat=14.5995&lng=120.9842
   static async checkInsideSpecificAirport(req: Request, res: Response) {
     const { airportName, lat, lng } = req.query;

@@ -263,5 +263,32 @@ export default class AirportRepo {
       )
       .toArray();
   }
+
+  static async findInsideBoundary(params: { lat: number; lng: number }) {
+    const { lat, lng } = params;
+
+    return this.collection().findOne(
+      {
+        boundary: {
+          $geoIntersects: {
+            $geometry: {
+              type: "Point",
+              coordinates: [lng, lat],
+            },
+          },
+        },
+      },
+      {
+        projection: {
+          _id: 1,
+          iata: 1,
+          icao: 1,
+          airport: 1,
+          radiusKm: 1,
+          location: 1,
+        },
+      }
+    );
+  }
 }
 

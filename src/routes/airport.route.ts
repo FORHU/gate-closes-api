@@ -10,6 +10,8 @@ router.get("/nearby", AirportCtrl.findNearby);
 
 router.get("/check-inside-airport", AirportCtrl.checkInsideAirport);
 
+router.get("/check-inside-airport-boundary", AirportCtrl.checkInsideAirportByBoundary);
+
 router.get("/check-inside-specific-airport", AirportCtrl.checkInsideSpecificAirport);
 
 router.post("/boundary/sync", AirportCtrl.syncBoundaries);

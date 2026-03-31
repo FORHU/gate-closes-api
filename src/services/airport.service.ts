@@ -102,6 +102,23 @@ export default class AirportSvc {
     return AirportRepo.findNearestWithDistance(params);
   }
 
+  static async checkInsideAirportByBoundary(params: {
+    lat: number;
+    lng: number;
+  }) {
+    const { lat, lng } = params;
+    const airport: any = await AirportRepo.findInsideBoundary({ lat, lng });
+    if (!airport) return null;
+
+    return {
+      _id: airport._id,
+      iata: airport.iata ?? null,
+      airport: airport.airport ?? null,
+      icao: airport.icao ?? null,
+      insideBoundary: true,
+    };
+  }
+
   static async checkInsideSpecificAirport(params: {lat: number; lng: number; airportName: string;}) {
     return AirportRepo.findNearestForAirport(params);
   }
