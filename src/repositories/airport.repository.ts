@@ -111,6 +111,7 @@ export default class AirportRepo {
     if (airport.radarboxUrl !== undefined) setFields.radarboxUrl = airport.radarboxUrl;
     if (airport.flightawareUrl !== undefined) setFields.flightawareUrl = airport.flightawareUrl;
     if (airport.location !== undefined) setFields.location = airport.location;
+    if (airport.boundary !== undefined) setFields.boundary = airport.boundary;
     if (airport.radiusKm !== undefined) setFields.radiusKm = airport.radiusKm;
 
     return this.collection().updateOne({ _id: airport._id }, { $set: setFields });
@@ -215,6 +216,52 @@ export default class AirportRepo {
       .toArray();
 
     return results[0] ?? null;
+  }
+
+  static async findForBoundarySync() {
+    const filter: any = {
+      location: { $exists: true },
+      radiusKm: { $gt: 0 },
+    };
+
+    return this.collection()
+      .find(filter, {
+        projection: {
+          _id: 1,
+          location: 1,
+          radiusKm: 1,
+          boundary: 1,
+        },
+      })
+      .toArray();
+  }
+
+  static async updateBoundaryById(
+    _id: ObjectId,
+    boundary: { type: "Polygon"; coordinates: number[][][] }
+  ) {
+    return this.collection().updateOne(
+      { _id },
+      { $set: { boundary, updatedAt: new Date() } }
+    );
+  }
+
+  static async findAllWithBoundary() {
+    return this.collection()
+      .find(
+        {
+          boundary: { $exists: true },
+        },
+        {
+          projection: {
+            _id: 1,
+            boundary: 1,
+            airport: 1,
+            countryCode: 1,
+          },
+        }
+      )
+      .toArray();
   }
 }
 

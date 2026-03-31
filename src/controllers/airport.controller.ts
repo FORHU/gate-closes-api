@@ -120,4 +120,47 @@ export default class AirportCtrl {
       return res.status(500).json({ message: err?.message ?? err });
     }
   }
+
+  // POST /airport/boundary/sync
+  static async syncBoundaries(req: Request, res: Response) {
+    const { force } = req.body ?? {};
+
+    const schema = Joi.object({
+      force: Joi.boolean().optional(),
+    });
+
+    const { error, value } = schema.validate(
+      { force },
+      { convert: true }
+    );
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const result = await AirportSvc.syncBoundaries({
+        force: value.force ?? false,
+      });
+
+      return res.json({
+        message: "Airport boundary sync completed.",
+        data: result,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
+
+  // GET /airport/geojson
+  static async getAllAsGeoJson(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+
+    try {
+      const geojson = await AirportSvc.getAllAsGeoJson();
+      return res.json({ data: geojson });
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
 }
