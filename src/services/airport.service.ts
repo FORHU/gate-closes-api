@@ -7,6 +7,7 @@ import * as turf from "@turf/turf";
 import { ObjectId } from "mongodb";
 import AirportRepo from "../repositories/airport.repository";
 import { TAirport } from "../models/airport.model";
+import RedisUtil from "../utils/redis.util";
 
 type RawAirport = {
   iata?: string;
@@ -178,6 +179,10 @@ export default class AirportSvc {
   }
 
   static async getAllAsGeoJson() {
+    const cacheKey = "airport:geojson:v1";
+    const cached = await RedisUtil.getJson<any>(cacheKey);
+    if (cached) return cached;
+
     const airports = await AirportRepo.findAllWithBoundary();
 
     const features = (airports as any[])
@@ -196,10 +201,13 @@ export default class AirportSvc {
         },
       }));
 
-    return {
+    const geojson = {
       type: "FeatureCollection" as const,
       features,
     };
+    
+    await RedisUtil.setJson(cacheKey, geojson, { ttlSeconds: 60 * 10 });
+    return geojson;
   }
 
   private static toStringOrNull(
