@@ -3,6 +3,8 @@ const {
   getAirportByIcao,
   findNearbyAirports,
 } = require("airport-data-js");
+import * as turf from "@turf/turf";
+import { ObjectId } from "mongodb";
 import AirportRepo from "../repositories/airport.repository";
 import { TAirport } from "../models/airport.model";
 
@@ -27,6 +29,22 @@ type RawAirport = {
 };
 
 export default class AirportSvc {
+  private static buildBoundaryFromLocationAndRadius(params: {
+    location: { type: "Point"; coordinates: [number, number] };
+    radiusKm: number;
+  }) {
+    const { location, radiusKm } = params;
+    const [lng, lat] = location.coordinates;
+
+    const center = turf.point([lng, lat]);
+    const circle = turf.circle(center, radiusKm, {
+      units: "kilometers",
+      steps: 32,
+    });
+
+    return circle.geometry as { type: "Polygon"; coordinates: number[][][] };
+  }
+
   // Fetch nearby airports from airport-data-js, persist them, and return mapped records
   static async findNearbyAndStore(
     lat: number,
@@ -84,12 +102,104 @@ export default class AirportSvc {
     return AirportRepo.findNearestWithDistance(params);
   }
 
+  static async checkInsideAirportByBoundary(params: {
+    lat: number;
+    lng: number;
+  }) {
+    const { lat, lng } = params;
+    const airport: any = await AirportRepo.findInsideBoundary({ lat, lng });
+    if (!airport) return null;
+
+    return {
+      _id: airport._id,
+      iata: airport.iata ?? null,
+      airport: airport.airport ?? null,
+      icao: airport.icao ?? null,
+      insideBoundary: true,
+    };
+  }
+
   static async checkInsideSpecificAirport(params: {lat: number; lng: number; airportName: string;}) {
     return AirportRepo.findNearestForAirport(params);
   }
 
   static async search(q: string, limit: number): Promise<TAirport[]> {
     return AirportRepo.searchByText(q, limit) as Promise<TAirport[]>;
+  }
+
+  static async syncBoundaries(params?: { force?: boolean }) {
+    const airports = await AirportRepo.findForBoundarySync();
+
+    const force = Boolean(params?.force);
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const airport of airports as any[]) {
+      const hasBoundary =
+        airport?.boundary?.type === "Polygon" &&
+        Array.isArray(airport?.boundary?.coordinates);
+
+      if (hasBoundary && !force) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const location = airport?.location;
+      const radiusKm = Number(airport?.radiusKm);
+
+      if (
+        location?.type !== "Point" ||
+        !Array.isArray(location?.coordinates) ||
+        location.coordinates.length !== 2 ||
+        Number.isNaN(radiusKm) ||
+        radiusKm <= 0
+      ) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const boundary = this.buildBoundaryFromLocationAndRadius({
+        location: {
+          type: "Point",
+          coordinates: [Number(location.coordinates[0]), Number(location.coordinates[1])],
+        },
+        radiusKm,
+      });
+
+      await AirportRepo.updateBoundaryById(airport._id as ObjectId, boundary);
+      updatedCount += 1;
+    }
+
+    return {
+      updatedCount,
+      skippedCount,
+      total: airports.length,
+    };
+  }
+
+  static async getAllAsGeoJson() {
+    const airports = await AirportRepo.findAllWithBoundary();
+
+    const features = (airports as any[])
+      .filter(
+        (airport) =>
+          airport?.boundary?.type === "Polygon" &&
+          Array.isArray(airport?.boundary?.coordinates)
+      )
+      .map((airport) => ({
+        type: "Feature" as const,
+        id: airport._id?.toString?.() ?? String(airport._id),
+        geometry: airport.boundary,
+        properties: {
+          airport: airport.airport ?? null,
+          country_code: airport.countryCode ?? null,
+        },
+      }));
+
+    return {
+      type: "FeatureCollection" as const,
+      features,
+    };
   }
 
   private static toStringOrNull(
@@ -130,6 +240,14 @@ export default class AirportSvc {
 
     const radiusKm = this.inferRadiusKm(a.type, runwayLength ?? undefined);
 
+    const boundary =
+      location && radiusKm && radiusKm > 0
+        ? this.buildBoundaryFromLocationAndRadius({
+            location,
+            radiusKm,
+          })
+        : undefined;
+
     const airport: TAirport = {
       iata: a.iata
         ? this.toStringOrNull(a.iata.toUpperCase()) ?? null
@@ -151,6 +269,7 @@ export default class AirportSvc {
       radarboxUrl: this.toStringOrNull(a.radarbox_url),
       flightawareUrl: this.toStringOrNull(a.flightaware_url),
       location,
+      boundary,
       radiusKm,
     };
 

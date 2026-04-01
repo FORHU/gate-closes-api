@@ -18,6 +18,7 @@ export type TAirport = {
   radarboxUrl?: string | null;
   flightawareUrl?: string | null;
   location?: { type: "Point"; coordinates: [number, number] };
+  boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -41,6 +42,7 @@ export type TAirportUpdateOptions = {
   radarboxUrl?: string | null;
   flightawareUrl?: string | null;
   location?: { type: "Point"; coordinates: [number, number] };
+  boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
 };
 
@@ -62,6 +64,7 @@ export class MAirport implements Partial<TAirport> {
   radarboxUrl?: string | null;
   flightawareUrl?: string | null;
   location?: { type: "Point"; coordinates: [number, number] };
+  boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -84,6 +87,7 @@ export class MAirport implements Partial<TAirport> {
     radarboxUrl,
     flightawareUrl,
     location,
+    boundary,
     radiusKm,
     createdAt = new Date(),
     updatedAt,
@@ -105,6 +109,7 @@ export class MAirport implements Partial<TAirport> {
     this.radarboxUrl = radarboxUrl;
     this.flightawareUrl = flightawareUrl;
     this.location = location;
+    this.boundary = boundary;
     this.radiusKm = radiusKm;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
