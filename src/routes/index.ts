@@ -6,6 +6,7 @@ import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
 import flightTicketRoutes from "./flight.ticket.route";
 import psRoutes from "./ps.route";
+import dtRoutes from "./dt.route";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.use("/terminal-echo-reply", sessionMiddleware, terminalEchoReplyRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
 router.use("/ps", sessionMiddleware, psRoutes);
+router.use("/dt", sessionMiddleware, dtRoutes);
 
 export default router;
