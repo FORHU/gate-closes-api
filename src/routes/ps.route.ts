@@ -3,11 +3,12 @@ const router = express.Router();
 
 import PsConversationCtrl from "../controllers/ps.conversation.controller";
 import PsConversationMessageCtrl from "../controllers/ps.conversation.message.controller";
+import PsConversationMessageReactionCtrl from "../controllers/ps.conversation.message.reaction.controller";
 
 router.get("/conversations", PsConversationCtrl.listMyConversations);
 router.post("/conversations/dm", PsConversationCtrl.createOrGetDm);
 router.get("/conversations/:conversationId/messages", PsConversationMessageCtrl.list);
 router.post("/conversations/:conversationId/messages", PsConversationMessageCtrl.send);
-router.patch("/conversations/:conversationId/messages/:messageId/reaction", PsConversationMessageCtrl.updateReaction);
+router.patch("/conversations/:conversationId/messages/:messageId/reaction", PsConversationMessageReactionCtrl.updateReaction);
 
 export default router;
