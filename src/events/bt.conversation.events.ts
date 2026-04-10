@@ -1,10 +1,10 @@
 import { ObjectId } from "mongodb";
 import { Server } from "socket.io";
 import { verifyAccessToken } from "../utils/jwt";
-import DtConversationRepo from "../repositories/dt.conversation.repository";
+import BtConversationRepo from "../repositories/bt.conversation.repository";
 
 export default (io: Server) => {
-  const nsp = io.of("/dt");
+  const nsp = io.of("/bt");
 
   nsp.use((socket, next) => {
     try {
@@ -28,20 +28,20 @@ export default (io: Server) => {
         try {
           const userId = socket.data.userId as string | undefined;
           if (!userId) {
-            console.warn("[DT] join_conversation unauthorized");
+            console.warn("[Bt] join_conversation unauthorized");
             return;
           }
 
-          const dtUserId = new ObjectId(userId);
-          const dtConversationId = new ObjectId(conversationId);
+          const btUserId = new ObjectId(userId);
+          const btConversationId = new ObjectId(conversationId);
 
-          const convo = await DtConversationRepo.collection().findOne({
-            _id: dtConversationId,
-            participants: dtUserId,
+          const convo = await BtConversationRepo.collection().findOne({
+            _id: btConversationId,
+            participants: btUserId,
           });
 
           if (!convo) {
-            console.warn("[DT] join_conversation not a participant", {
+            console.warn("[Bt] join_conversation not a participant", {
               userId,
               conversationId,
             });
@@ -49,9 +49,9 @@ export default (io: Server) => {
           }
 
           socket.join(conversationId);
-          console.log("[DT] joined conversation", { userId, conversationId });
+          console.log("[Bt] joined conversation", { userId, conversationId });
         } catch (err) {
-          console.warn("[DT]] join_conversation invalid conversationId", {
+          console.warn("[Bt] join_conversation invalid conversationId", {
             conversationId,
             err,
           });
@@ -63,7 +63,7 @@ export default (io: Server) => {
       "leave_conversation",
       ({ conversationId }: { conversationId: string }) => {
         socket.leave(conversationId);
-        console.log("[DT] left conversation", {
+        console.log("[BT] left conversation", {
           userId: socket.data.userId,
           conversationId,
         });

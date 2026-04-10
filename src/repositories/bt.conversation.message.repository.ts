@@ -1,20 +1,20 @@
 import { ObjectId } from "mongodb";
 import { getDB } from "../utils/mongo";
-import { MDtConversationMessage, TDtConversationMessage } from "../models/dt.conversation.message.model";
+import { MBtConversationMessage, TBtConversationMessage } from "../models/bt.conversation.message.model";
 
-export default class DtConversationMessageRepo {
+export default class BtConversationMessageRepo {
     static collection() {
-        return getDB().collection("dtConversationMessage");
+        return getDB().collection("btConversationMessage");
     }
 
-    static async create (message: TDtConversationMessage) {
-        return this.collection().insertOne(new MDtConversationMessage(message));
+    static async create (message: TBtConversationMessage) {
+        return this.collection().insertOne(new MBtConversationMessage(message));
     }
 
-    static async listByConversationId(dtConversationId: ObjectId, limit: number) {
+    static async listByConversationId(btConversationId: ObjectId, limit: number) {
         return this.collection()
         .aggregate([
-            { $match: { dtConversationId } },
+            { $match: { btConversationId } },
             { $sort: { createdAt: -1 } },
             { $limit: limit },
             {
@@ -34,7 +34,7 @@ export default class DtConversationMessageRepo {
             {
                 $lookup: {
                     from: "user",
-                    let: { senderId: "$dtSenderId" },
+                    let: { senderId: "$btSenderId" },
                     pipeline: [
                         {
                             $match: { $expr: { $eq: ["$_id", "$$senderId"] } },
