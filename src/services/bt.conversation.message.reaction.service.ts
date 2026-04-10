@@ -3,6 +3,8 @@ import BtConversationMessageRepo from "../repositories/bt.conversation.message.r
 import BtConversationMessageReactionRepo from "../repositories/bt.conversation.message.reaction.repository";
 
 export default class btConversationMessageRecationSvc {
+
+    // Update reaction data when user react in one of the messages
     static async updateMessageReaction(params: {btConversationMessageId: ObjectId, reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry", userId: ObjectId}){
         const { btConversationMessageId, reaction, userId} = params;
 

@@ -5,6 +5,8 @@ import FileSvc from "./file.service";
 import { ObjectId as MongoObjectId } from "mongodb";
 
 export default class BtConversationMessageSvc {
+
+    // Create an audio message in baton touch conversation
     static async sendMessage(params: {btConversationId: ObjectId, btSenderId: ObjectId, fileUrl: string, fileName: string}) {
         const { btConversationId, btSenderId, fileUrl, fileName } = params;
 
@@ -13,6 +15,7 @@ export default class BtConversationMessageSvc {
         return BtConversationMessageRepo.create({btConversationId, btSenderId, fileId: fileCreateResult.insertedId} as any);
     }
 
+    // Get all messages in one conversation
     static async listMessages(params: {btConversationId: ObjectId, limit: number, requesterId?: ObjectId}) {
         const messages = await BtConversationMessageRepo.listByConversationId(
             params.btConversationId,

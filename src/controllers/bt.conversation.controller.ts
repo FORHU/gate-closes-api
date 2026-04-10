@@ -7,6 +7,7 @@ import { ERROR_MESSAGE } from "../const";
 
 export default class BtConversationCtrl {
 
+    // POST /conversations/dm - Create an baton touch conversation or get conversation when exist
     static async createOrGetDm( req: Request, res: Response) {
         const userId = req.user?.userId as string;
         const { otherUserId } = req.body;
@@ -30,6 +31,7 @@ export default class BtConversationCtrl {
         }
     }
 
+    // GET /conversations - List all the baton touch convo of auth user
     static async listMyConversations(req: Request, res: Response) {
         const userId = req.user?.userId as string;
 

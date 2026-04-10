@@ -8,6 +8,7 @@ import { ERROR_MESSAGE } from "../const";
 
 export default class btConversationMessageCtrl {
 
+  // POST /conversations/:conversationId/messages - Send a message in baton touch conversation
   static async send(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
@@ -63,6 +64,7 @@ export default class btConversationMessageCtrl {
     }
   }
 
+  // GET /conversations/:conversationId/messages - Get all the sended messages in a conversation
   static async list(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
