@@ -7,6 +7,7 @@ import { ERROR_MESSAGE } from "../const";
 
 export default class PsConversationCtrl {
   
+  // POST /conversations/dm - Create an parallel soul conversation or get conversation when exist
   static async createOrGetDm(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
@@ -40,6 +41,7 @@ export default class PsConversationCtrl {
     }
   }
 
+  // GET /conversations - List all the parallel soul convo of auth user
   static async listMyConversations(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 

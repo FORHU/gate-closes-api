@@ -4,6 +4,8 @@ import PsConversationMessageReactionRepo from "../repositories/ps.conversation.m
 import FileSvc from "./file.service";
 
 export default class PsConversationMessageSvc {
+
+  // Create an audio message in parallel soul conversation
   static async sendMessage(params: {
     psConversationId: ObjectId;
     psSenderId: ObjectId;
@@ -24,6 +26,7 @@ export default class PsConversationMessageSvc {
     } as any);
   }
 
+  // Get all the messages in one conversation
   static async listMessages(params: {
     psConversationId: ObjectId;
     limit: number;

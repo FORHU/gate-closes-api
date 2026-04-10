@@ -3,12 +3,15 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 
 export default class PsConversationSvc {
+
+  // Use to avoid duplication of conversation. If 2 users has conversation already then they cannot create another one
   static dmKeyForUsers(a: ObjectId, b: ObjectId) {
     const sa = a.toHexString();
     const sb = b.toHexString();
     return sa < sb ? `${sa}:${sb}` : `${sb}:${sa}`;
   }
 
+  // Create or get conversation
   static async createOrGetDm(params: {
     requesterId: ObjectId;
     otherUserId: ObjectId;
@@ -65,6 +68,7 @@ export default class PsConversationSvc {
     return createdOrFound;
   }
 
+  // List all created conversation of user
   static async listMyConversations(psUserId: ObjectId) {
     return PsConversationRepo.listByUserId(psUserId);
   }

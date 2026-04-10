@@ -3,6 +3,8 @@ import PsConversationMessageRepo from "../repositories/ps.conversation.message.r
 import PsConversationMessageReactionRepo from "../repositories/ps.conversation.message.reaction.repository";
 
 export default class PsConversationMessageReactionSvc {
+
+  // Update reaction data when user react in one of the messages
   static async updateMessageReaction(params: {
     psConversationMessageId: string;
     reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry";

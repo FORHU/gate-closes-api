@@ -8,6 +8,8 @@ import { io } from "../app";
 import { ERROR_MESSAGE } from "../const";
 
 export default class PsConversationMessageReactionCtrl {
+
+  // PATCH /conversations/:conversationId/messages/:messageId/reaction - update the reaction data when user react in one of the messages
   static async updateReaction(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
