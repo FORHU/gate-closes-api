@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Joi from "joi";
+import type { TerminalEchoMapBounds } from "../const";
 import TerminalEchoSvc from "../services/terminal.echo.service";
 
 export default class TerminalEchoCtrl {
@@ -79,8 +80,57 @@ export default class TerminalEchoCtrl {
   static async getMap(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
+    const q = req.query;
+    const boundsKeys = ["west", "south", "east", "north"] as const;
+    const anyBoundsParam = boundsKeys.some(
+      (k) => q[k] !== undefined && String(q[k]).length > 0
+    );
+
+    let mapBounds: TerminalEchoMapBounds | undefined;
+    if (anyBoundsParam) {
+      const boundsSchema = Joi.object({
+        west: Joi.number().min(-180).max(180).required(),
+        south: Joi.number().min(-90).max(90).required(),
+        east: Joi.number().min(-180).max(180).required(),
+        north: Joi.number().min(-90).max(90).required(),
+      }).custom((v, helpers) => {
+        if (v.west > v.east) {
+          return helpers.error("any.invalid");
+        }
+        if (v.south > v.north) {
+          return helpers.error("any.invalid");
+        }
+        return v;
+      });
+
+      const { error, value } = boundsSchema.validate(
+        {
+          west: q.west,
+          south: q.south,
+          east: q.east,
+          north: q.north,
+        },
+        { convert: true, abortEarly: false }
+      );
+
+      if (error) {
+        const msg = error.details[0]?.message ?? error.message;
+        return res.status(400).json({
+          message:
+            msg.includes("invalid")
+              ? "Bounds must satisfy west ≤ east and south ≤ north."
+              : msg,
+        });
+      }
+
+      mapBounds = [
+        [value.west, value.south],
+        [value.east, value.north],
+      ];
+    }
+
     try {
-      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId);
+      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson( userId, mapBounds );
       return res.json({ data: geojson });
     } catch (err: any) {
       return res

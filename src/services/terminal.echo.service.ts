@@ -3,7 +3,7 @@ import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
-import {TERMINAL_ECHO_TYPE, type TerminalEchoType} from "../const";
+import { TERMINAL_ECHO_TYPE, type TerminalEchoMapBounds, type TerminalEchoType } from "../const";
 
 export default class TerminalEchoSvc {
   private static isPointGeometry(location: any): location is {
@@ -44,7 +44,7 @@ export default class TerminalEchoSvc {
     if (!d) return "";
     const dd = d instanceof Date ? d : new Date(d as any);
     if (Number.isNaN(dd.getTime())) return "";
-    return dd.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+    return dd.toISOString().slice(0, 10);
   }
 
   private static computeType(params: {
@@ -153,24 +153,24 @@ export default class TerminalEchoSvc {
     }));
   }
 
-  static async findAllWithType(userId: string): Promise<any[]> {
-    const echoes = await TerminalEchoRepo.findAllWithFile();
+  /**
+   * Lean list for map: `_id`, `senderId`, computed `type`, and `location` (GeoJSON for features).
+   * No file join, no reactions.
+   */
+  static async findAllWithType(
+    userId: string,
+    mapBounds?: TerminalEchoMapBounds
+  ): Promise<
+    Array<{
+      _id: ObjectId;
+      senderId: ObjectId;
+      type: TerminalEchoType;
+      location: { type: "Point"; coordinates: [number, number] };
+    }>
+  > {
+    const echoes = await TerminalEchoRepo.findAllForMap(mapBounds);
     if (!echoes.length) return [];
 
-    // Reactions enrichment (same pattern as airport search)
-    const echoIds = echoes.map((e) => e._id);
-    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
-      userId,
-      echoIds
-    );
-    const byEchoId = new Map<string, string[]>();
-    for (const r of reactions as any[]) {
-      const id = (r.terminalEchoId as ObjectId).toString();
-      if (!byEchoId.has(id)) byEchoId.set(id, []);
-      byEchoId.get(id)!.push(r.reaction);
-    }
-
-    // Ticket logic
     const authUserObjectId = FlightTicketRepo.parseObjectId(
       userId,
       "Invalid user id."
@@ -179,12 +179,12 @@ export default class TerminalEchoSvc {
       authUserObjectId
     );
 
-    // If auth user has no flight ticket -> all terminal_echo
     if (!authTicket) {
       return echoes.map((e: any) => ({
-        ...e,
+        _id: e._id as ObjectId,
+        senderId: e.senderId as ObjectId,
         type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
-        currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+        location: e.location,
       }));
     }
 
@@ -203,39 +203,60 @@ export default class TerminalEchoSvc {
     );
 
     return echoes.map((e: any) => {
-      const senderIdStr = (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
+      const senderIdStr =
+        (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
 
-      // Only compare against "other users"
-      if (!senderIdStr || senderIdStr === authUserObjectId.toString()) {
-        return {
-          ...e,
-          type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
-          currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
-        };
+      let type: TerminalEchoType = TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
+      if (senderIdStr && senderIdStr !== authUserObjectId.toString()) {
+        const otherTicket = ticketsByUserId.get(senderIdStr) ?? null;
+        type = this.computeType({ authTicket, otherTicket });
       }
 
-      const otherTicket = ticketsByUserId.get(senderIdStr) ?? null;
-
       return {
-        ...e,
-        type: this.computeType({ authTicket, otherTicket }),
-        currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+        _id: e._id as ObjectId,
+        senderId: e.senderId as ObjectId,
+        type,
+        location: e.location,
       };
     });
   }
 
-  static async findAllWithTypeAsGeoJson(userId: string) {
-    const echoes = await this.findAllWithType(userId);
+  static async findAllWithTypeAsGeoJson(
+    userId: string,
+    mapBounds?: TerminalEchoMapBounds
+  ) {
+    const echoes = await this.findAllWithType(userId, mapBounds);
     return this.toFeatureCollection(echoes);
   }
 
+  /** Full echo + file/user/replyCount + computed `type` (GET by id). */
   static async findOneWithType(userId: string, terminalEchoId: string) {
-    const echoes = await this.findAllWithType(userId);
-    return (
-      echoes.find(
-        (echo: any) => echo?._id?.toString?.() === terminalEchoId
-      ) ?? null
+    const echo = await TerminalEchoRepo.findByIdWithFile(terminalEchoId);
+    if (!echo) return null;
+
+    const authUserObjectId = FlightTicketRepo.parseObjectId(
+      userId,
+      "Invalid user id."
     );
+    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
+      authUserObjectId
+    );
+
+    let type: TerminalEchoType = TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
+    if (authTicket) {
+      const senderIdStr =
+        (echo.senderId as ObjectId | undefined)?.toString?.() ?? "";
+      if (senderIdStr && senderIdStr !== authUserObjectId.toString()) {
+        const ticketsByUserId =
+          await FlightTicketRepo.findActiveOrLatestByUserIds([
+            new ObjectId(senderIdStr),
+          ]);
+        const otherTicket = ticketsByUserId.get(senderIdStr) ?? null;
+        type = this.computeType({ authTicket, otherTicket });
+      }
+    }
+
+    return { ...echo, type };
   }
 
   static async incrementListen(terminalEchoId: string) {
