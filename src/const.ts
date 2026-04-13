@@ -8,6 +8,8 @@ export const TERMINAL_ECHO_TYPE = {
 export type TerminalEchoType =
   (typeof TERMINAL_ECHO_TYPE)[keyof typeof TERMINAL_ECHO_TYPE];
 
+export type TerminalEchoMapBounds = [[number, number], [number, number]];
+
 export const ERROR_MESSAGE = {
   INVALID_USER_ID: "Invalid user id.",
   INVALID_CONVERSATION_ID: "Invalid conversation id.",

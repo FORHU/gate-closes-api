@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { MTerminalEcho, TTerminalEcho, TTerminalEchoUpdateOptions } from "../models/terminal.echo.model";
+import type { TerminalEchoMapBounds } from "../const";
 import { getDB } from "../utils/mongo";
 
 export default class TerminalEchoRepo {
@@ -8,13 +9,55 @@ export default class TerminalEchoRepo {
   }
 
   /**
-   * Returns all terminal echoes sorted latest -> oldest.
-   * Includes file + user lookup and replyCount like airport search.
+   * Terminal echoes for map: no file/user/reply joins.
+   * With bounds: geo filter, latest first, max 100. Without bounds: all, sorted latest first.
    */
-  static async findAllWithFile() {
-    return this.collection()
-      .aggregate([
+  static async findAllForMap(mapBounds?: TerminalEchoMapBounds) {
+    let pipeline: Record<string, unknown>[];
+    if (mapBounds) {
+      const [[west, south], [east, north]] = mapBounds;
+      pipeline = [
+        {
+          $match: {
+            location: {
+              $geoWithin: {
+                $geometry: {
+                  type: "Polygon",
+                  coordinates: [
+                    [
+                      [west, south],
+                      [east, south],
+                      [east, north],
+                      [west, north],
+                      [west, south],
+                    ],
+                  ],
+                },
+              },
+            },
+          },
+        },
         { $sort: { createdAt: -1, _id: -1 } },
+        { $limit: 100 },
+      ];
+    } else {
+      pipeline = [{ $sort: { createdAt: -1, _id: -1 } }];
+    }
+
+    return this.collection().aggregate(pipeline).toArray();
+  }
+
+  /** Single echo with file, user, and replyCount (detail view). */
+  static async findByIdWithFile(_id: string | ObjectId) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return Promise.reject("Invalid terminal echo id.");
+    }
+
+    const rows = await this.collection()
+      .aggregate([
+        { $match: { _id } },
         {
           $lookup: {
             from: "file",
@@ -76,130 +119,12 @@ export default class TerminalEchoRepo {
         },
       ])
       .toArray();
-  }
 
-  static async createForAudio(
-    senderId: string | ObjectId,
-    fileId: string | ObjectId,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    try {
-      senderId = new ObjectId(senderId);
-      fileId = new ObjectId(fileId);
-    } catch (error) {
-      return Promise.reject("Invalid sender id or file id.");
-    }
-    const echo: TTerminalEcho = {
-      senderId,
-      airportName,
-      fileId,
-      location: location ?? { type: "Point", coordinates: [0, 0] },
-    };
-    return this.collection().insertOne(new MTerminalEcho(echo));
-  }
-
-  static async createForTextMessage(
-    senderId: string | ObjectId,
-    textMessage: string,
-    location?: { type: "Point"; coordinates: [number, number] },
-    airportName?: string
-  ) {
-    try {
-      senderId = new ObjectId(senderId);
-    } catch (error) {
-      return Promise.reject("Invalid sender id.");
-    }
-    const echo: TTerminalEcho = {
-      senderId,
-      airportName,
-      textMessage,
-      location: location ?? { type: "Point", coordinates: [0, 0] },
-    };
-    return this.collection().insertOne(new MTerminalEcho(echo));
+    return rows[0] ?? null;
   }
 
   static async create(echo: TTerminalEcho) {
     return this.collection().insertOne(new MTerminalEcho(echo));
-  }
-
-  static async findById(_id: string | ObjectId) {
-    try {
-      _id = new ObjectId(_id);
-    } catch (error) {
-      return Promise.reject("Invalid terminal echo id.");
-    }
-    return this.collection().findOne({ _id });
-  }
-
-  static async findBySenderId(senderId: string | ObjectId) {
-    try {
-      senderId = new ObjectId(senderId);
-    } catch (error) {
-      return Promise.reject("Invalid sender id.");
-    }
-    return this.collection().find({ senderId }).toArray();
-  }
-
-  static async findLatestBySenderIdsWithFile(senderIds: ObjectId[]) {
-    if (!senderIds?.length) return [];
-
-    return this.collection()
-      .aggregate([
-        { $match: { senderId: { $in: senderIds } } },
-        { $sort: { createdAt: -1, _id: -1 } },
-        {
-          $group: {
-            _id: "$senderId",
-            echo: { $first: "$$ROOT" },
-          },
-        },
-        { $replaceRoot: { newRoot: "$echo" } },
-        {
-          $lookup: {
-            from: "file",
-            localField: "fileId",
-            foreignField: "_id",
-            as: "file",
-          },
-        },
-        {
-          $unwind: {
-            path: "$file",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-      ])
-      .toArray();
-  }
-
-  /**
-   * Returns all terminal echoes for the given senderIds (batch), sorted latest -> oldest.
-   * Includes `file` lookup like other echo queries.
-   */
-  static async findBySenderIdsWithFileSorted(senderIds: ObjectId[]) {
-    if (!senderIds?.length) return [];
-
-    return this.collection()
-      .aggregate([
-        { $match: { senderId: { $in: senderIds } } },
-        { $sort: { createdAt: -1, _id: -1 } },
-        {
-          $lookup: {
-            from: "file",
-            localField: "fileId",
-            foreignField: "_id",
-            as: "file",
-          },
-        },
-        {
-          $unwind: {
-            path: "$file",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-      ])
-      .toArray();
   }
 
   static async findByAirportNameWithFile(airportName: string) {
