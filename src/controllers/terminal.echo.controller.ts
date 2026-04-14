@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Joi from "joi";
 import type { TerminalEchoMapBounds } from "../const";
 import TerminalEchoSvc from "../services/terminal.echo.service";
+import { io } from "../app";
 
 export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
@@ -42,6 +43,12 @@ export default class TerminalEchoCtrl {
         location: value.location,
         airportName: value.airportName,
       });
+      
+      io.of("/terminal-echo").emit("terminal_echo:changed", {
+        type: "create",
+        data: result,
+      });
+
       return res.status(201).json({
         message: "Terminal echo created.",
         insertedId: result.insertedId,
