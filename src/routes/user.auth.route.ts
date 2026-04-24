@@ -26,5 +26,6 @@ router.post("/login-or-register-google", AuthController.loginOrRegisterGoogle);
 router.get("/me", sessionMiddleware, AuthController.me);
 router.post("/change-password", sessionMiddleware, AuthController.changePassword);
 router.post("/change-username", sessionMiddleware, AuthController.changeUsername);
+router.post("/update-profile", sessionMiddleware, AuthController.updateProfile);
 
 export default router;

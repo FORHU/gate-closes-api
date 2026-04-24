@@ -365,6 +365,35 @@ export default class AuthController {
     }
   }
 
+  /** Update user profile (authenticated). Body: username (optional), picture (optional). */
+  static async updateProfile(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { username, picture } = req.body;
+    
+    const schema = Joi.object({
+      username: Joi.string().pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/).optional(),
+      picture: Joi.string().optional(),
+    });
+    
+    const { error, value } = schema.validate({ username, picture });
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    try {
+      const user = await UserSvc.updateProfile(userId, value.username, value.picture);
+      return res.status(200).json({
+        message: "Profile updated successfully.",
+        user,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      const status =
+        message === "Username is already taken." ? 409 : message === "User not found." ? 404 : 500;
+      return res.status(status).json({ message });
+    }
+  }
+
   /** Change username (authenticated). Body: username (format e.g. A123.45). */
   static async changeUsername(req: Request, res: Response) {
     const userId = req.user?.userId as string;

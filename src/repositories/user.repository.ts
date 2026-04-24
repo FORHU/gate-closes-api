@@ -53,6 +53,7 @@ export default class UserRepo {
     if (user.signupStep !== undefined) setFields.signupStep = user.signupStep;
     if (user.signupCompleted !== undefined) setFields.signupCompleted = user.signupCompleted;
     if (user.isCompleteProfile !== undefined) setFields.isCompleteProfile = user.isCompleteProfile;
+    if (user.picture !== undefined) setFields.picture = user.picture;
 
     return this.collection().updateOne({ _id: user._id }, { $set: setFields });
   }
