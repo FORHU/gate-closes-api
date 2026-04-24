@@ -80,23 +80,6 @@ export default class TerminalEchoSvc {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
-    // destination_thread: same toCity
-    if (authToCity && authToCity === otherToCity) {
-      return TERMINAL_ECHO_TYPE.DESTINATION_THREAD;
-    }
-
-    // baton_touch:
-    // auth.toCity == other.fromCity
-    // auth.fromCity == other.toCity
-    if (
-      authFromCity &&
-      authToCity &&
-      authToCity === otherFromCity &&
-      authFromCity === otherToCity
-    ) {
-      return TERMINAL_ECHO_TYPE.BATON_TOUCH;
-    }
-
     return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
   }
 

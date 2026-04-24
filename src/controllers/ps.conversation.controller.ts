@@ -1,14 +1,10 @@
 import { Request, Response } from "express";
 import Joi from "joi";
-import FlightTicketRepo from "../repositories/flight.ticket.repository";
-import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationSvc from "../services/ps.conversation.service";
-import { ERROR_MESSAGE } from "../const";
 
 export default class PsConversationCtrl {
-  
-  // POST /conversations/dm - Create an parallel soul conversation or get conversation when exist
-  static async createOrGetDm(req: Request, res: Response) {
+  // POST /conversations - Create a parallel soul conversation
+  static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
     const { otherUserId } = req.body;
@@ -21,21 +17,39 @@ export default class PsConversationCtrl {
     if (error) return res.status(400).json({ message: error.message });
 
     try {
-      const requesterId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
-      const otherId = PsConversationRepo.parseObjectId(
-        value.otherUserId,
-        ERROR_MESSAGE.INVALID_OTHER_USER_ID
-      );
-
-      const convo = await PsConversationSvc.createOrGetDm({
-        requesterId,
-        otherUserId: otherId,
+      const convo = await PsConversationSvc.createDmForUsers({
+        requesterId: userId,
+        otherUserId: value.otherUserId,
       });
 
       return res.json({ data: convo });
+    } catch (err: any) {
+      if (err?.message === "Conversation already exists.") {
+        return res.status(409).json({ message: err.message });
+      }
+      return res.status(400).json({ message: err?.message ?? err });
+    }
+  }
+
+  // GET /conversations/dm/existence - Check whether conversation between users already exists
+  static async checkDmExists(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { otherUserId } = req.query;
+
+    const schema = Joi.object({
+      otherUserId: Joi.string().required(),
+    });
+
+    const { error, value } = schema.validate({ otherUserId });
+    if (error) return res.status(400).json({ message: error.message });
+
+    try {
+      const result = await PsConversationSvc.checkExistingDmForUsers({
+        requesterId: userId,
+        otherUserId: value.otherUserId,
+      });
+
+      return res.json({ data: result });
     } catch (err: any) {
       return res.status(400).json({ message: err?.message ?? err });
     }
@@ -46,13 +60,42 @@ export default class PsConversationCtrl {
     const userId = req.user?.userId as string;
 
     try {
-      const requesterId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
+      const conversations = await PsConversationSvc.listMyConversationsForUser(
+        userId
       );
-      const convos = await PsConversationSvc.listMyConversations(requesterId);
-      return res.json({ data: convos });
+      return res.json({ data: conversations });
     } catch (err: any) {
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
+
+  // GET /conversations/:conversationId - Get conversation detail with participant data
+  static async getById(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const conversationId = req.params.conversationId as string;
+
+    const schema = Joi.object({
+      conversationId: Joi.string().required(),
+    });
+    const { error, value } = schema.validate({ conversationId });
+    if (error) return res.status(400).json({ message: error.message });
+
+    try {
+      const conversation = await PsConversationSvc.getConversationDetailForUser({
+        conversationId: value.conversationId,
+        requesterId: userId,
+      });
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found." });
+      }
+
+      return res.json({
+        data: conversation,
+      });
+    } catch (err: any) {
+      if (err?.message === "Not a participant.") {
+        return res.status(403).json({ message: err.message });
+      }
       return res.status(500).json({ message: err?.message ?? err });
     }
   }

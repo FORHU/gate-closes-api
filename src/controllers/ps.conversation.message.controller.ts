@@ -3,6 +3,7 @@ import Joi from "joi";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationMessageSvc from "../services/ps.conversation.message.service";
+import PsConversationSvc from "../services/ps.conversation.service";
 import { io } from "../app";
 import { ERROR_MESSAGE } from "../const";
 
