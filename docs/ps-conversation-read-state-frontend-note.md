@@ -27,11 +27,44 @@ This means outgoing latest events are never unread for sender.
   - `lastReadAt`
   - `hasUnread: false`
 
+## Socket.IO Realtime Sync
+- Namespace: `/ps`
+- Event: `ps:conversation_read_state_updated`
+- Event payload union:
+  - `kind: "read"`
+    - `conversationId`
+    - `userId`
+    - `serverTs` (ISO ordering timestamp)
+    - `lastReadAt`
+    - `hasUnread` (always `false`)
+  - `kind: "latest_event"`
+    - `conversationId`
+    - `userId`
+    - `serverTs` (ISO ordering timestamp)
+    - `lastEventAt`
+    - `lastEventActorId`
+    - `lastEventType`
+    - `lastEventText`
+    - `hasUnread` (user-specific)
+
+### Frontend Socket Handling
+1. Subscribe to `ps:conversation_read_state_updated` on `/ps`.
+2. Keep inbox rows keyed by `conversationId`.
+3. If `kind === "read"` and `payload.userId === currentUserId`:
+   - set `lastReadAt = payload.lastReadAt`
+   - set `hasUnread = false`
+4. If `kind === "latest_event"` and `payload.userId === currentUserId`:
+   - update `lastEvent*` preview fields
+   - set `hasUnread = payload.hasUnread`
+5. Ignore payloads where `payload.userId !== currentUserId`.
+6. Keep `lastAppliedServerTs` per conversation and ignore stale socket payloads (`payload.serverTs <= lastAppliedServerTs`).
+7. On reconnect/app foreground, refetch `GET /api/ps/conversations` to reconcile.
+
 ## Frontend Migration Steps
 1. Remove local viewed-state fallback logic for PS conversation highlights.
 2. Use `hasUnread` directly to render inbox highlight.
 3. On opening a thread, call `POST /api/ps/conversations/:conversationId/read`.
-4. Refresh/reload inbox from server state after mark-read flow.
+4. Keep API refetch as reconciliation fallback after mark-read flow.
 5. Keep existing sort behavior as-is (do not sort by read status).
 
 ## Defensive Fallback (Temporary)

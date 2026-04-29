@@ -380,6 +380,45 @@ export default class PsConversationSvc {
     };
   }
 
+  static async getConversationRealtimeStateForUser(params: {
+    conversationId: ObjectId;
+    requesterId: ObjectId;
+  }) {
+    const [conversation, readState] = await Promise.all([
+      this.getConversationDetail({
+        conversationId: params.conversationId,
+        requesterId: params.requesterId,
+      }),
+      PsConversationReadStateRepo.findOneByConversationAndUser(
+        params.conversationId,
+        params.requesterId
+      ),
+    ]);
+    if (!conversation) return null;
+
+    const lastReadAt = (readState as any)?.lastReadAt ?? null;
+    const shaped = this.shapeConversationForUser(conversation, params.requesterId);
+    const hasUnread = this.computeHasUnread({
+      requesterId: params.requesterId,
+      lastEventAt: shaped.lastEventAt,
+      lastEventActorId: shaped.lastEventActorId,
+      lastReadAt,
+    });
+
+    return {
+      conversationId: String(params.conversationId),
+      userId: String(params.requesterId),
+      lastReadAt,
+      hasUnread,
+      lastEventAt: shaped.lastEventAt ?? null,
+      lastEventActorId: shaped.lastEventActorId
+        ? String(shaped.lastEventActorId)
+        : null,
+      lastEventType: shaped.lastEventType ?? null,
+      lastEventText: shaped.lastEventText ?? null,
+    };
+  }
+
   static async markConversationReadForUser(params: {
     conversationId: string;
     requesterId: string;

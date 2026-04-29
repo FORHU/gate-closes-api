@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import Joi from "joi";
 import PsConversationSvc from "../services/ps.conversation.service";
 import { io } from "../app";
+import {
+  PS_SOCKET_EVENT,
+  TPsConversationReadStateSocketPayload,
+} from "../const";
 
 export default class PsConversationCtrl {
   // POST /conversations - Create a parallel soul conversation
@@ -135,6 +139,19 @@ export default class PsConversationCtrl {
       if (!readState) {
         return res.status(404).json({ message: "Conversation not found." });
       }
+
+      const payload: TPsConversationReadStateSocketPayload = {
+        kind: "read",
+        conversationId: String(readState.conversationId),
+        userId,
+        serverTs: new Date().toISOString(),
+        lastReadAt: readState.lastReadAt,
+        hasUnread: false,
+      };
+      io
+        .of("/ps")
+        .to(`user:${userId}`)
+        .emit(PS_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
 
       return res.json({ data: readState });
     } catch (err: any) {
