@@ -2,6 +2,15 @@ import { ObjectId } from "mongodb";
 import { getDB } from "../utils/mongo";
 import { MPsConversation, TPsConversation } from "../models/ps.conversation.model";
 
+type TPsConversationLatestEventUpdate = {
+  type: "message_sent" | "message_reacted" | "message_reaction_removed";
+  at: Date;
+  actorId: ObjectId;
+  actorName: string;
+  payload: Record<string, any> | null;
+  text: string;
+};
+
 export default class PsConversationRepo {
   static collection() {
     return getDB().collection("psConversation");
@@ -45,7 +54,7 @@ export default class PsConversationRepo {
   static async listByUserId(psUserId: ObjectId) {
     return this.collection()
       .find({ participants: psUserId })
-      .sort({ updatedAt: -1, createdAt: -1 })
+      .sort({ lastEventAt: -1, updatedAt: -1, createdAt: -1 })
       .toArray();
   }
 
@@ -53,7 +62,7 @@ export default class PsConversationRepo {
     return this.collection()
       .aggregate([
         { $match: { participants: psUserId } },
-        { $sort: { updatedAt: -1, createdAt: -1 } },
+        { $sort: { lastEventAt: -1, updatedAt: -1, createdAt: -1 } },
         this.participantsLookupStage(),
       ])
       .toArray();
@@ -108,6 +117,35 @@ export default class PsConversationRepo {
 
   static async create(convo: TPsConversation) {
     return this.collection().insertOne(new MPsConversation(convo));
+  }
+
+  static async updateLatestEvent(
+    conversationId: ObjectId,
+    latestEvent: TPsConversationLatestEventUpdate
+  ) {
+    return this.collection().updateOne(
+      { _id: conversationId },
+      {
+        $set: {
+          lastEventType: latestEvent.type,
+          lastEventAt: latestEvent.at,
+          lastEventActorId: latestEvent.actorId,
+          lastEventActorName: latestEvent.actorName,
+          lastEventPayload: latestEvent.payload,
+          lastEventText: latestEvent.text,
+          updatedAt: new Date(),
+        },
+      }
+    );
+  }
+
+  static async createInboxSortIndex() {
+    return this.collection().createIndex({
+      participants: 1,
+      lastEventAt: -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
   }
 
   static parseObjectId(id: string, message: string) {

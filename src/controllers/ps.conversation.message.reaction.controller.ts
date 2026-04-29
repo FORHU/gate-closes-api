@@ -4,6 +4,7 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationMessageReactionSvc from "../services/ps.conversation.message.reaction.service";
 import PsConversationMessageSvc from "../services/ps.conversation.message.service";
+import PsConversationSvc from "../services/ps.conversation.service";
 import { io } from "../app";
 import { ERROR_MESSAGE } from "../const";
 
@@ -56,6 +57,16 @@ export default class PsConversationMessageReactionCtrl {
         userId: requesterId,
       });
 
+      await PsConversationSvc.refreshConversationLatestEvent({
+        conversationId: psConversationId,
+        type: result.eventType,
+        actorId: requesterId,
+        payload: {
+          messageId: value.messageId,
+          reaction: value.reaction,
+        },
+      });
+
       const updatedMessage = await PsConversationMessageSvc.getMessageById({
         psConversationMessageId: value.messageId,
         requesterId,
@@ -68,7 +79,7 @@ export default class PsConversationMessageReactionCtrl {
           .emit("ps:message_reaction_updated", updatedMessage);
       }
 
-      return res.json({ data: result?.value ?? null });
+      return res.json({ data: result.messageUpdate?.value ?? null });
     } catch (err: any) {
       return res.status(500).json({ message: err?.message ?? err });
     }

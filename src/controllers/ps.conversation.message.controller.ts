@@ -50,6 +50,16 @@ export default class PsConversationMessageCtrl {
         fileName: value.fileName,
       });
 
+      await PsConversationSvc.refreshConversationLatestEvent({
+        conversationId: psConversationId,
+        type: "message_sent",
+        actorId: senderId,
+        payload: {
+          messageId: result.insertedId,
+          fileName: value.fileName,
+        },
+      });
+
       // Fetch the latest message (including file and sender lookups)
       const [latestMessage] = await PsConversationMessageSvc.listMessages({
         psConversationId,

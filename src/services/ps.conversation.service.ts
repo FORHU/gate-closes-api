@@ -4,7 +4,78 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import UserRepo from "../repositories/user.repository";
 
+type TPsLatestEventType =
+  | "message_sent"
+  | "message_reacted"
+  | "message_reaction_removed";
+
+type TPsLatestEventPayload = Record<string, any> | null;
+
 export default class PsConversationSvc {
+  static safeActorName(actorName?: string | null) {
+    return actorName?.trim() || "Someone";
+  }
+
+  static latestEventTextForType(type: TPsLatestEventType, actorName: string) {
+    if (type === "message_reacted") {
+      return `${actorName} reacted to a message`;
+    }
+    if (type === "message_reaction_removed") {
+      return `${actorName} removed a reaction`;
+    }
+    return `${actorName} sent a new message`;
+  }
+
+  static buildLatestEvent(params: {
+    type: TPsLatestEventType;
+    at?: Date;
+    actorId: ObjectId;
+    actorName?: string | null;
+    payload?: TPsLatestEventPayload;
+  }) {
+    const actorName = this.safeActorName(params.actorName);
+    const normalizedPayload = params.payload ?? null;
+    const eventAt = params.at ?? new Date();
+
+    const text = this.latestEventTextForType(params.type, actorName);
+
+    return {
+      type: params.type,
+      at: eventAt,
+      actorId: params.actorId,
+      actorName,
+      payload: normalizedPayload,
+      text,
+    };
+  }
+
+  static async resolveActorName(actorId: ObjectId) {
+    const actor = await UserRepo.collection().findOne(
+      { _id: actorId },
+      { projection: { username: 1 } }
+    );
+    return this.safeActorName((actor as any)?.username ?? null);
+  }
+
+  static async refreshConversationLatestEvent(params: {
+    conversationId: ObjectId;
+    type: TPsLatestEventType;
+    actorId: ObjectId;
+    payload?: TPsLatestEventPayload;
+    at?: Date;
+  }) {
+    const actorName = await this.resolveActorName(params.actorId);
+    const latestEvent = this.buildLatestEvent({
+      type: params.type,
+      actorId: params.actorId,
+      actorName,
+      payload: params.payload,
+      at: params.at,
+    });
+    await PsConversationRepo.updateLatestEvent(params.conversationId, latestEvent);
+    return latestEvent;
+  }
+
   static shapeConversationForUser(convo: any, requesterId: ObjectId) {
     const participants = convo.participants ?? [];
     const participantsDetail = convo.participantsDetail ?? [];
@@ -33,10 +104,29 @@ export default class PsConversationSvc {
         (p: any) => String(p._id) !== String(requesterId)
       ) ?? null;
 
+    const normalizedLatestEventPayload = convo.lastEventPayload ?? null;
+    const normalizedLatestEventText =
+      convo.lastEventText?.trim() ||
+      (() => {
+        if (!convo.lastEventType) return null;
+        return this.latestEventTextForType(
+          convo.lastEventType,
+          this.safeActorName(convo.lastEventActorName ?? null)
+        );
+      })();
+
     return {
       ...convo,
       participantsDetail: normalizedParticipantsDetail,
       otherUser,
+      lastEventType: convo.lastEventType ?? null,
+      lastEventAt: convo.lastEventAt ?? null,
+      lastEventActorId: convo.lastEventActorId ?? null,
+      lastEventActorName: convo.lastEventType
+        ? this.safeActorName(convo.lastEventActorName ?? null)
+        : null,
+      lastEventPayload: normalizedLatestEventPayload,
+      lastEventText: normalizedLatestEventText,
     };
   }
 
