@@ -93,3 +93,6 @@ build/Release
 
 # Snowpack dependency directory
 web_modules/
+
+# Docs
+docs/
