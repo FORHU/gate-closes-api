@@ -68,6 +68,63 @@ export default class PsConversationMessageRepo {
       .toArray();
   }
 
+  static async findByIdWithDetails(_id: string | ObjectId) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return null;
+    }
+
+    const [message] = await this.collection()
+      .aggregate([
+        { $match: { _id } },
+        {
+          $lookup: {
+            from: "file",
+            localField: "fileId",
+            foreignField: "_id",
+            as: "file",
+          },
+        },
+        {
+          $unwind: {
+            path: "$file",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "user",
+            let: { senderId: "$psSenderId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$_id", "$$senderId"] },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  username: 1,
+                  gender: 1,
+                },
+              },
+            ],
+            as: "sender",
+          },
+        },
+        {
+          $unwind: {
+            path: "$sender",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
+      .toArray();
+
+    return message ?? null;
+  }
+
   static async updateReaction(
     _id: string | ObjectId,
     reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry",

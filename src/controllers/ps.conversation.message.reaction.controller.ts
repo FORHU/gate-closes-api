@@ -56,9 +56,8 @@ export default class PsConversationMessageReactionCtrl {
         userId: requesterId,
       });
 
-      const [updatedMessage] = await PsConversationMessageSvc.listMessages({
-        psConversationId,
-        limit: 1,
+      const updatedMessage = await PsConversationMessageSvc.getMessageById({
+        psConversationMessageId: value.messageId,
         requesterId,
       });
 

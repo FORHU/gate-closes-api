@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import PsConversationSvc from "../services/ps.conversation.service";
+import { io } from "../app";
 
 export default class PsConversationCtrl {
   // POST /conversations - Create a parallel soul conversation
@@ -21,6 +22,21 @@ export default class PsConversationCtrl {
         requesterId: userId,
         otherUserId: value.otherUserId,
       });
+
+      const participants = (convo as any)?.participants ?? [];
+      for (const participantId of participants) {
+        const participantIdStr = String(participantId);
+        const conversationForParticipant =
+          await PsConversationSvc.getConversationDetailForUser({
+            conversationId: String((convo as any)._id),
+            requesterId: participantIdStr,
+          });
+
+        io
+          .of("/ps")
+          .to(`user:${participantIdStr}`)
+          .emit("ps:new_conversation", conversationForParticipant ?? convo);
+      }
 
       return res.json({ data: convo });
     } catch (err: any) {
