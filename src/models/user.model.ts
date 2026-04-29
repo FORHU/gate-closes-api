@@ -13,6 +13,7 @@ export type TUser = {
   signupStep?: SignupStep;
   signupCompleted?: boolean;
   isCompleteProfile?: boolean;
+  picture?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -25,6 +26,7 @@ export type TUserUpdateOptions = {
   signupStep?: SignupStep;
   signupCompleted?: boolean;
   isCompleteProfile?: boolean;
+  picture?: string;
 };
 
 export class MUser implements Partial<TUser> {
@@ -35,6 +37,7 @@ export class MUser implements Partial<TUser> {
   signupStep?: SignupStep;
   signupCompleted?: boolean;
   isCompleteProfile?: boolean;
+  picture?: string;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -46,6 +49,7 @@ export class MUser implements Partial<TUser> {
     signupStep = "email_verification",
     signupCompleted = false,
     isCompleteProfile = false,
+    picture,
     createdAt = new Date(),
     updatedAt,
   } = {} as TUser) {
@@ -56,6 +60,7 @@ export class MUser implements Partial<TUser> {
     this.signupStep = signupStep;
     this.signupCompleted = signupCompleted;
     this.isCompleteProfile = isCompleteProfile;
+    this.picture = picture;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

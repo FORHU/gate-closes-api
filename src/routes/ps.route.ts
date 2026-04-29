@@ -9,6 +9,7 @@ router.get("/conversations", PsConversationCtrl.listMyConversations);
 router.post("/conversations", PsConversationCtrl.create);
 router.get("/conversations/dm/existence", PsConversationCtrl.checkDmExists);
 router.get("/conversations/:conversationId", PsConversationCtrl.getById);
+router.post("/conversations/:conversationId/read", PsConversationCtrl.markRead);
 router.get("/conversations/:conversationId/messages", PsConversationMessageCtrl.list);
 router.post("/conversations/:conversationId/messages", PsConversationMessageCtrl.send);
 router.patch("/conversations/:conversationId/messages/:messageId/reaction", PsConversationMessageReactionCtrl.updateReaction);

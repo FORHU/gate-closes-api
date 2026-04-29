@@ -22,6 +22,11 @@ export default (io: Server) => {
   });
 
   nsp.on("connection", (socket) => {
+    const userId = socket.data.userId as string | undefined;
+    if (userId) {
+      socket.join(`user:${userId}`);
+    }
+
     socket.on(
       "join_conversation",
       async ({ conversationId }: { conversationId: string }) => {

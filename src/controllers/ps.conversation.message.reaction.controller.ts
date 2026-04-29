@@ -4,8 +4,13 @@ import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationMessageReactionSvc from "../services/ps.conversation.message.reaction.service";
 import PsConversationMessageSvc from "../services/ps.conversation.message.service";
+import PsConversationSvc from "../services/ps.conversation.service";
 import { io } from "../app";
-import { ERROR_MESSAGE } from "../const";
+import {
+  ERROR_MESSAGE,
+  PS_SOCKET_EVENT,
+  TPsConversationReadStateSocketPayload,
+} from "../const";
 
 export default class PsConversationMessageReactionCtrl {
 
@@ -56,9 +61,48 @@ export default class PsConversationMessageReactionCtrl {
         userId: requesterId,
       });
 
-      const [updatedMessage] = await PsConversationMessageSvc.listMessages({
-        psConversationId,
-        limit: 1,
+      await PsConversationSvc.refreshConversationLatestEvent({
+        conversationId: psConversationId,
+        type: result.eventType,
+        actorId: requesterId,
+        payload: {
+          messageId: value.messageId,
+          reaction: value.reaction,
+        },
+      });
+
+      const participants = (convo as any)?.participants ?? [];
+      for (const participantId of participants) {
+        const participantObjectId = FlightTicketRepo.parseObjectId(
+          String(participantId),
+          ERROR_MESSAGE.INVALID_USER_ID
+        );
+        const participantRealtimeState =
+          await PsConversationSvc.getConversationRealtimeStateForUser({
+            conversationId: psConversationId,
+            requesterId: participantObjectId,
+          });
+        if (!participantRealtimeState) continue;
+
+        const payload: TPsConversationReadStateSocketPayload = {
+          kind: "latest_event",
+          conversationId: participantRealtimeState.conversationId,
+          userId: participantRealtimeState.userId,
+          serverTs: new Date().toISOString(),
+          lastEventAt: participantRealtimeState.lastEventAt,
+          lastEventActorId: participantRealtimeState.lastEventActorId,
+          lastEventType: participantRealtimeState.lastEventType,
+          lastEventText: participantRealtimeState.lastEventText,
+          hasUnread: participantRealtimeState.hasUnread,
+        };
+        io
+          .of("/ps")
+          .to(`user:${participantRealtimeState.userId}`)
+          .emit(PS_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
+      }
+
+      const updatedMessage = await PsConversationMessageSvc.getMessageById({
+        psConversationMessageId: value.messageId,
         requesterId,
       });
 
@@ -69,7 +113,7 @@ export default class PsConversationMessageReactionCtrl {
           .emit("ps:message_reaction_updated", updatedMessage);
       }
 
-      return res.json({ data: result?.value ?? null });
+      return res.json({ data: result.messageUpdate?.value ?? null });
     } catch (err: any) {
       return res.status(500).json({ message: err?.message ?? err });
     }

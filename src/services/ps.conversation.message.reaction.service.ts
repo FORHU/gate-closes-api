@@ -24,11 +24,12 @@ export default class PsConversationMessageReactionSvc {
         userId,
         reaction,
       });
-      return PsConversationMessageRepo.updateReaction(
+      const messageUpdate = await PsConversationMessageRepo.updateReaction(
         psConversationMessageId,
         reaction,
         "decrement"
       );
+      return { messageUpdate, eventType: "message_reaction_removed" as const };
     }
 
     await PsConversationMessageReactionRepo.create({
@@ -37,10 +38,11 @@ export default class PsConversationMessageReactionSvc {
       reaction,
     } as any);
 
-    return PsConversationMessageRepo.updateReaction(
+    const messageUpdate = await PsConversationMessageRepo.updateReaction(
       psConversationMessageId,
       reaction,
       "increment"
     );
+    return { messageUpdate, eventType: "message_reacted" as const };
   }
 }

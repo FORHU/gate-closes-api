@@ -63,4 +63,33 @@ export default class PsConversationMessageSvc {
       currentUserReactions: byMessageId.get(m._id.toString()) ?? [],
     }));
   }
+
+  static async getMessageById(params: {
+    psConversationMessageId: string;
+    requesterId?: ObjectId;
+  }) {
+    const message = await PsConversationMessageRepo.findByIdWithDetails(
+      params.psConversationMessageId
+    );
+    if (!message) return null;
+
+    if (!params.requesterId) {
+      return {
+        ...message,
+        currentUserReactions: message.currentUserReactions ?? [],
+      };
+    }
+
+    const reactions =
+      await PsConversationMessageReactionRepo.findByUserIdAndMessageIds(
+        params.requesterId,
+        [message._id]
+      );
+    const currentUserReactions = (reactions as any[]).map((r: any) => r.reaction);
+
+    return {
+      ...message,
+      currentUserReactions,
+    };
+  }
 }

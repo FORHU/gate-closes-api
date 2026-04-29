@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import PsConversationSvc from "../services/ps.conversation.service";
+import { io } from "../app";
+import {
+  PS_SOCKET_EVENT,
+  TPsConversationReadStateSocketPayload,
+} from "../const";
 
 export default class PsConversationCtrl {
   // POST /conversations - Create a parallel soul conversation
@@ -21,6 +26,21 @@ export default class PsConversationCtrl {
         requesterId: userId,
         otherUserId: value.otherUserId,
       });
+
+      const participants = (convo as any)?.participants ?? [];
+      for (const participantId of participants) {
+        const participantIdStr = String(participantId);
+        const conversationForParticipant =
+          await PsConversationSvc.getConversationDetailForUser({
+            conversationId: String((convo as any)._id),
+            requesterId: participantIdStr,
+          });
+
+        io
+          .of("/ps")
+          .to(`user:${participantIdStr}`)
+          .emit("ps:new_conversation", conversationForParticipant ?? convo);
+      }
 
       return res.json({ data: convo });
     } catch (err: any) {
@@ -92,6 +112,48 @@ export default class PsConversationCtrl {
       return res.json({
         data: conversation,
       });
+    } catch (err: any) {
+      if (err?.message === "Not a participant.") {
+        return res.status(403).json({ message: err.message });
+      }
+      return res.status(500).json({ message: err?.message ?? err });
+    }
+  }
+
+  // POST /conversations/:conversationId/read - Mark conversation as read by auth user
+  static async markRead(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const conversationId = req.params.conversationId as string;
+
+    const schema = Joi.object({
+      conversationId: Joi.string().required(),
+    });
+    const { error, value } = schema.validate({ conversationId });
+    if (error) return res.status(400).json({ message: error.message });
+
+    try {
+      const readState = await PsConversationSvc.markConversationReadForUser({
+        conversationId: value.conversationId,
+        requesterId: userId,
+      });
+      if (!readState) {
+        return res.status(404).json({ message: "Conversation not found." });
+      }
+
+      const payload: TPsConversationReadStateSocketPayload = {
+        kind: "read",
+        conversationId: String(readState.conversationId),
+        userId,
+        serverTs: new Date().toISOString(),
+        lastReadAt: readState.lastReadAt,
+        hasUnread: false,
+      };
+      io
+        .of("/ps")
+        .to(`user:${userId}`)
+        .emit(PS_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
+
+      return res.json({ data: readState });
     } catch (err: any) {
       if (err?.message === "Not a participant.") {
         return res.status(403).json({ message: err.message });
