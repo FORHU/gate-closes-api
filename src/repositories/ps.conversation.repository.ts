@@ -64,6 +64,55 @@ export default class PsConversationRepo {
         { $match: { participants: psUserId } },
         { $sort: { lastEventAt: -1, updatedAt: -1, createdAt: -1 } },
         this.participantsLookupStage(),
+        {
+          $lookup: {
+            from: "psConversationReadState",
+            let: { conversationId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$psConversationId", "$$conversationId"] },
+                      { $eq: ["$userId", psUserId] },
+                    ],
+                  },
+                },
+              },
+              { $project: { _id: 0, lastReadAt: 1 } },
+              { $limit: 1 },
+            ],
+            as: "readState",
+          },
+        },
+        {
+          $addFields: {
+            lastReadAt: {
+              $ifNull: [{ $arrayElemAt: ["$readState.lastReadAt", 0] }, null],
+            },
+          },
+        },
+        {
+          $addFields: {
+            hasUnread: {
+              $and: [
+                { $ne: ["$lastEventAt", null] },
+                { $ne: ["$lastEventActorId", psUserId] },
+                {
+                  $or: [
+                    { $eq: ["$lastReadAt", null] },
+                    { $gt: ["$lastEventAt", "$lastReadAt"] },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          $project: {
+            readState: 0,
+          },
+        },
       ])
       .toArray();
   }

@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { ERROR_MESSAGE } from "../const";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
+import PsConversationReadStateRepo from "../repositories/ps.conversation.read.state.repository";
 import UserRepo from "../repositories/user.repository";
 
 type TPsLatestEventType =
@@ -12,6 +13,21 @@ type TPsLatestEventType =
 type TPsLatestEventPayload = Record<string, any> | null;
 
 export default class PsConversationSvc {
+  static computeHasUnread(params: {
+    requesterId: ObjectId;
+    lastEventAt?: Date | null;
+    lastEventActorId?: ObjectId | null;
+    lastReadAt?: Date | null;
+  }) {
+    const { requesterId, lastEventAt, lastEventActorId, lastReadAt } = params;
+    if (!lastEventAt) return false;
+    if (lastEventActorId && String(lastEventActorId) === String(requesterId)) {
+      return false;
+    }
+    if (!lastReadAt) return true;
+    return new Date(lastEventAt).getTime() > new Date(lastReadAt).getTime();
+  }
+
   static safeActorName(actorName?: string | null) {
     return actorName?.trim() || "Someone";
   }
@@ -127,6 +143,16 @@ export default class PsConversationSvc {
         : null,
       lastEventPayload: normalizedLatestEventPayload,
       lastEventText: normalizedLatestEventText,
+      lastReadAt: convo.lastReadAt ?? null,
+      hasUnread:
+        typeof convo.hasUnread === "boolean"
+          ? convo.hasUnread
+          : this.computeHasUnread({
+              requesterId,
+              lastEventAt: convo.lastEventAt ?? null,
+              lastEventActorId: convo.lastEventActorId ?? null,
+              lastReadAt: convo.lastReadAt ?? null,
+            }),
     };
   }
 
@@ -328,5 +354,47 @@ export default class PsConversationSvc {
     if (!conversation) return null;
 
     return this.shapeConversationForUser(conversation, requesterObjectId);
+  }
+
+  static async markConversationRead(params: {
+    conversationId: ObjectId;
+    requesterId: ObjectId;
+  }) {
+    const conversation = await this.getConversationDetail({
+      conversationId: params.conversationId,
+      requesterId: params.requesterId,
+    });
+    if (!conversation) return null;
+
+    const targetReadAt = conversation.lastEventAt ?? new Date();
+    await PsConversationReadStateRepo.upsertLastReadAt({
+      psConversationId: params.conversationId,
+      userId: params.requesterId,
+      lastReadAt: targetReadAt,
+    });
+
+    return {
+      conversationId: params.conversationId,
+      lastReadAt: targetReadAt,
+      hasUnread: false,
+    };
+  }
+
+  static async markConversationReadForUser(params: {
+    conversationId: string;
+    requesterId: string;
+  }) {
+    const requesterObjectId = FlightTicketRepo.parseObjectId(
+      params.requesterId,
+      ERROR_MESSAGE.INVALID_USER_ID
+    );
+    const conversationObjectId = PsConversationRepo.parseObjectId(
+      params.conversationId,
+      ERROR_MESSAGE.INVALID_CONVERSATION_ID
+    );
+    return this.markConversationRead({
+      conversationId: conversationObjectId,
+      requesterId: requesterObjectId,
+    });
   }
 }

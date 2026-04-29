@@ -10,6 +10,8 @@ export type TPsConversation = {
   lastEventActorName?: string;
   lastEventPayload?: Record<string, any> | null;
   lastEventText?: string;
+  lastReadAt?: Date | null;
+  hasUnread?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -24,6 +26,8 @@ export type TPsConversationUpdateOptions = {
   lastEventActorName?: string;
   lastEventPayload?: Record<string, any> | null;
   lastEventText?: string;
+  lastReadAt?: Date | null;
+  hasUnread?: boolean;
 };
 
 export class MPsConversation implements Partial<TPsConversation> {
@@ -36,6 +40,8 @@ export class MPsConversation implements Partial<TPsConversation> {
   lastEventActorName?: string;
   lastEventPayload?: Record<string, any> | null;
   lastEventText?: string;
+  lastReadAt?: Date | null;
+  hasUnread?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -49,6 +55,8 @@ export class MPsConversation implements Partial<TPsConversation> {
     lastEventActorName,
     lastEventPayload = null,
     lastEventText,
+    lastReadAt = null,
+    hasUnread = false,
     createdAt = new Date(),
     updatedAt,
   } = {} as TPsConversation) {
@@ -61,6 +69,8 @@ export class MPsConversation implements Partial<TPsConversation> {
     this.lastEventActorName = lastEventActorName;
     this.lastEventPayload = lastEventPayload;
     this.lastEventText = lastEventText;
+    this.lastReadAt = lastReadAt;
+    this.hasUnread = hasUnread;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
