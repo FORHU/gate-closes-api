@@ -1,8 +1,4 @@
 import { ObjectId } from "mongodb";
-import {
-  MPsConversationReadState,
-  TPsConversationReadState,
-} from "../models/ps.conversation.read.state.model";
 import { getDB } from "../utils/mongo";
 
 export default class PsConversationReadStateRepo {
@@ -27,13 +23,10 @@ export default class PsConversationReadStateRepo {
           updatedAt: now,
         },
         $setOnInsert: {
-          ...new MPsConversationReadState({
-            psConversationId: params.psConversationId,
-            userId: params.userId,
-            lastReadAt: params.lastReadAt,
-            createdAt: now,
-            updatedAt: now,
-          } as TPsConversationReadState),
+          _id: new ObjectId(),
+          psConversationId: params.psConversationId,
+          userId: params.userId,
+          createdAt: now,
         },
       },
       { upsert: true }
