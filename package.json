@@ -8,7 +8,7 @@
     "lint": "eslint src/**/*.ts --fix",
     "test": "NODE_ENV=development mocha --require ts-node/register 'test/**/*.spec.ts'",
     "build": "tsc",
-    "start": "node ./dist/src/server.js",
+    "start": "node ./dist/server.js",
     "backfill:ps-latest-events": "ts-node --files ./src/scripts/backfill-ps-latest-events.ts"
   },
   "dependencies": {
