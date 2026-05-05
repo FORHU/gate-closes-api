@@ -8,7 +8,7 @@ import { sendOtpEmail } from "./send.otp.service";
 import { createAccessToken, createRefreshToken } from "../utils/jwt";
 import { GOOGLE_CLIENT_ID } from "../config";
 
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client();
 
 export default class UserAuthSvc {
 
