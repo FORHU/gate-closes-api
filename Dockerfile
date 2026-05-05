@@ -36,4 +36,4 @@ COPY --from=builder /app/types ./types
 EXPOSE 3001
 
 # Start the app
-CMD ["node", "./dist/server.js"]
+CMD ["node", "./dist/src/server.js"]
