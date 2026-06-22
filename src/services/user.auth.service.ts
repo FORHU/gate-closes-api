@@ -5,9 +5,9 @@ import UserAuthRepo from "../repositories/user.auth.repository";
 import UserRepo from "../repositories/user.repository";
 import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { sendOtpEmail } from "./send.otp.service";
+import { sendOtpResetEmail } from "./send.otp.forgot";
 import { createAccessToken, createRefreshToken } from "../utils/jwt";
 import { GOOGLE_CLIENT_ID } from "../config";
-import { sendOtpResetEmail } from "./send.otp.forgot";
 
 const googleClient = new OAuth2Client();
 
@@ -167,7 +167,7 @@ export default class UserAuthSvc {
     const codeHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + 1 * 60 * 1000);
     const resendAfter = new Date(Date.now() + 60 * 1000);
-
+    
     await VerificationCodeRepo.create({
       userId: new ObjectId(userId),
       codeHash,
