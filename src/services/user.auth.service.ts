@@ -5,7 +5,7 @@ import UserAuthRepo from "../repositories/user.auth.repository";
 import UserRepo from "../repositories/user.repository";
 import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { sendOtpEmail } from "./send.otp.service";
-import { sendOtpResetEmail } from "./send.otp.forgot"; //ggs
+import { sendOtpResetEmail } from "./send.otp.forgot"; //for forgot password
 import { createAccessToken, createRefreshToken } from "../utils/jwt";
 import { GOOGLE_CLIENT_ID } from "../config";
 
