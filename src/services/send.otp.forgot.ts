@@ -29,7 +29,7 @@ return forgorPass.sendMail({
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #000000 0%, #0d2818 50%, #00ff64 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; text-shadow: 0 0 20px rgba(0, 255, 100, 0.5);">Verification Code</h1>
+                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; text-shadow: 0 0 20px rgba(0, 255, 100, 0.5);">Reset Password Code</h1>
                   </td>
                 </tr>
                 <!-- Body -->
