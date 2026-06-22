@@ -64,4 +64,5 @@ return forgorPass.sendMail({
         </table>
       </body>
     `,
-  });
+  });}
+  
