@@ -28,8 +28,8 @@ return forgorPass.sendMail({
               <table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #1a1a1a; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 30px rgba(0, 255, 100, 0.15); border: 1px solid #2a2a2a;">
                 <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #000000 0%, #0d2818 50%, #a2ec29 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; text-shadow: 0 0 20px #00ff6480;">Verification Code</h1>
+                  <td style="background: linear-gradient(135deg, #000000 0%, #0d2818 50%, #00ff64 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; text-shadow: 0 0 20px rgba(0, 255, 100, 0.5);">Verification Code</h1>
                   </td>
                 </tr>
                 <!-- Body -->
@@ -38,8 +38,8 @@ return forgorPass.sendMail({
                     <p style="color: #a0a0a0; font-size: 16px; margin: 0 0 30px 0;">Use this code to reset your password:</p>
                     
                     <!-- OTP Code Box -->
-                    <div style="background-color: #0d0d0d; border: 2px dashed #a2ec29; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 0 20px rgba(0, 255, 100, 0.1);">
-                      <p style="margin: 0; color: #a2ec29; font-size: 42px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace; text-shadow: 0 0 10px rgba(0, 255, 100, 0.6);">${otp}</p>
+                    <div style="background-color: #0d0d0d; border: 2px dashed #00ff64; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 0 20px rgba(0, 255, 100, 0.1);">
+                      <p style="margin: 0; color: #00ff64; font-size: 42px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace; text-shadow: 0 0 10px rgba(0, 255, 100, 0.6);">${otp}</p>
                     </div>
                     
                     <p style="color: #707070; font-size: 14px; margin: 20px 0 0 0;">This code expires in <strong style="color: #00ff64;">5 minutes</strong></p>
@@ -64,4 +64,4 @@ return forgorPass.sendMail({
         </table>
       </body>
     `,
-  });}
+  });
