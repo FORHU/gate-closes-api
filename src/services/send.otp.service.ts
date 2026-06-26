@@ -1,5 +1,8 @@
 import { createTransport } from "nodemailer";
+import * as path from "path";
 import { MAILER_TRANSPORT_HOST, MAILER_TRANSPORT_PORT, MAILER_EMAIL, MAILER_PASSWORD } from "../config";
+
+
 
 export async function sendOtpEmail(to: string, otp: string) {
   const transporter = createTransport({
@@ -10,58 +13,144 @@ export async function sendOtpEmail(to: string, otp: string) {
       pass: MAILER_PASSWORD,
     },
   });
+    // Resolve PNG paths relative to the compiled file.
+    // Works in dev (src/) and prod (dist/) because we copy assets next to the JS.
+    const logoIconPath = path.join(__dirname, "../assets/gate-closes-logo.png");
+    const logoTextPath = path.join(__dirname, "../assets/gate-closes-text.png");
 
   return transporter.sendMail({
     from: `"noreply" <${MAILER_EMAIL}>`,
     to,
     subject: "Your One Time Password (OTP) from Gate Closes",
     text: `Your verification code is text: ${otp}. It expires in 5 minutes.`,
-    html: `
-     <head>
-      <meta charset="UTF-8">
-    </head>
-    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a0a;">
-        <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+    html: `<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OTP Verification</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f8f8f7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+
+  <!-- Preheader text (hidden in inbox preview) -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+    Your one-time verification code is ready. It expires in 5 minutes.
+  </div>
+
+  <!-- Outer Wrapper -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8f8f7; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+
+        <!-- Email Container -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px; background-color:#ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+
+          <!-- Header with PNG Logo -->
           <tr>
-            <td align="center">
-              <table width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #1a1a1a; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 30px rgba(0, 255, 100, 0.15); border: 1px solid #2a2a2a;">
-                <!-- Header -->
+            <td style="background-color:#000000; padding: 32px 40px; text-align:center;">
+             <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+          <tr>
+            <td style="vertical-align: middle; padding-right: 12px;">
+            <img src="cid:logo-icon-png" alt="Gate Closes Logo" style="display:block; width: 64px; height: auto; border: 0;">
+            </td>
+              <td style="vertical-align: middle;">
+                <img src="cid:logo-text-png" alt="Gate Closes Text" style="display:block; width: 220px; height: auto; border: 0;">
+              </td>
+          </tr>
+        </table>
+       </td>
+
+          </tr>
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 24px 40px 32px 40px;">
+              <!-- Greeting -->
+              <h1 style="margin: 0 0 16px 0; font-size: 26px; font-weight: 700; color: #000000; line-height: 1.3; text-align:center;">
+                Verification Code
+              </h1>
+              <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color:#333333;">
+                Hi there <br/>
+                Use this code to verify your account. This code is valid for the next <strong style="color:#000000;">5 minutes</strong>.
+              </p>
+
+              <!-- OTP Code Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 32px 0;">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #000000 0%, #0d2818 50%, #00ff64 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 26px; text-shadow: 0 0 20px rgba(0, 255, 100, 0.5);">Verification Code</h1>
-                  </td>
-                </tr>
-                <!-- Body -->
-                <tr>
-                  <td style="padding: 40px 30px; text-align: center; background-color: #1a1a1a;">
-                    <p style="color: #a0a0a0; font-size: 16px; margin: 0 0 30px 0;">Use this code to verify your account:</p>
-                    
-                    <!-- OTP Code Box -->
-                    <div style="background-color: #0d0d0d; border: 2px dashed #00ff64; border-radius: 12px; padding: 30px; margin: 20px 0; box-shadow: 0 0 20px rgba(0, 255, 100, 0.1);">
-                      <p style="margin: 0; color: #00ff64; font-size: 42px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace; text-shadow: 0 0 10px rgba(0, 255, 100, 0.6);">${otp}</p>
+                  <td align="center" style="background-color:#f8f8f7; border: 2px dashed #bbe40a; border-radius: 12px; padding: 28px 20px;">
+                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color:#000000; text-transform: uppercase; letter-spacing: 2px;">
+                      Your Verification Code
+                    </p>
+                    <div style="font-size: 42px; font-weight: 800; color:#000000; letter-spacing: 8px; font-family: 'Courier New', monospace; margin: 8px 0;">
+                      ${otp}
                     </div>
-                    
-                    <p style="color: #707070; font-size: 14px; margin: 20px 0 0 0;">This code expires in <strong style="color: #00ff64;">5 minutes</strong></p>
-                    
-                    <!-- Security Notice -->
-                    <div style="background-color: #1f1f0d; border-left: 4px solid #00ff64; padding: 16px 20px; margin-top: 30px; text-align: left; border-radius: 4px;">
-                      <p style="margin: 0; color: #00cc50; font-size: 14px;">
-                        <strong> Security:</strong> Never share this code. We'll never ask for it.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-                <!-- Footer -->
-                <tr>
-                  <td style="background-color: #0d0d0d; padding: 20px; text-align: center; border-top: 1px solid #2a2a2a;">
-                    <p style="margin: 0; color: #505050; font-size: 12px;">This is an automated message. Please do not reply.</p>
                   </td>
                 </tr>
               </table>
+
+              <!-- Security Notice -->
+              <div style="background-color: #f8f8f7; border-left: 4px solid #bbe40a; padding: 16px 20px; margin-top: 30px; text-align: left; border-radius: 4px;">
+                <p style="margin: 0; color: #000000; font-size: 14px;">
+                  <strong> Security:</strong> Never share this code. We'll never ask for it.
+                </p>
+              </div>
+
+              <!-- Warning Text -->
+              <p style="margin: 24px 0; font-size: 14px; line-height: 1.6; color:#666666;">
+                  If you didn't request this code, you can safely ignore this email. Someone might have entered your email by mistake.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <div style="height: 1px; background-color:#e5e5e5; font-size:0; line-height:0;">&nbsp;</div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 32px 40px; text-align:center;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color:#666666;">
+                Need help? Contact us at
+                <a href="mailto:support@gatecloses.com" style="color:#000000; text-decoration: none; font-weight: 600;">support@gatecloses.com</a>
+              </p>
+              <p style="margin: 16px 0 8px 0; font-size: 12px; color:#999999;">
+                © 2026 GateCloses. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Outer Footer Note -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px;">
+          <tr>
+            <td align="center" style="padding: 24px 20px;">
+              <p style="margin: 0; font-size: 11px; color:#999999; line-height: 1.5;">
+                This is an automated message. Please do not reply directly to this email.
+              </p>
             </td>
           </tr>
         </table>
-      </body>
-    `,
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`,attachments: [
+      {
+        filename: "gate-closes-logo.png",   // ← was "logo-icon.png"
+        path: logoIconPath,
+        cid: "logo-icon-png",
+      },
+      {
+        filename: "gate-closes-text.png",   // ← was "logo-text.png"
+        path: logoTextPath,
+        cid: "logo-text-png",
+      },
+    ],
   });
 }
