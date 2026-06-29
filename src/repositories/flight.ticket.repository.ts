@@ -117,5 +117,22 @@ export default class FlightTicketRepo {
       throw new Error(message);
     }
   }
+
+static async updateByUserId(userId: ObjectId, updateData: Record<string, any>) {
+
+  const dataToUpdate = {
+    ...updateData,
+    updatedAt: new Date()
+  };
+
+  const result = await this.collection().findOneAndUpdate(
+    { userId },
+    { $set: dataToUpdate },
+    { returnDocument: "after" } 
+  );
+
+  return result;
+}
+
 }
 
