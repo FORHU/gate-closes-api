@@ -10,5 +10,16 @@ export default class FlightTicketSvc {
   static async getByUserId(userId: ObjectId) {
     return FlightTicketRepo.findActiveOrLatestByUserId(userId);
   }
+
+  static async update(userId: ObjectId, updateData: Record<string, any>) {
+  const result = await FlightTicketRepo.updateByUserId(userId, updateData);
+  
+  if (!result) {
+    throw new Error("Flight ticket not found or could not be updated");
+  }
+  
+  return result.value ?? result; 
 }
+}
+
 
