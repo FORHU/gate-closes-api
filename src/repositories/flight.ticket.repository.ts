@@ -11,54 +11,23 @@ export default class FlightTicketRepo {
     return this.collection().insertOne(new MFlightTicket(ticket));
   }
 
+  // ✅ FIXED: Sort by updatedAt instead of departureDateTime
+  // This ensures we return the most recently updated record
   static async findActiveOrLatestByUserId(userId: ObjectId) {
-    const now = new Date();
-
-    const upcoming = await this.collection().findOne(
-      { userId, departureDateTime: { $gte: now } },
-      { sort: { departureDateTime: 1 } }
-    );
-    if (upcoming) return upcoming as any;
-
     const latest = await this.collection().findOne(
       { userId },
-      { sort: { departureDateTime: -1 } }
+      { sort: { updatedAt: -1, createdAt: -1 } }
     );
     return (latest as any) ?? null;
   }
 
-  /**
-   * Batch version of findActiveOrLatestByUserId:
-   * - Prefer the soonest upcoming departureDateTime (>= now) per user
-   * - Otherwise fallback to latest (max departureDateTime) per user
-   */
   static async findActiveOrLatestByUserIds(userIds: ObjectId[]) {
     if (!userIds?.length) return new Map<string, any>();
-
-    const now = new Date();
-
-    const upcoming = await this.collection()
-      .aggregate([
-        {
-          $match: {
-            userId: { $in: userIds },
-            departureDateTime: { $gte: now },
-          },
-        },
-        { $sort: { userId: 1, departureDateTime: 1, _id: 1 } },
-        {
-          $group: {
-            _id: "$userId",
-            ticket: { $first: "$$ROOT" },
-          },
-        },
-      ])
-      .toArray();
 
     const latest = await this.collection()
       .aggregate([
         { $match: { userId: { $in: userIds } } },
-        { $sort: { userId: 1, departureDateTime: -1, _id: -1 } },
+        { $sort: { userId: 1, updatedAt: -1, createdAt: -1 } },
         {
           $group: {
             _id: "$userId",
@@ -70,9 +39,6 @@ export default class FlightTicketRepo {
 
     const map = new Map<string, any>();
     for (const row of latest as any[]) {
-      map.set(String(row._id), row.ticket);
-    }
-    for (const row of upcoming as any[]) {
       map.set(String(row._id), row.ticket);
     }
     return map;
@@ -118,21 +84,24 @@ export default class FlightTicketRepo {
     }
   }
 
-static async updateByUserId(userId: ObjectId, updateData: Record<string, any>) {
+  // ✅ FIXED: Don't include userId in $set, return the correct value shape
+  static async updateByUserId(userId: ObjectId, updateData: Record<string, any>) {
+    const { userId: _, ...dataToUpdate } = updateData;
 
-  const dataToUpdate = {
-    ...updateData,
-    updatedAt: new Date()
-  };
+    const data = {
+      ...dataToUpdate,
+      updatedAt: new Date()
+    };
 
-  const result = await this.collection().findOneAndUpdate(
-    { userId },
-    { $set: dataToUpdate },
-    { returnDocument: "after" } 
-  );
+    const result = await this.collection().findOneAndUpdate(
+      { userId },
+      { $set: data },
+      { 
+        upsert: false,           // ✅ Don't create duplicates
+        returnDocument: "after" 
+      }
+    );
 
-  return result;
+    return result?.value ?? result;
+  }
 }
-
-}
-
