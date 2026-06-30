@@ -11,7 +11,7 @@ export default class FlightTicketRepo {
     return this.collection().insertOne(new MFlightTicket(ticket));
   }
 
-  // ✅ FIXED: Sort by updatedAt instead of departureDateTime
+  // FIXED: Sort by updatedAt instead of departureDateTime
   // This ensures we return the most recently updated record
   static async findActiveOrLatestByUserId(userId: ObjectId) {
     const latest = await this.collection().findOne(
@@ -84,7 +84,7 @@ export default class FlightTicketRepo {
     }
   }
 
-  // ✅ FIXED: Don't include userId in $set, return the correct value shape
+  // FIXED: Don't include userId in $set, return the correct value shape
   static async updateByUserId(userId: ObjectId, updateData: Record<string, any>) {
     const { userId: _, ...dataToUpdate } = updateData;
 
@@ -97,7 +97,7 @@ export default class FlightTicketRepo {
       { userId },
       { $set: data },
       { 
-        upsert: false,           // ✅ Don't create duplicates
+        upsert: false,           //  Don't create duplicates
         returnDocument: "after" 
       }
     );
