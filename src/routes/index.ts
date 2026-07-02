@@ -20,7 +20,7 @@ router.get("/v1", (_, res) => {
 router.use("/auth", authRoutes);
 router.use("/s3", s3Routes);
 router.use("/terminal-echo", terminalEchoRoutes);
-router.use("/terminal-echo-reply", sessionMiddleware, terminalEchoReplyRoutes);
+router.use("/terminal-echo-reply", terminalEchoReplyRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
 router.use("/ps", sessionMiddleware, psRoutes);

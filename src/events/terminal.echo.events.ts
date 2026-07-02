@@ -4,11 +4,14 @@ import { verifyAccessToken } from "../utils/jwt";
 export default (io: Server) => {
   const nsp = io.of("/terminal-echo");
 
+  // uses accessToken (already unprefixed) first, falling back to the 
+  // header-derived token (also already split/stripped) — 
+  // both paths now hand verifyAccessToken a clean token string.
   nsp.use((socket, next) => {
     try {
-      const token =
-        socket.handshake.auth?.token ??
-        socket.handshake.headers.authorization?.split(" ")[1];
+      const rawAuthToken = socket.handshake.auth?.accessToken;
+      const headerToken = socket.handshake.headers.authorization?.split(" ")[1];
+      const token = rawAuthToken ?? headerToken;
 
       if (!token) return next(new Error("Unauthorized"));
 
