@@ -9,18 +9,29 @@ export default class TerminalEchoReplySvc {
     terminalEchoId: string | ObjectId;
     fileUrl: string;
     fileName: string;
+    textMessage?: string;
+    audioDuration?: number;
+    waveformData?: number[];
   }) {
-    const { userId, terminalEchoId, fileUrl, fileName } = params;
+    const { userId, terminalEchoId, fileUrl, fileName, textMessage, audioDuration, waveformData } = params;
 
-    const fileCreateResult = await FileSvc.create({
-      fileUrl,
-      fileName,
-    });
+    let fileCreateResult: any = null;
+    if (fileUrl && fileName) {
+      fileCreateResult = await FileSvc.create({
+        fileUrl,
+        fileName,
+        metaData: {
+          audioDuration: audioDuration ?? 0,
+          waveformData: waveformData ?? [],
+        },
+      });
+    }
 
     return TerminalEchoReplyRepo.create({
       terminalEchoId: new ObjectId(terminalEchoId),
       senderId: new ObjectId(userId),
-      fileId: fileCreateResult.insertedId,
+      fileId: fileCreateResult?.insertedId,
+      textMessage: textMessage || "",
     });
   }
 
@@ -93,4 +104,3 @@ export default class TerminalEchoReplySvc {
     return TerminalEchoReplyRepo.updateReaction(replyId, reaction, "increment");
   }
 }
-

@@ -6,9 +6,13 @@ export default (io: Server) => {
 
   nsp.use((socket, next) => {
     try {
-      const token =
-        socket.handshake.auth?.token ??
-        socket.handshake.headers.authorization?.split(" ")[1];
+      // Prefer the raw (unprefixed) accessToken the client sends,
+      // fall back to the header-derived token (already split from "Bearer ").
+      // Do NOT use handshake.auth.token directly — it still has the
+      // "Bearer " prefix and will fail verification unstripped.
+      const rawAuthToken = socket.handshake.auth?.accessToken;
+      const headerToken = socket.handshake.headers.authorization?.split(" ")[1];
+      const token = rawAuthToken ?? headerToken;
 
       if (!token) return next(new Error("Unauthorized"));
 

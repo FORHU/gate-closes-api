@@ -5,6 +5,7 @@ export type TTerminalEchoReply = {
   terminalEchoId: ObjectId;
   senderId: ObjectId;
   fileId?: ObjectId;
+  textMessage?: string;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -21,6 +22,7 @@ export type TTerminalEchoReplyUpdateOptions = {
   terminalEchoId: ObjectId | string;
   senderId: ObjectId | string;
   fileId?: ObjectId | string;
+  textMessage?: string;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -35,6 +37,7 @@ export class MTerminalEchoReply implements Partial<TTerminalEchoReply> {
   terminalEchoId: ObjectId;
   senderId: ObjectId;
   fileId?: ObjectId;
+  textMessage?: string;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -45,11 +48,12 @@ export class MTerminalEchoReply implements Partial<TTerminalEchoReply> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({ _id = new ObjectId(), terminalEchoId, senderId, fileId, countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt } = {} as TTerminalEchoReply) {
+  constructor({ _id = new ObjectId(), terminalEchoId, senderId, fileId, textMessage = "", countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt } = {} as TTerminalEchoReply) {
     this._id = _id;
     this.terminalEchoId = terminalEchoId;
     this.senderId = senderId;
     this.fileId = fileId;
+    this.textMessage = textMessage;
     this.countListens = countListens;
     this.countReactLike = countReactLike;
     this.countReactLove = countReactLove;
