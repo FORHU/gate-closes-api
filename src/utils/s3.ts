@@ -53,3 +53,29 @@ export async function getGetObjectPresignedUrl(params: {
 
   return url;
 }
+
+export async function uploadBufferToS3(params: {
+  key: string;
+  buffer: Buffer;
+  contentType?: string;
+}) {
+  const { key, buffer, contentType } = params;
+
+  const command = new PutObjectCommand({
+    Bucket: AWS_S3_BUCKET,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  });
+
+  await s3Client.send(command);
+  
+  // Return the CloudFront URL directly if available, otherwise return S3 URL
+  if (CLOUD_FRONT_DOMAIN) {
+    const normalizedDomain = CLOUD_FRONT_DOMAIN.replace(/\/+$/, "");
+    const normalizedKey = key.replace(/^\/+/, "");
+    return `${normalizedDomain}/${normalizedKey}`;
+  }
+  
+  return `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+}

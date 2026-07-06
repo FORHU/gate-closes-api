@@ -43,7 +43,7 @@ export default class TerminalEchoCtrl {
         location: value.location,
         airportName: value.airportName,
       });
-      
+
       io.of("/terminal-echo").emit("terminal_echo:changed", {
         type: "create",
         data: result,
@@ -137,7 +137,7 @@ export default class TerminalEchoCtrl {
     }
 
     try {
-      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson( userId, mapBounds );
+      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, mapBounds);
       return res.json({ data: geojson });
     } catch (err: any) {
       return res
