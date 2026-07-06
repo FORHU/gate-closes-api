@@ -1,3 +1,22 @@
+/**
+ * Data-access layer for terminal echo replies. All MongoDB queries for
+ * replies live here — no other file should touch the collection
+ * directly.
+ *
+ * Two read paths exist for a reason:
+ *   - findByTerminalEchoIdWithFile(): fetches ALL replies for a thread.
+ *     Used for the initial full-thread load.
+ *   - findByIdWithFile(): fetches ONE reply by its own _id. Used by the
+ *     frontend's "append, don't refetch" real-time strategy — when a
+ *     socket event announces a new reply, the client fetches just that
+ *     one reply and appends it to its already-loaded list, instead of
+ *     re-fetching (and re-transforming) the entire thread every time.
+ *     Both share nearly identical aggregation pipelines (file + user
+ *     lookups) — kept as two separate methods rather than one
+ *     parameterized method for clarity and to keep each query plan
+ *     simple/predictable.
+ */
+
 import { ObjectId } from "mongodb";
 import { MTerminalEchoReply, TTerminalEchoReply, TTerminalEchoReplyUpdateOptions } from "../models/terminal.echo.reply.model";
 import { getDB } from "../utils/mongo";
@@ -29,6 +48,16 @@ export default class TerminalEchoReplyRepo {
     return this.collection().find({ terminalEchoId }).toArray();
   }
 
+  /**
+   * Fetches ALL replies for a given echo, enriched with:
+   *   - `file`: the associated audio file document (if any) — text-only
+   *     replies have no fileId, so `preserveNullAndEmptyArrays: true` on
+   *     the $unwind is essential; without it, text-only replies would be
+   *     silently dropped from the results entirely.
+   *   - `user`: sender's username/gender, for alias display.
+   *
+   * Used for the initial full-thread load (one call per thread open).
+   */
   static async findByTerminalEchoIdWithFile(terminalEchoId: string | ObjectId) {
     try {
       terminalEchoId = new ObjectId(terminalEchoId);
@@ -82,6 +111,67 @@ export default class TerminalEchoReplyRepo {
         },
       ])
       .toArray();
+  }
+
+  /**
+   * Fetches a SINGLE reply by its own _id, with the same file/user
+   * enrichment as findByTerminalEchoIdWithFile above.
+   *
+   * Used by the "append, don't refetch" real-time flow: when the
+   * backend emits `terminal_echo_reply:created` after a new reply is
+   * posted, the payload only contains the new reply's id (not its full
+   * content). The frontend calls GET /terminal-echo-reply/:id — which
+   * hits this method — to fetch just that one reply's data, then
+   * appends it locally rather than re-fetching the whole thread.
+   *
+   * Returns `null` if no reply with that id exists (e.g. it was
+   * deleted between the socket event firing and this fetch running).
+   */
+  static async findByIdWithFile(_id: string | ObjectId) {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return Promise.reject("Invalid terminal echo reply id.");
+    }
+
+    const results = await this.collection()
+      .aggregate([
+        { $match: { _id } },
+        {
+          $lookup: {
+            from: "file",
+            localField: "fileId",
+            foreignField: "_id",
+            as: "file",
+          },
+        },
+        {
+          $unwind: {
+            path: "$file",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "user",
+            let: { senderId: "$senderId" },
+            pipeline: [
+              { $match: { $expr: { $eq: ["$_id", "$$senderId"] } } },
+              { $project: { _id: 1, username: 1, gender: 1 } },
+            ],
+            as: "user",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
+      .toArray();
+
+    return results[0] ?? null;
   }
 
   static async update(reply: TTerminalEchoReplyUpdateOptions) {
