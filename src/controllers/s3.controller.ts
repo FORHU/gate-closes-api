@@ -4,6 +4,32 @@ import S3Svc from "../services/s3.service";
 
 
 export default class S3Controller {
+  static async uploadProxy(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const { originalname, buffer, size } = req.file;
+    const contentType = req.body.contentType || req.file.mimetype;
+    
+    try {
+      const result = await S3Svc.uploadFile(
+        userId,
+        originalname,
+        buffer,
+        contentType,
+        size
+      );
+      
+      return res.status(200).json(result);
+    } catch (err: any) {
+      const message = err?.message || "Failed to upload file to S3";
+      return res.status(500).json({ message });
+    }
+  }
+
   static async getPutUrl(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
