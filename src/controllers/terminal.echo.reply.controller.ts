@@ -251,17 +251,37 @@ export default class TerminalEchoReplyCtrl {
       return res.status(400).json({ message: error.message });
     }
 
+    let result: any;
     try {
-      const result = await TerminalEchoReplySvc.updateReaction({
+      result = await TerminalEchoReplySvc.updateReaction({
         replyId: value.id,
         reaction: value.reaction,
         userId,
       });
-      return res.json({ data: result?.value ?? null });
     } catch (err: any) {
       return res
         .status(500)
         .json({ message: err.message || "Server error." });
     }
+
+    try {
+      const terminalEchoId = result?.value?.terminalEchoId?.toString();
+
+      if (terminalEchoId) {
+        io.of("/terminal-echo").to(`thread:${terminalEchoId}`).emit("terminal_echo_reply:reaction_updated", {
+          replyId: value.id,
+          reactionKey: value.reaction,
+          action: result?.action ?? "increment",
+          triggeredByUserId: userId,
+        });
+      }
+    } catch (broadcastErr: any) {
+      console.warn(
+        "[TerminalEchoReplyCtrl.updateReaction] Reaction saved, but broadcast failed:",
+        broadcastErr
+      );
+    }
+
+    return res.json({ data: result?.value ?? null });
   }
 }

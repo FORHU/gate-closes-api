@@ -222,7 +222,7 @@ export default class TerminalEchoRepo {
     } catch {
       return Promise.reject("Invalid terminal echo id.");
     }
-  
+
     const reactionFieldMap = {
       like: "countReactLike",
       love: "countReactLove",
@@ -231,15 +231,15 @@ export default class TerminalEchoRepo {
       sad: "countReactSad",
       angry: "countReactAngry",
     } as const;
-  
+
     const fieldName = reactionFieldMap[reaction];
-  
+
     if (!fieldName) {
       return Promise.reject("Invalid reaction type.");
     }
-  
+
     const delta = action === "increment" ? 1 : -1;
-  
+
     return this.collection().findOneAndUpdate(
       { _id },
       [

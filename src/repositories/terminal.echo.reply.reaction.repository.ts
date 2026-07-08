@@ -43,6 +43,62 @@ export default class TerminalEchoReplyReactionRepo {
     return this.collection().deleteOne(filter);
   }
 
+  /**
+   * toggleReaction
+   * ----------------
+   * Same atomic delete-then-insert-with-retry pattern as
+   * TerminalEchoReactionRepo.toggleReaction — see that file's comment
+   * for full rationale. Requires a UNIQUE INDEX on
+   * {terminalEchoReplyId, userId, reaction} (created in
+   * utils/mongo.ts's connectToMongo).
+   *
+   * Returns the direction actually taken: "increment" or "decrement".
+   */
+  static async toggleReaction(
+    params: {
+      terminalEchoReplyId: string | ObjectId;
+      userId: string | ObjectId;
+      reaction: string;
+    },
+    maxRetries = 3
+  ): Promise<"increment" | "decrement"> {
+    const terminalEchoReplyId = new ObjectId(params.terminalEchoReplyId as string);
+    const userId = new ObjectId(params.userId as string);
+    const { reaction } = params;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const deleteResult = await this.collection().deleteOne({
+        terminalEchoReplyId,
+        userId,
+        reaction,
+      });
+
+      if (deleteResult.deletedCount === 1) {
+        return "decrement";
+      }
+
+      try {
+        await this.collection().insertOne(
+          new MTerminalEchoReplyReaction({
+            terminalEchoReplyId,
+            userId,
+            reaction,
+          } as any)
+        );
+        return "increment";
+      } catch (err: any) {
+        if (err?.code === 11000) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw new Error(
+      "Failed to toggle reaction after multiple retries — possible sustained contention."
+    );
+  }
+
   /** Batch: all reactions by this user for the given reply ids. Used to enrich reply list. */
   static async findByUserIdAndReplyIds(
     userId: string | ObjectId,
@@ -57,4 +113,3 @@ export default class TerminalEchoReplyReactionRepo {
       .toArray();
   }
 }
-
