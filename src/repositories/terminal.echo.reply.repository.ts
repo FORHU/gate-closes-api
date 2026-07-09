@@ -178,6 +178,19 @@ export default class TerminalEchoReplyRepo {
     return this.collection().updateOne({ _id: reply._id }, { $set: setFields });
   }
 
+  /**
+   * FIX: added `includeResultMetadata: true`.
+   *
+   * On MongoDB Node driver v6+, `findOneAndUpdate` returns the updated
+   * document DIRECTLY by default — the old `{ value, ok, lastErrorObject }`
+   * wrapper shape is now opt-in via `includeResultMetadata: true`. This
+   * method's callers (the service, then the controller) expect the old
+   * wrapped shape (`result.value`), so without this flag `result.value`
+   * silently resolves to `undefined` on driver v6+ rather than throwing —
+   * which is why this went unnoticed until the equivalent bug in
+   * updateReaction below caused a visible symptom (missing socket
+   * broadcasts).
+   */
   static async incrementListen(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
@@ -191,10 +204,22 @@ export default class TerminalEchoReplyRepo {
         $inc: { countListens: 1 },
         $set: { updatedAt: new Date() },
       },
-      { returnDocument: "after" }
+      { returnDocument: "after", includeResultMetadata: true }
     );
   }
 
+  /**
+   * FIX: added `includeResultMetadata: true`.
+   *
+   * Same root cause as incrementListen above. Without this flag, on
+   * driver v6+, the returned document has no `.value` wrapper, so
+   * `result.value.terminalEchoId` in the controller (used to pick the
+   * `thread:<id>` room to broadcast the reaction update to) silently
+   * evaluated to `undefined` — the broadcast was skipped every time,
+   * with no error anywhere in the chain. Restoring the wrapped shape
+   * fixes `result.value.terminalEchoId` in the controller without
+   * requiring any service/controller changes.
+   */
   static async updateReaction(
     _id: string | ObjectId,
     reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry",
@@ -240,7 +265,7 @@ export default class TerminalEchoReplyRepo {
           },
         },
       ],
-      { returnDocument: "after" }
+      { returnDocument: "after", includeResultMetadata: true }
     );
   }
 

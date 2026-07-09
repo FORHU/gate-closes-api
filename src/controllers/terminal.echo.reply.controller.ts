@@ -47,6 +47,21 @@
  *    time some UNRELATED full refetch happened to occur (which is
  *    what caused the earlier bug where a reply count only updated
  *    after posting a completely different new echo).
+ *
+ * FIX NOTE (reply-reaction broadcast bug):
+ * `updateReaction` below used `result?.value?.terminalEchoId` to pick
+ * which `thread:<id>` room to broadcast to. On MongoDB Node driver
+ * v6+, `findOneAndUpdate` returns the document directly rather than
+ * wrapped in `{ value: doc }` unless `includeResultMetadata: true` is
+ * passed at the call site — which
+ * TerminalEchoReplyRepo.updateReaction wasn't doing. That made
+ * `result.value` (and therefore `terminalEchoId`) silently resolve to
+ * `undefined`, so the `if (terminalEchoId)` guard below skipped the
+ * emit on every single reaction toggle, with no error anywhere in the
+ * chain. The actual fix is in the repository (added
+ * `includeResultMetadata: true` to its findOneAndUpdate calls); the
+ * console.warn added below is just a safety net so a regression like
+ * this is visible in logs instead of failing silently again.
  */
 
 import { Request, Response } from "express";
@@ -267,7 +282,18 @@ export default class TerminalEchoReplyCtrl {
     try {
       const terminalEchoId = result?.value?.terminalEchoId?.toString();
 
-      if (terminalEchoId) {
+      // FIX: was silently skipping the broadcast whenever
+      // terminalEchoId couldn't be resolved (previously always, due
+      // to the missing `includeResultMetadata: true` in the
+      // repository — see fix note at top of file). Now logs so a
+      // future regression here is visible immediately instead of
+      // silently dropping real-time updates again.
+      if (!terminalEchoId) {
+        console.warn(
+          "[TerminalEchoReplyCtrl.updateReaction] No terminalEchoId on updateReaction result — broadcast skipped.",
+          JSON.stringify(result)
+        );
+      } else {
         io.of("/terminal-echo").to(`thread:${terminalEchoId}`).emit("terminal_echo_reply:reaction_updated", {
           replyId: value.id,
           reactionKey: value.reaction,
