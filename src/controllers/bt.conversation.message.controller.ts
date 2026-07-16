@@ -3,12 +3,16 @@ import Joi from "joi";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import BtConversationRepo from "../repositories/bt.conversation.repository";
 import BtConversationMessageSvc from "../services/bt.conversation.message.service";
+import BtConversationSvc from "../services/bt.conversation.service";
 import { io } from "../app";
-import { ERROR_MESSAGE } from "../const";
+import {
+  ERROR_MESSAGE,
+  BT_SOCKET_EVENT,
+  TBtConversationReadStateSocketPayload,
+} from "../const";
 
-export default class btConversationMessageCtrl {
+export default class BtConversationMessageCtrl {
 
-  // POST /conversations/:conversationId/messages - Send a message in baton touch conversation
   static async send(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
@@ -49,6 +53,46 @@ export default class btConversationMessageCtrl {
         fileName: value.fileName,
       });
 
+      await BtConversationSvc.refreshConversationLatestEvent({
+        conversationId: btConversationId,
+        type: "message_sent",
+        actorId: senderId,
+        payload: {
+          messageId: result.insertedId,
+          fileName: value.fileName,
+        },
+      });
+
+      const participants = (convo as any)?.participants ?? [];
+      for (const participantId of participants) {
+        const participantObjectId = FlightTicketRepo.parseObjectId(
+          String(participantId),
+          ERROR_MESSAGE.INVALID_USER_ID
+        );
+        const participantRealtimeState =
+          await BtConversationSvc.getConversationRealtimeStateForUser({
+            conversationId: btConversationId,
+            requesterId: participantObjectId,
+          });
+        if (!participantRealtimeState) continue;
+
+        const payload: TBtConversationReadStateSocketPayload = {
+          kind: "latest_event",
+          conversationId: participantRealtimeState.conversationId,
+          userId: participantRealtimeState.userId,
+          serverTs: new Date().toISOString(),
+          lastEventAt: participantRealtimeState.lastEventAt,
+          lastEventActorId: participantRealtimeState.lastEventActorId,
+          lastEventType: participantRealtimeState.lastEventType,
+          lastEventText: participantRealtimeState.lastEventText,
+          hasUnread: participantRealtimeState.hasUnread,
+        };
+        io
+          .of("/bt")
+          .to(`user:${participantRealtimeState.userId}`)
+          .emit(BT_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
+      }
+
       const [latestMessage] = await BtConversationMessageSvc.listMessages({
         btConversationId,
         limit: 1,
@@ -64,7 +108,6 @@ export default class btConversationMessageCtrl {
     }
   }
 
-  // GET /conversations/:conversationId/messages - Get all the sended messages in a conversation
   static async list(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 

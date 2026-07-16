@@ -2,7 +2,6 @@ import { ObjectId } from "mongodb";
 import DtConversationMessageRepo from "../repositories/dt.conversation.message.repository";
 import DtConversationMessageReactionRepo from "../repositories/dt.conversation.message.reaction.repository";
 import FileSvc from "./file.service";
-import { ObjectId as MongoObjectId } from "mongodb";
 
 export default class DtConversationMessageSvc {
     static async sendMessage(params: {dtConversationId: ObjectId, dtSenderId: ObjectId, fileUrl: string, fileName: string}) {
@@ -35,7 +34,7 @@ export default class DtConversationMessageSvc {
       
         const byMessageId = new Map<string, string[]>();
         for (const r of reactions as any[]) {
-            const id = (r.dtConversationMessageId as MongoObjectId).toString();
+            const id = (r.dtConversationMessageId as ObjectId).toString();
             if (!byMessageId.has(id)) byMessageId.set(id, []);
             byMessageId.get(id)!.push(r.reaction);
         }
@@ -44,5 +43,34 @@ export default class DtConversationMessageSvc {
         ...m,
         currentUserReactions: byMessageId.get(m._id.toString()) ?? [],
         }));
+    }
+
+    static async getMessageById(params: {
+        dtConversationMessageId: string;
+        requesterId?: ObjectId;
+    }) {
+        const message = await DtConversationMessageRepo.findByIdWithDetails(
+            params.dtConversationMessageId
+        );
+        if (!message) return null;
+
+        if (!params.requesterId) {
+            return {
+                ...message,
+                currentUserReactions: message.currentUserReactions ?? [],
+            };
+        }
+
+        const reactions =
+            await DtConversationMessageReactionRepo.findByUserIdAndMessageIds(
+                params.requesterId,
+                [message._id]
+            );
+        const currentUserReactions = (reactions as any[]).map((r: any) => r.reaction);
+
+        return {
+            ...message,
+            currentUserReactions,
+        };
     }
 }
