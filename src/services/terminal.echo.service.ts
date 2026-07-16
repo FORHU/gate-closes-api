@@ -80,6 +80,25 @@ export default class TerminalEchoSvc {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
+    // destination_thread: same destination, different flight or date
+    if (
+      authToCity &&
+      otherToCity &&
+      authToCity === otherToCity &&
+      (authFlightNumber !== otherFlightNumber || authDeparture !== otherDeparture)
+    ) {
+      return TERMINAL_ECHO_TYPE.DESTINATION_THREAD;
+    }
+
+    // baton_touch: cross-directional — one arriving, one departing
+    if (
+      ((authToCity && otherFromCity && authToCity === otherFromCity) ||
+        (authFromCity && otherToCity && authFromCity === otherToCity)) &&
+      (authFlightNumber !== otherFlightNumber || authDeparture !== otherDeparture)
+    ) {
+      return TERMINAL_ECHO_TYPE.BATON_TOUCH;
+    }
+
     return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
   }
 

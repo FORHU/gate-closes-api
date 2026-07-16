@@ -175,28 +175,40 @@ export default class DtConversationSvc {
     const myTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
       requesterId
     );
-    if (!myTicket?.flightNumber || !myTicket?.departureDateTime) {
+    if (!myTicket?.toCity) {
       throw new Error("No active flight ticket found for user.");
     }
 
-    const flightNumber = myTicket.flightNumber;
-    const departureDateTime = myTicket.departureDateTime;
+    const otherTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
+      otherUserId
+    );
+
+    const toCity = myTicket.toCity;
 
     const [meEligible, otherEligible] = await Promise.all([
-      FlightTicketRepo.userHasFlight({
+      FlightTicketRepo.userHasSameDestination({
         userId: requesterId,
-        flightNumber,
-        departureDateTime,
+        toCity,
       }),
-      FlightTicketRepo.userHasFlight({
+      FlightTicketRepo.userHasSameDestination({
         userId: otherUserId,
-        flightNumber,
-        departureDateTime,
+        toCity,
       }),
     ]);
 
     if (!meEligible || !otherEligible) {
-      throw new Error("Users are not eligible to chat for this flight.");
+      throw new Error("Users are not eligible for destination threads.");
+    }
+
+    if (
+      myTicket.flightNumber &&
+      otherTicket?.flightNumber &&
+      myTicket.flightNumber === otherTicket.flightNumber &&
+      myTicket.departureDateTime &&
+      otherTicket?.departureDateTime &&
+      new Date(myTicket.departureDateTime).getTime() === new Date(otherTicket.departureDateTime).getTime()
+    ) {
+      throw new Error("Users are on the same flight. Use parallel soul instead.");
     }
 
     const dmKey = this.dmKeyForUsers(requesterId, otherUserId);

@@ -175,28 +175,39 @@ export default class BtConversationSvc {
     const myTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
       requesterId
     );
-    if (!myTicket?.flightNumber || !myTicket?.departureDateTime) {
+    if (!myTicket) {
       throw new Error("No active flight ticket found for user.");
     }
 
-    const flightNumber = myTicket.flightNumber;
-    const departureDateTime = myTicket.departureDateTime;
+    const otherTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
+      otherUserId
+    );
+    if (!otherTicket) {
+      throw new Error("Other user has no active flight ticket.");
+    }
 
-    const [meEligible, otherEligible] = await Promise.all([
-      FlightTicketRepo.userHasFlight({
-        userId: requesterId,
-        flightNumber,
-        departureDateTime,
-      }),
-      FlightTicketRepo.userHasFlight({
-        userId: otherUserId,
-        flightNumber,
-        departureDateTime,
-      }),
-    ]);
+    const myToCity = (myTicket.toCity ?? "").trim();
+    const myFromCity = (myTicket.fromCity ?? "").trim();
+    const otherToCity = (otherTicket.toCity ?? "").trim();
+    const otherFromCity = (otherTicket.fromCity ?? "").trim();
 
-    if (!meEligible || !otherEligible) {
-      throw new Error("Users are not eligible to chat for this flight.");
+    const isCrossDirectionalMatch =
+      (myToCity && otherFromCity && myToCity === otherFromCity) ||
+      (myFromCity && otherToCity && myFromCity === otherToCity);
+
+    if (!isCrossDirectionalMatch) {
+      throw new Error("Users are not eligible for baton touch.");
+    }
+
+    if (
+      myTicket.flightNumber &&
+      otherTicket.flightNumber &&
+      myTicket.flightNumber === otherTicket.flightNumber &&
+      myTicket.departureDateTime &&
+      otherTicket.departureDateTime &&
+      new Date(myTicket.departureDateTime).getTime() === new Date(otherTicket.departureDateTime).getTime()
+    ) {
+      throw new Error("Users are on the same flight. Use parallel soul instead.");
     }
 
     const dmKey = this.dmKeyForUsers(requesterId, otherUserId);
