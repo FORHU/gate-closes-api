@@ -7,6 +7,9 @@ import DtConversationMessageReactionCtrl from "../controllers/dt.conversation.me
 
 router.get("/conversations", DtConversationCtrl.listMyConversations);
 router.post("/conversations/dm", DtConversationCtrl.createOrGetDm);
+router.get("/conversations/dm/existence", DtConversationCtrl.checkDmExists);
+router.get("/conversations/:conversationId", DtConversationCtrl.getById);
+router.post("/conversations/:conversationId/read", DtConversationCtrl.markRead);
 router.get("/conversations/:conversationId/messages", DtConversationMessageCtrl.list);
 router.post("/conversations/:conversationId/messages", DtConversationMessageCtrl.send);
 router.patch("/conversations/:conversationId/messages/:messageId/reaction", DtConversationMessageReactionCtrl.updateReaction);

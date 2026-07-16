@@ -22,13 +22,18 @@ export default (io: Server) => {
   });
 
   nsp.on("connection", (socket) => {
+    const userId = socket.data.userId as string | undefined;
+    if (userId) {
+      socket.join(`user:${userId}`);
+    }
+
     socket.on(
       "join_conversation",
       async ({ conversationId }: { conversationId: string }) => {
         try {
           const userId = socket.data.userId as string | undefined;
           if (!userId) {
-            console.warn("[Bt] join_conversation unauthorized");
+            console.warn("[BT] join_conversation unauthorized");
             return;
           }
 
@@ -41,7 +46,7 @@ export default (io: Server) => {
           });
 
           if (!convo) {
-            console.warn("[Bt] join_conversation not a participant", {
+            console.warn("[BT] join_conversation not a participant", {
               userId,
               conversationId,
             });
@@ -49,9 +54,9 @@ export default (io: Server) => {
           }
 
           socket.join(conversationId);
-          console.log("[Bt] joined conversation", { userId, conversationId });
+          console.log("[BT] joined conversation", { userId, conversationId });
         } catch (err) {
-          console.warn("[Bt] join_conversation invalid conversationId", {
+          console.warn("[BT] join_conversation invalid conversationId", {
             conversationId,
             err,
           });

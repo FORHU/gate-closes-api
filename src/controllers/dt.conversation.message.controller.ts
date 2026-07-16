@@ -3,8 +3,13 @@ import Joi from "joi";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import DtConversationRepo from "../repositories/dt.conversation.repository";
 import DtConversationMessageSvc from "../services/dt.conversation.message.service";
+import DtConversationSvc from "../services/dt.conversation.service";
 import { io } from "../app";
-import { ERROR_MESSAGE } from "../const";
+import {
+  ERROR_MESSAGE,
+  DT_SOCKET_EVENT,
+  TDtConversationReadStateSocketPayload,
+} from "../const";
 
 export default class DtConversationMessageCtrl {
 
@@ -47,6 +52,46 @@ export default class DtConversationMessageCtrl {
         fileUrl: value.fileUrl,
         fileName: value.fileName,
       });
+
+      await DtConversationSvc.refreshConversationLatestEvent({
+        conversationId: dtConversationId,
+        type: "message_sent",
+        actorId: senderId,
+        payload: {
+          messageId: result.insertedId,
+          fileName: value.fileName,
+        },
+      });
+
+      const participants = (convo as any)?.participants ?? [];
+      for (const participantId of participants) {
+        const participantObjectId = FlightTicketRepo.parseObjectId(
+          String(participantId),
+          ERROR_MESSAGE.INVALID_USER_ID
+        );
+        const participantRealtimeState =
+          await DtConversationSvc.getConversationRealtimeStateForUser({
+            conversationId: dtConversationId,
+            requesterId: participantObjectId,
+          });
+        if (!participantRealtimeState) continue;
+
+        const payload: TDtConversationReadStateSocketPayload = {
+          kind: "latest_event",
+          conversationId: participantRealtimeState.conversationId,
+          userId: participantRealtimeState.userId,
+          serverTs: new Date().toISOString(),
+          lastEventAt: participantRealtimeState.lastEventAt,
+          lastEventActorId: participantRealtimeState.lastEventActorId,
+          lastEventType: participantRealtimeState.lastEventType,
+          lastEventText: participantRealtimeState.lastEventText,
+          hasUnread: participantRealtimeState.hasUnread,
+        };
+        io
+          .of("/dt")
+          .to(`user:${participantRealtimeState.userId}`)
+          .emit(DT_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
+      }
 
       const [latestMessage] = await DtConversationMessageSvc.listMessages({
         dtConversationId,

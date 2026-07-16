@@ -20,7 +20,57 @@ export const PS_SOCKET_EVENT = {
   CONVERSATION_READ_STATE_UPDATED: "ps:conversation_read_state_updated",
 } as const;
 
+export const DT_SOCKET_EVENT = {
+  CONVERSATION_READ_STATE_UPDATED: "dt:conversation_read_state_updated",
+} as const;
+
+export const BT_SOCKET_EVENT = {
+  CONVERSATION_READ_STATE_UPDATED: "bt:conversation_read_state_updated",
+} as const;
+
 export type TPsConversationReadStateSocketPayload =
+  | {
+      kind: "read";
+      conversationId: string;
+      userId: string;
+      serverTs: string;
+      lastReadAt: Date;
+      hasUnread: false;
+    }
+  | {
+      kind: "latest_event";
+      conversationId: string;
+      userId: string;
+      serverTs: string;
+      lastEventAt: Date | null;
+      lastEventActorId: string | null;
+      lastEventType: "message_sent" | "message_reacted" | "message_reaction_removed" | null;
+      lastEventText: string | null;
+      hasUnread: boolean;
+    };
+
+export type TDtConversationReadStateSocketPayload =
+  | {
+      kind: "read";
+      conversationId: string;
+      userId: string;
+      serverTs: string;
+      lastReadAt: Date;
+      hasUnread: false;
+    }
+  | {
+      kind: "latest_event";
+      conversationId: string;
+      userId: string;
+      serverTs: string;
+      lastEventAt: Date | null;
+      lastEventActorId: string | null;
+      lastEventType: "message_sent" | "message_reacted" | "message_reaction_removed" | null;
+      lastEventText: string | null;
+      hasUnread: boolean;
+    };
+
+export type TBtConversationReadStateSocketPayload =
   | {
       kind: "read";
       conversationId: string;

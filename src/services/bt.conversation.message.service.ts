@@ -2,11 +2,8 @@ import { ObjectId } from "mongodb";
 import BtConversationMessageRepo from "../repositories/bt.conversation.message.repository";
 import BtConversationMessageReactionRepo from "../repositories/bt.conversation.message.reaction.repository";
 import FileSvc from "./file.service";
-import { ObjectId as MongoObjectId } from "mongodb";
 
 export default class BtConversationMessageSvc {
-
-    // Create an audio message in baton touch conversation
     static async sendMessage(params: {btConversationId: ObjectId, btSenderId: ObjectId, fileUrl: string, fileName: string}) {
         const { btConversationId, btSenderId, fileUrl, fileName } = params;
 
@@ -15,7 +12,6 @@ export default class BtConversationMessageSvc {
         return BtConversationMessageRepo.create({btConversationId, btSenderId, fileId: fileCreateResult.insertedId} as any);
     }
 
-    // Get all messages in one conversation
     static async listMessages(params: {btConversationId: ObjectId, limit: number, requesterId?: ObjectId}) {
         const messages = await BtConversationMessageRepo.listByConversationId(
             params.btConversationId,
@@ -38,7 +34,7 @@ export default class BtConversationMessageSvc {
       
         const byMessageId = new Map<string, string[]>();
         for (const r of reactions as any[]) {
-            const id = (r.btConversationMessageId as MongoObjectId).toString();
+            const id = (r.btConversationMessageId as ObjectId).toString();
             if (!byMessageId.has(id)) byMessageId.set(id, []);
             byMessageId.get(id)!.push(r.reaction);
         }
@@ -47,5 +43,34 @@ export default class BtConversationMessageSvc {
         ...m,
         currentUserReactions: byMessageId.get(m._id.toString()) ?? [],
         }));
+    }
+
+    static async getMessageById(params: {
+        btConversationMessageId: string;
+        requesterId?: ObjectId;
+    }) {
+        const message = await BtConversationMessageRepo.findByIdWithDetails(
+            params.btConversationMessageId
+        );
+        if (!message) return null;
+
+        if (!params.requesterId) {
+            return {
+                ...message,
+                currentUserReactions: message.currentUserReactions ?? [],
+            };
+        }
+
+        const reactions =
+            await BtConversationMessageReactionRepo.findByUserIdAndMessageIds(
+                params.requesterId,
+                [message._id]
+            );
+        const currentUserReactions = (reactions as any[]).map((r: any) => r.reaction);
+
+        return {
+            ...message,
+            currentUserReactions,
+        };
     }
 }

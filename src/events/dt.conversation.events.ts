@@ -22,6 +22,11 @@ export default (io: Server) => {
   });
 
   nsp.on("connection", (socket) => {
+    const userId = socket.data.userId as string | undefined;
+    if (userId) {
+      socket.join(`user:${userId}`);
+    }
+
     socket.on(
       "join_conversation",
       async ({ conversationId }: { conversationId: string }) => {
@@ -51,7 +56,7 @@ export default (io: Server) => {
           socket.join(conversationId);
           console.log("[DT] joined conversation", { userId, conversationId });
         } catch (err) {
-          console.warn("[DT]] join_conversation invalid conversationId", {
+          console.warn("[DT] join_conversation invalid conversationId", {
             conversationId,
             err,
           });
