@@ -201,6 +201,22 @@ export default class DtConversationSvc {
     }
 
     if (
+      myTicket.fromCity &&
+      otherTicket?.fromCity &&
+      myTicket.fromCity === otherTicket.fromCity
+    ) {
+      throw new Error("Users are from the same city. Not eligible for destination threads.");
+    }
+
+    const authMonthDay = new Date(myTicket.departureDateTime).toISOString().slice(5, 10);
+    const otherMonthDay = otherTicket?.departureDateTime
+      ? new Date(otherTicket.departureDateTime).toISOString().slice(5, 10)
+      : "";
+    if (authMonthDay !== otherMonthDay) {
+      throw new Error("Users are not departing on the same day. Not eligible for destination threads.");
+    }
+
+    if (
       myTicket.flightNumber &&
       otherTicket?.flightNumber &&
       myTicket.flightNumber === otherTicket.flightNumber &&

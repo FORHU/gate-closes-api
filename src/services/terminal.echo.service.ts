@@ -47,6 +47,13 @@ export default class TerminalEchoSvc {
     return dd.toISOString().slice(0, 10);
   }
 
+  private static monthDayKey(d?: Date) {
+    if (!d) return "";
+    const dd = d instanceof Date ? d : new Date(d as any);
+    if (Number.isNaN(dd.getTime())) return "";
+    return dd.toISOString().slice(5, 10);
+  }
+
   private static computeType(params: {
     authTicket: any;
     otherTicket: any;
@@ -80,12 +87,17 @@ export default class TerminalEchoSvc {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
-    // destination_thread: same destination, different flight or date
+    // destination_thread: same destination, same day (month+day), different flight and different origin
+    const authMonthDay = this.monthDayKey(authTicket.departureDateTime);
+    const otherMonthDay = this.monthDayKey(otherTicket.departureDateTime);
+
     if (
       authToCity &&
       otherToCity &&
       authToCity === otherToCity &&
-      (authFlightNumber !== otherFlightNumber || authDeparture !== otherDeparture)
+      authMonthDay === otherMonthDay &&
+      authFlightNumber !== otherFlightNumber &&
+      authFromCity !== otherFromCity
     ) {
       return TERMINAL_ECHO_TYPE.DESTINATION_THREAD;
     }
