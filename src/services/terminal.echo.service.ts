@@ -90,13 +90,19 @@ export default class TerminalEchoSvc {
     textMessage?: string;
     location?: { type: "Point"; coordinates: [number, number] };
     airportName?: string;
+    audioDuration?: number;
+    waveformData?: number[];
   }) {
-    const { userId, fileUrl, fileName, textMessage, location, airportName } =
+    const { userId, fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } =
       params;
 
     const fileCreateResult = await FileSvc.create({
       fileUrl,
       fileName,
+      metaData: {
+        audioDuration: audioDuration ?? 0,
+        waveformData: waveformData ?? [],
+      },
     });
 
     return TerminalEchoRepo.create({

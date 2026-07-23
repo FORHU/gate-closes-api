@@ -30,7 +30,7 @@ export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
-    const { fileUrl, fileName, textMessage, location, airportName } = req.body;
+    const { fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } = req.body;
 
     const locationSchema = Joi.object({
       type: Joi.string().valid("Point").required(),
@@ -43,6 +43,8 @@ export default class TerminalEchoCtrl {
       textMessage: Joi.string().optional().allow(""),
       location: locationSchema.required(),
       airportName: Joi.string().min(1).required(),
+      audioDuration: Joi.number().optional().default(0),
+      waveformData: Joi.array().items(Joi.number()).optional().default([]),
     });
 
     const { error, value } = schema.validate({
@@ -51,6 +53,8 @@ export default class TerminalEchoCtrl {
       textMessage,
       location,
       airportName,
+      audioDuration,
+      waveformData,
     });
     if (error) {
       return res.status(400).json({ message: error.message });
@@ -65,6 +69,8 @@ export default class TerminalEchoCtrl {
         textMessage: value.textMessage,
         location: value.location,
         airportName: value.airportName,
+        audioDuration: value.audioDuration,
+        waveformData: value.waveformData,
       });
     } catch (error: any) {
       return res.status(500).json({ message: error.message || "Server error." });
