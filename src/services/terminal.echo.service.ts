@@ -121,13 +121,19 @@ export default class TerminalEchoSvc {
     textMessage?: string;
     location?: { type: "Point"; coordinates: [number, number] };
     airportName?: string;
+    audioDuration?: number;
+    waveformData?: number[];
   }) {
-    const { userId, fileUrl, fileName, textMessage, location, airportName } =
+    const { userId, fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } =
       params;
 
     const fileCreateResult = await FileSvc.create({
       fileUrl,
       fileName,
+      metaData: {
+        audioDuration: audioDuration ?? 0,
+        waveformData: waveformData ?? [],
+      },
     });
 
     return TerminalEchoRepo.create({
@@ -284,32 +290,18 @@ export default class TerminalEchoSvc {
   }) {
     const { terminalEchoId, reaction, userId } = params;
 
-    const existing = await TerminalEchoReactionRepo.findOne({
+    // Atomic toggle — see TerminalEchoReactionRepo.toggleReaction for
+    // why this replaced the old findOne-then-create/delete pattern
+    // (which had a race condition causing intermittent wrong-direction
+    // reaction broadcasts under concurrent taps).
+    const action = await TerminalEchoReactionRepo.toggleReaction({
       terminalEchoId,
       userId,
       reaction,
     });
 
-    if (existing) {
-      await TerminalEchoReactionRepo.deleteOne({
-        terminalEchoId,
-        userId,
-        reaction,
-      });
-      return TerminalEchoRepo.updateReaction(
-        terminalEchoId,
-        reaction,
-        "decrement"
-      );
-    }
-
-    await TerminalEchoReactionRepo.create({
-      terminalEchoId: new ObjectId(terminalEchoId),
-      userId: new ObjectId(userId),
-      reaction,
-    });
-
-    return TerminalEchoRepo.updateReaction(terminalEchoId, reaction, "increment");
+    const result = await TerminalEchoRepo.updateReaction(terminalEchoId, reaction, action);
+    return { ...result, action };
   }
 }
 

@@ -129,31 +129,13 @@ export default class TerminalEchoReplySvc {
   }) {
     const { replyId, reaction, userId } = params;
 
-    const existing = await TerminalEchoReplyReactionRepo.findOne({
+    const action = await TerminalEchoReplyReactionRepo.toggleReaction({
       terminalEchoReplyId: replyId,
       userId,
       reaction,
     });
 
-    if (existing) {
-      await TerminalEchoReplyReactionRepo.deleteOne({
-        terminalEchoReplyId: replyId,
-        userId,
-        reaction,
-      });
-      return TerminalEchoReplyRepo.updateReaction(
-        replyId,
-        reaction,
-        "decrement"
-      );
-    }
-
-    await TerminalEchoReplyReactionRepo.create({
-      terminalEchoReplyId: new ObjectId(replyId),
-      userId: new ObjectId(userId),
-      reaction,
-    });
-
-    return TerminalEchoReplyRepo.updateReaction(replyId, reaction, "increment");
+    const result = await TerminalEchoReplyRepo.updateReaction(replyId, reaction, action);
+    return { ...result, action };
   }
 }

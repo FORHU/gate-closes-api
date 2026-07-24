@@ -1,22 +1,3 @@
-/**
- * Data-access layer for terminal echo replies. All MongoDB queries for
- * replies live here — no other file should touch the collection
- * directly.
- *
- * Two read paths exist for a reason:
- *   - findByTerminalEchoIdWithFile(): fetches ALL replies for a thread.
- *     Used for the initial full-thread load.
- *   - findByIdWithFile(): fetches ONE reply by its own _id. Used by the
- *     frontend's "append, don't refetch" real-time strategy — when a
- *     socket event announces a new reply, the client fetches just that
- *     one reply and appends it to its already-loaded list, instead of
- *     re-fetching (and re-transforming) the entire thread every time.
- *     Both share nearly identical aggregation pipelines (file + user
- *     lookups) — kept as two separate methods rather than one
- *     parameterized method for clarity and to keep each query plan
- *     simple/predictable.
- */
-
 import { ObjectId } from "mongodb";
 import { MTerminalEchoReply, TTerminalEchoReply, TTerminalEchoReplyUpdateOptions } from "../models/terminal.echo.reply.model";
 import { getDB } from "../utils/mongo";
@@ -119,19 +100,16 @@ export default class TerminalEchoReplyRepo {
    *
    * Used by the "append, don't refetch" real-time flow: when the
    * backend emits `terminal_echo_reply:created` after a new reply is
-   * posted, the payload only contains the new reply's id (not its full
-   * content). The frontend calls GET /terminal-echo-reply/:id — which
-   * hits this method — to fetch just that one reply's data, then
-   * appends it locally rather than re-fetching the whole thread.
+   * posted, the payload now includes the full reply document directly
+   * (built via this method), so no separate client fetch is needed.
    *
-   * Returns `null` if no reply with that id exists (e.g. it was
-   * deleted between the socket event firing and this fetch running).
+   * Returns `null` if no reply with that id exists.
    */
   static async findByIdWithFile(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
     } catch {
-      return Promise.reject("Invalid terminal echo reply id.");
+      return Promise.reject("Invalid terminal echo id.");
     }
 
     const results = await this.collection()
@@ -200,6 +178,19 @@ export default class TerminalEchoReplyRepo {
     return this.collection().updateOne({ _id: reply._id }, { $set: setFields });
   }
 
+  /**
+   * FIX: added `includeResultMetadata: true`.
+   *
+   * On MongoDB Node driver v6+, `findOneAndUpdate` returns the updated
+   * document DIRECTLY by default — the old `{ value, ok, lastErrorObject }`
+   * wrapper shape is now opt-in via `includeResultMetadata: true`. This
+   * method's callers (the service, then the controller) expect the old
+   * wrapped shape (`result.value`), so without this flag `result.value`
+   * silently resolves to `undefined` on driver v6+ rather than throwing —
+   * which is why this went unnoticed until the equivalent bug in
+   * updateReaction below caused a visible symptom (missing socket
+   * broadcasts).
+   */
   static async incrementListen(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
@@ -213,10 +204,22 @@ export default class TerminalEchoReplyRepo {
         $inc: { countListens: 1 },
         $set: { updatedAt: new Date() },
       },
-      { returnDocument: "after" }
+      { returnDocument: "after", includeResultMetadata: true }
     );
   }
 
+  /**
+   * FIX: added `includeResultMetadata: true`.
+   *
+   * Same root cause as incrementListen above. Without this flag, on
+   * driver v6+, the returned document has no `.value` wrapper, so
+   * `result.value.terminalEchoId` in the controller (used to pick the
+   * `thread:<id>` room to broadcast the reaction update to) silently
+   * evaluated to `undefined` — the broadcast was skipped every time,
+   * with no error anywhere in the chain. Restoring the wrapped shape
+   * fixes `result.value.terminalEchoId` in the controller without
+   * requiring any service/controller changes.
+   */
   static async updateReaction(
     _id: string | ObjectId,
     reaction: "like" | "love" | "haha" | "wow" | "sad" | "angry",
@@ -262,7 +265,7 @@ export default class TerminalEchoReplyRepo {
           },
         },
       ],
-      { returnDocument: "after" }
+      { returnDocument: "after", includeResultMetadata: true }
     );
   }
 

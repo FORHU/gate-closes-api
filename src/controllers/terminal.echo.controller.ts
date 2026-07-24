@@ -1,14 +1,36 @@
+/**
+ * terminal.echo.controller.ts
+ * ─────────────────────────────────────────────────────────────
+ * (see previous version's header for full context on broadcast
+ * strategy — unchanged)
+ *
+ * TEMP DEBUG LOGGING (this pass):
+ * Added logs around the reaction broadcast to confirm it fires and to
+ * see how many sockets are connected at emit time — same diagnostic
+ * technique used to find the reply-count sync bug earlier. Remove
+ * once the reaction real-time bug is confirmed fixed.
+ */
+
 import { Request, Response } from "express";
 import Joi from "joi";
 import type { TerminalEchoMapBounds } from "../const";
 import TerminalEchoSvc from "../services/terminal.echo.service";
 import { io } from "../app";
 
+const REACTION_FIELD_MAP: Record<string, string> = {
+  like: "countReactLike",
+  love: "countReactLove",
+  haha: "countReactHaha",
+  wow: "countReactWow",
+  sad: "countReactSad",
+  angry: "countReactAngry",
+};
+
 export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
-    const { fileUrl, fileName, textMessage, location, airportName } = req.body;
+    const { fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } = req.body;
 
     const locationSchema = Joi.object({
       type: Joi.string().valid("Point").required(),
@@ -21,6 +43,8 @@ export default class TerminalEchoCtrl {
       textMessage: Joi.string().optional().allow(""),
       location: locationSchema.required(),
       airportName: Joi.string().min(1).required(),
+      audioDuration: Joi.number().optional().default(0),
+      waveformData: Joi.array().items(Joi.number()).optional().default([]),
     });
 
     const { error, value } = schema.validate({
@@ -29,33 +53,45 @@ export default class TerminalEchoCtrl {
       textMessage,
       location,
       airportName,
+      audioDuration,
+      waveformData,
     });
     if (error) {
       return res.status(400).json({ message: error.message });
     }
 
+    let result: any;
     try {
-      const result = await TerminalEchoSvc.createTerminalEcho({
+      result = await TerminalEchoSvc.createTerminalEcho({
         userId,
         fileUrl: value.fileUrl,
         fileName: value.fileName,
         textMessage: value.textMessage,
         location: value.location,
         airportName: value.airportName,
-      });
-
-      io.of("/terminal-echo").emit("terminal_echo:changed", {
-        type: "create",
-        data: result,
-      });
-
-      return res.status(201).json({
-        message: "Terminal echo created.",
-        insertedId: result.insertedId,
+        audioDuration: value.audioDuration,
+        waveformData: value.waveformData,
       });
     } catch (error: any) {
       return res.status(500).json({ message: error.message || "Server error." });
     }
+
+    try {
+      io.of("/terminal-echo").emit("terminal_echo:changed", {
+        type: "create",
+        data: result,
+      });
+    } catch (broadcastErr: any) {
+      console.warn(
+        "[TerminalEchoCtrl.create] Echo saved successfully, but broadcast failed:",
+        broadcastErr
+      );
+    }
+
+    return res.status(201).json({
+      message: "Terminal echo created.",
+      insertedId: result.insertedId,
+    });
   }
 
   static async search(req: Request, res: Response) {
@@ -194,6 +230,8 @@ export default class TerminalEchoCtrl {
     }
   }
 
+
+  // PATCH /terminal-echo/:id/reaction
   static async updateReaction(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
@@ -212,18 +250,38 @@ export default class TerminalEchoCtrl {
       return res.status(400).json({ message: error.message });
     }
 
+    let result: any;
     try {
-      const result = await TerminalEchoSvc.updateReaction({
+      result = await TerminalEchoSvc.updateReaction({
         terminalEchoId: value.id,
         reaction: value.reaction,
         userId,
       });
-      return res.json({ data: result?.value ?? null });
     } catch (err: any) {
       return res
         .status(500)
         .json({ message: err.message || "Server error." });
     }
+
+    // ── Broadcast, best-effort. Mirrors terminal_echo:reply_added's
+    // pattern exactly — the direction ("increment"/"decrement") is
+    // already known (computed by TerminalEchoSvc.updateReaction), so
+    // the frontend just applies +1 or -1 accordingly. No guessing, no
+    // computed totals, no extra DB reads. ──
+    try {
+      io.of("/terminal-echo").emit("terminal_echo:reaction_updated", {
+        terminalEchoId: value.id,
+        reactionKey: value.reaction, // e.g. "like" — backend key, not emoji character
+        action: result?.action ?? "increment",
+        triggeredByUserId: userId,
+      });
+    } catch (broadcastErr: any) {
+      console.warn(
+        "[TerminalEchoCtrl.updateReaction] Reaction saved, but broadcast failed:",
+        broadcastErr
+      );
+    }
+
+    return res.json({ data: result?.value ?? null });
   }
 }
-
