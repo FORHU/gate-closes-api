@@ -104,7 +104,7 @@ export default class TerminalEchoReplyCtrl {
 
     // ── Step 1: Create the reply. If THIS fails, the request should
     // genuinely fail — the reply was never saved. ──
-    let result: any;
+    let result: Awaited<ReturnType<typeof TerminalEchoReplySvc.createReply>>;
     try {
       result = await TerminalEchoReplySvc.createReply({
         userId,
@@ -115,10 +115,9 @@ export default class TerminalEchoReplyCtrl {
         audioDuration: value.audioDuration,
         waveformData: value.waveformData,
       });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
 
     // ── Step 2: Build and emit the real-time broadcasts. This is
@@ -148,7 +147,7 @@ export default class TerminalEchoReplyCtrl {
       io.of("/terminal-echo").emit("terminal_echo:reply_added", {
         terminalEchoId: value.terminalEchoId,
       });
-    } catch (broadcastErr: any) {
+    } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoReplyCtrl.create] Reply saved successfully, but real-time broadcast failed:",
         broadcastErr
@@ -185,10 +184,9 @@ export default class TerminalEchoReplyCtrl {
         userId
       );
       return res.json({ data: replies });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -217,10 +215,9 @@ export default class TerminalEchoReplyCtrl {
         return res.status(404).json({ message: "Reply not found." });
       }
       return res.json({ data: reply });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -240,10 +237,9 @@ export default class TerminalEchoReplyCtrl {
     try {
       const result = await TerminalEchoReplySvc.incrementListen(value.id);
       return res.json({ data: result?.value ?? null });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -266,17 +262,16 @@ export default class TerminalEchoReplyCtrl {
       return res.status(400).json({ message: error.message });
     }
 
-    let result: any;
+    let result: Awaited<ReturnType<typeof TerminalEchoReplySvc.updateReaction>>;
     try {
       result = await TerminalEchoReplySvc.updateReaction({
         replyId: value.id,
         reaction: value.reaction,
         userId,
       });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
 
     try {
@@ -301,7 +296,7 @@ export default class TerminalEchoReplyCtrl {
           triggeredByUserId: userId,
         });
       }
-    } catch (broadcastErr: any) {
+    } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoReplyCtrl.updateReaction] Reaction saved, but broadcast failed:",
         broadcastErr

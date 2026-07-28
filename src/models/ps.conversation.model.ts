@@ -8,7 +8,7 @@ export type TPsConversation = {
   lastEventAt?: Date;
   lastEventActorId?: ObjectId;
   lastEventActorName?: string;
-  lastEventPayload?: Record<string, any> | null;
+  lastEventPayload?: Record<string, unknown> | null;
   lastEventText?: string;
   lastReadAt?: Date | null;
   hasUnread?: boolean;
@@ -24,7 +24,7 @@ export type TPsConversationUpdateOptions = {
   lastEventAt?: Date;
   lastEventActorId?: ObjectId | string;
   lastEventActorName?: string;
-  lastEventPayload?: Record<string, any> | null;
+  lastEventPayload?: Record<string, unknown> | null;
   lastEventText?: string;
   lastReadAt?: Date | null;
   hasUnread?: boolean;
@@ -38,7 +38,7 @@ export class MPsConversation implements Partial<TPsConversation> {
   lastEventAt?: Date;
   lastEventActorId?: ObjectId;
   lastEventActorName?: string;
-  lastEventPayload?: Record<string, any> | null;
+  lastEventPayload?: Record<string, unknown> | null;
   lastEventText?: string;
   lastReadAt?: Date | null;
   hasUnread?: boolean;

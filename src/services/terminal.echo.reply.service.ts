@@ -6,7 +6,7 @@
  * reaction state.
  */
 
-import { ObjectId } from "mongodb";
+import { Document, ObjectId } from "mongodb";
 import TerminalEchoReplyRepo from "../repositories/terminal.echo.reply.repository";
 import FileSvc from "./file.service";
 import TerminalEchoReplyReactionRepo from "../repositories/terminal.echo.reply.reaction.repository";
@@ -29,7 +29,7 @@ export default class TerminalEchoReplySvc {
   }) {
     const { userId, terminalEchoId, fileUrl, fileName, textMessage, audioDuration, waveformData } = params;
 
-    let fileCreateResult: any = null;
+    let fileCreateResult: Awaited<ReturnType<typeof FileSvc.create>> | null = null;
     if (fileUrl && fileName) {
       fileCreateResult = await FileSvc.create({
         fileUrl,
@@ -58,14 +58,14 @@ export default class TerminalEchoReplySvc {
   static async findByTerminalEchoId(
     terminalEchoId: string,
     userId?: string
-  ): Promise<any[]> {
+  ): Promise<Document[]> {
     const replies =
       await TerminalEchoReplyRepo.findByTerminalEchoIdWithFile(terminalEchoId);
     if (!userId || !replies.length) {
       return replies.map((r) => ({
         ...r,
         currentUserReactions: r.currentUserReactions ?? [],
-      }));
+      } as Document));
     }
     const replyIds = replies.map((r) => r._id);
     const reactions =
@@ -82,7 +82,7 @@ export default class TerminalEchoReplySvc {
     return replies.map((r) => ({
       ...r,
       currentUserReactions: byReplyId.get(r._id.toString()) ?? [],
-    }));
+    } as Document));
   }
 
   /**
@@ -100,12 +100,12 @@ export default class TerminalEchoReplySvc {
    * window between the socket event firing and this fetch running) —
    * the controller turns that into a 404.
    */
-  static async findReplyById(replyId: string, userId?: string): Promise<any | null> {
+  static async findReplyById(replyId: string, userId?: string): Promise<Document | null> {
     const reply = await TerminalEchoReplyRepo.findByIdWithFile(replyId);
     if (!reply) return null;
 
     if (!userId) {
-      return { ...reply, currentUserReactions: [] };
+      return { ...reply, currentUserReactions: [] } as Document;
     }
 
     const reactions = await TerminalEchoReplyReactionRepo.findByUserIdAndReplyIds(userId, [
@@ -115,7 +115,7 @@ export default class TerminalEchoReplySvc {
       .filter((r) => (r.terminalEchoReplyId as ObjectId).toString() === reply._id.toString())
       .map((r) => r.reaction);
 
-    return { ...reply, currentUserReactions };
+    return { ...reply, currentUserReactions } as Document;
   }
 
   static async incrementListen(replyId: string) {

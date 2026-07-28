@@ -18,7 +18,7 @@ export default class PsConversationMessageReactionRepo {
   }
 
   static async findOne(query: TPsConversationMessageReactionQuery) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.psConversationMessageId)
       filter.psConversationMessageId = new ObjectId(
@@ -31,7 +31,7 @@ export default class PsConversationMessageReactionRepo {
   }
 
   static async deleteOne(query: TPsConversationMessageReactionQuery) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.psConversationMessageId)
       filter.psConversationMessageId = new ObjectId(

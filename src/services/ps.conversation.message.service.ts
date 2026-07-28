@@ -29,7 +29,7 @@ export default class PsConversationMessageSvc {
       psConversationId,
       psSenderId,
       fileId: fileCreateResult.insertedId,
-    } as any);
+    });
   }
 
   // Get all the messages in one conversation
@@ -44,13 +44,13 @@ export default class PsConversationMessageSvc {
     );
 
     if (!params.requesterId || !messages.length) {
-      return messages.map((m: any) => ({
+      return messages.map((m) => ({
         ...m,
         currentUserReactions: m.currentUserReactions ?? [],
       }));
     }
 
-    const messageIds = messages.map((m: any) => m._id);
+    const messageIds = messages.map((m) => m._id);
     const reactions =
       await PsConversationMessageReactionRepo.findByUserIdAndMessageIds(
         params.requesterId,
@@ -58,13 +58,13 @@ export default class PsConversationMessageSvc {
       );
 
     const byMessageId = new Map<string, string[]>();
-    for (const r of reactions as any[]) {
+    for (const r of reactions) {
       const id = (r.psConversationMessageId as ObjectId).toString();
       if (!byMessageId.has(id)) byMessageId.set(id, []);
       byMessageId.get(id)!.push(r.reaction);
     }
 
-    return messages.map((m: any) => ({
+    return messages.map((m) => ({
       ...m,
       currentUserReactions: byMessageId.get(m._id.toString()) ?? [],
     }));
@@ -91,7 +91,7 @@ export default class PsConversationMessageSvc {
         params.requesterId,
         [message._id]
       );
-    const currentUserReactions = (reactions as any[]).map((r: any) => r.reaction);
+    const currentUserReactions = reactions.map((r) => r.reaction);
 
     return {
       ...message,

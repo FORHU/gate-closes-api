@@ -1,25 +1,34 @@
-import { ObjectId } from "mongodb";
+import { Document, ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import { TERMINAL_ECHO_TYPE, type TerminalEchoMapBounds, type TerminalEchoType } from "../const";
 
+type TerminalEchoMapFeatureSource = {
+  _id: ObjectId;
+  senderId: ObjectId;
+  type: TerminalEchoType;
+  location: { type: "Point"; coordinates: [number, number] };
+};
+
 export default class TerminalEchoSvc {
-  private static isPointGeometry(location: any): location is {
+  private static isPointGeometry(location: unknown): location is {
     type: "Point";
     coordinates: [number, number];
   } {
     return (
-      location?.type === "Point" &&
-      Array.isArray(location?.coordinates) &&
-      location.coordinates.length === 2 &&
-      typeof location.coordinates[0] === "number" &&
-      typeof location.coordinates[1] === "number"
+      typeof location === "object" &&
+      location !== null &&
+      (location as { type?: unknown }).type === "Point" &&
+      Array.isArray((location as { coordinates?: unknown }).coordinates) &&
+      (location as { coordinates: unknown[] }).coordinates.length === 2 &&
+      typeof (location as { coordinates: unknown[] }).coordinates[0] === "number" &&
+      typeof (location as { coordinates: unknown[] }).coordinates[1] === "number"
     );
   }
 
-  static toFeatureCollection(echoes: any[]) {
+  static toFeatureCollection(echoes: TerminalEchoMapFeatureSource[]) {
     const features = (echoes ?? [])
       .filter((echo) => this.isPointGeometry(echo?.location))
       .map((echo) => {
@@ -42,21 +51,21 @@ export default class TerminalEchoSvc {
 
   private static dateKey(d?: Date) {
     if (!d) return "";
-    const dd = d instanceof Date ? d : new Date(d as any);
+    const dd = d instanceof Date ? d : new Date(d);
     if (Number.isNaN(dd.getTime())) return "";
     return dd.toISOString().slice(0, 10);
   }
 
   private static monthDayKey(d?: Date) {
     if (!d) return "";
-    const dd = d instanceof Date ? d : new Date(d as any);
+    const dd = d instanceof Date ? d : new Date(d);
     if (Number.isNaN(dd.getTime())) return "";
     return dd.toISOString().slice(5, 10);
   }
 
   private static computeType(params: {
-    authTicket: any;
-    otherTicket: any;
+    authTicket: Document | null;
+    otherTicket: Document | null;
   }):
     TerminalEchoType {
     const { authTicket, otherTicket } = params;
@@ -148,13 +157,13 @@ export default class TerminalEchoSvc {
   static async findByAirportName(
     airportName: string,
     userId?: string
-  ): Promise<any[]> {
+  ): Promise<Document[]> {
     const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName);
     if (!userId || !echoes.length) {
       return echoes.map((e) => ({
         ...e,
         currentUserReactions: e.currentUserReactions ?? [],
-      }));
+      } as Document));
     }
     const echoIds = echoes.map((e) => e._id);
     const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
@@ -170,7 +179,7 @@ export default class TerminalEchoSvc {
     return echoes.map((e) => ({
       ...e,
       currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
-    }));
+    } as Document));
   }
 
   /**
@@ -200,7 +209,7 @@ export default class TerminalEchoSvc {
     );
 
     if (!authTicket) {
-      return echoes.map((e: any) => ({
+      return echoes.map((e) => ({
         _id: e._id as ObjectId,
         senderId: e.senderId as ObjectId,
         type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
@@ -211,7 +220,7 @@ export default class TerminalEchoSvc {
     const senderIds = Array.from(
       new Set(
         echoes
-          .map((e: any) => (e.senderId as ObjectId | undefined)?.toString?.())
+          .map((e) => (e.senderId as ObjectId | undefined)?.toString?.())
           .filter(Boolean) as string[]
       )
     )
@@ -222,7 +231,7 @@ export default class TerminalEchoSvc {
       senderIds
     );
 
-    return echoes.map((e: any) => {
+    return echoes.map((e) => {
       const senderIdStr =
         (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
 

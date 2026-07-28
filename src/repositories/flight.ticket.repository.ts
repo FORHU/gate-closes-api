@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import { Document, ObjectId } from "mongodb";
 import { getDB } from "../utils/mongo";
 import { MFlightTicket, TFlightTicket } from "../models/flight.ticket.model";
 
@@ -18,13 +18,13 @@ export default class FlightTicketRepo {
       { userId, departureDateTime: { $gte: now } },
       { sort: { departureDateTime: 1 } }
     );
-    if (upcoming) return upcoming as any;
+    if (upcoming) return upcoming;
 
     const latest = await this.collection().findOne(
       { userId },
       { sort: { departureDateTime: -1 } }
     );
-    return (latest as any) ?? null;
+    return latest ?? null;
   }
 
   /**
@@ -33,7 +33,7 @@ export default class FlightTicketRepo {
    * - Otherwise fallback to latest (max departureDateTime) per user
    */
   static async findActiveOrLatestByUserIds(userIds: ObjectId[]) {
-    if (!userIds?.length) return new Map<string, any>();
+    if (!userIds?.length) return new Map<string, Document>();
 
     const now = new Date();
 
@@ -68,11 +68,11 @@ export default class FlightTicketRepo {
       ])
       .toArray();
 
-    const map = new Map<string, any>();
-    for (const row of latest as any[]) {
+    const map = new Map<string, Document>();
+    for (const row of latest) {
       map.set(String(row._id), row.ticket);
     }
-    for (const row of upcoming as any[]) {
+    for (const row of upcoming) {
       map.set(String(row._id), row.ticket);
     }
     return map;
@@ -81,7 +81,7 @@ export default class FlightTicketRepo {
   static async findUserIdsByFlight(params: {flightNumber: string; departureDateTime: Date; excludeUserId?: ObjectId; }): Promise<ObjectId[]> {
     const { flightNumber, departureDateTime, excludeUserId } = params;
 
-    const filter: any = { flightNumber, departureDateTime };
+    const filter: Record<string, unknown> = { flightNumber, departureDateTime };
     if (excludeUserId) filter.userId = { $ne: excludeUserId };
 
     const docs = await this.collection()
@@ -90,7 +90,7 @@ export default class FlightTicketRepo {
 
     const seen = new Set<string>();
     const ids: ObjectId[] = [];
-    for (const d of docs as any[]) {
+    for (const d of docs) {
       const id = d.userId as ObjectId | undefined;
       if (!id) continue;
       const key = String(id);
@@ -127,7 +127,7 @@ export default class FlightTicketRepo {
     }
   }
 
-static async updateByUserId(userId: ObjectId, updateData: Record<string, any>) {
+static async updateByUserId(userId: ObjectId, updateData: Record<string, unknown>) {
 
   const dataToUpdate = {
     ...updateData,

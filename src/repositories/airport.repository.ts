@@ -53,8 +53,8 @@ export default class AirportRepo {
     }
 
     const updatedAt = new Date();
-    const fullDoc = new MAirport({ ...airport, updatedAt });
-    const { _id, ...doc } = fullDoc;
+    const doc: Record<string, unknown> = { ...new MAirport({ ...airport, updatedAt }) };
+    delete doc._id;
 
     return this.collection().updateOne(filter, { $set: doc }, { upsert: true });
   }
@@ -62,7 +62,7 @@ export default class AirportRepo {
   static async findById(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid airport id.");
     }
     return this.collection().findOne({ _id });
@@ -79,12 +79,12 @@ export default class AirportRepo {
   static async update(airport: TAirportUpdateOptions) {
     try {
       airport._id = new ObjectId(airport._id as string);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid airport id.");
     }
 
     const updatedAt = new Date();
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
 
     if (airport.iata !== undefined && airport.iata !== null) {
       setFields.iata = airport.iata.toUpperCase();
@@ -219,7 +219,7 @@ export default class AirportRepo {
   }
 
   static async findForBoundarySync() {
-    const filter: any = {
+    const filter: Record<string, unknown> = {
       location: { $exists: true },
       radiusKm: { $gt: 0 },
     };

@@ -1,11 +1,12 @@
 import UserRepo from "../repositories/user.repository";
+import { TUserUpdateOptions } from "../models/user.model";
 
 export default class UserSvc {
   static async updateProfile(userId: string, username?: string, picture?: string) {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
-    const updateData: any = { _id: userId };
+    const updateData: TUserUpdateOptions = { _id: userId };
 
     if (username) {
       const existing = await UserRepo.findByUsername(username);
@@ -30,13 +31,13 @@ export default class UserSvc {
 
   static async setUsernameGender(
     userId: string,
-    gender: "Male" | "Female" | "Other",
+    gender: "Male" | "Female",
     username?: string
   ) {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
-    const updateData: any = {
+    const updateData: TUserUpdateOptions = {
       _id: userId,
       gender,
       isCompleteProfile: true,

@@ -3,6 +3,7 @@ import Joi from "joi";
 import FlightTicketSvc from "../services/flight.ticket.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import { ERROR_MESSAGE } from "../const";
+import { getErrorMessage } from "../utils/error.util";
 
 export default class FlightTicketCtrl {
   // POST /flight-ticket
@@ -56,8 +57,8 @@ export default class FlightTicketCtrl {
       });
 
       return res.json({ message: result });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 
@@ -82,8 +83,8 @@ export default class FlightTicketCtrl {
 
       const ticket = await FlightTicketSvc.getByUserId(userObjectId);
       return res.json({ data: ticket });
-    } catch (err: any) {
-      const message = err?.message ?? err;
+    } catch (err) {
+      const message = getErrorMessage(err);
       const status = message === ERROR_MESSAGE.INVALID_USER_ID ? 400 : 500;
       return res.status(status).json({ message });
     }
@@ -129,9 +130,9 @@ export default class FlightTicketCtrl {
       const updatedTicket = await FlightTicketSvc.update(userObjectId, value);
 
       return res.json({ message: "Ticket updated successfully", data: updatedTicket });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
-      }
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
+    }
   }
 }
 

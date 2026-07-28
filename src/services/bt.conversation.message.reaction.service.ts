@@ -34,7 +34,7 @@ export default class BtConversationMessageReactionSvc {
             btConversationMessageId: new ObjectId(btConversationMessageId),
             userId,
             reaction,
-        } as any);
+        });
 
         const messageUpdate = await BtConversationMessageRepo.updateReaction(
             btConversationMessageId,

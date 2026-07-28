@@ -23,7 +23,7 @@ export default class UserRepo {
   static async findById(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid user id.");
     }
     return this.collection().findOne({ _id });
@@ -40,13 +40,13 @@ export default class UserRepo {
   static async update(user: TUserUpdateOptions) {
     try {
       user._id = new ObjectId(user._id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid user id.");
     }
 
     const updatedAt = new Date();
 
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
     if (user.email !== undefined) setFields.email = user.email;
     if (user.username !== undefined) setFields.username = user.username;
     if (user.gender !== undefined) setFields.gender = user.gender;

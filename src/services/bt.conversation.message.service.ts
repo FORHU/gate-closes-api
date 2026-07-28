@@ -16,7 +16,7 @@ export default class BtConversationMessageSvc {
             },
         });
 
-        return BtConversationMessageRepo.create({btConversationId, btSenderId, fileId: fileCreateResult.insertedId} as any);
+        return BtConversationMessageRepo.create({btConversationId, btSenderId, fileId: fileCreateResult.insertedId});
     }
 
     static async listMessages(params: {btConversationId: ObjectId, limit: number, requesterId?: ObjectId}) {
@@ -24,29 +24,29 @@ export default class BtConversationMessageSvc {
             params.btConversationId,
             params.limit
         );
-      
+
         if (!params.requesterId || !messages.length) {
-            return messages.map((m: any) => ({
+            return messages.map((m) => ({
               ...m,
               currentUserReactions: m.currentUserReactions ?? [],
             }));
         }
-      
-        const messageIds = messages.map((m: any) => m._id);
+
+        const messageIds = messages.map((m) => m._id);
         const reactions =
             await BtConversationMessageReactionRepo.findByUserIdAndMessageIds(
             params.requesterId,
             messageIds
         );
-      
+
         const byMessageId = new Map<string, string[]>();
-        for (const r of reactions as any[]) {
+        for (const r of reactions) {
             const id = (r.btConversationMessageId as ObjectId).toString();
             if (!byMessageId.has(id)) byMessageId.set(id, []);
             byMessageId.get(id)!.push(r.reaction);
         }
-      
-        return messages.map((m: any) => ({
+
+        return messages.map((m) => ({
         ...m,
         currentUserReactions: byMessageId.get(m._id.toString()) ?? [],
         }));
@@ -73,7 +73,7 @@ export default class BtConversationMessageSvc {
                 params.requesterId,
                 [message._id]
             );
-        const currentUserReactions = (reactions as any[]).map((r: any) => r.reaction);
+        const currentUserReactions = reactions.map((r) => r.reaction);
 
         return {
             ...message,

@@ -6,6 +6,7 @@ import {
   PS_SOCKET_EVENT,
   TPsConversationReadStateSocketPayload,
 } from "../const";
+import { getErrorMessage } from "../utils/error.util";
 
 export default class PsConversationCtrl {
   // POST /conversations - Create a parallel soul conversation
@@ -27,12 +28,12 @@ export default class PsConversationCtrl {
         otherUserId: value.otherUserId,
       });
 
-      const participants = (convo as any)?.participants ?? [];
+      const participants = convo?.participants ?? [];
       for (const participantId of participants) {
         const participantIdStr = String(participantId);
         const conversationForParticipant =
           await PsConversationSvc.getConversationDetailForUser({
-            conversationId: String((convo as any)._id),
+            conversationId: String(convo?._id),
             requesterId: participantIdStr,
           });
 
@@ -43,11 +44,10 @@ export default class PsConversationCtrl {
       }
 
       return res.json({ data: convo });
-    } catch (err: any) {
-      if (err?.message === "Conversation already exists.") {
-        return res.status(409).json({ message: err.message });
-      }
-      return res.status(400).json({ message: err?.message ?? err });
+    } catch (err) {
+      const message = getErrorMessage(err);
+        return res.status(409).json({ message });
+      return res.status(400).json({ message });
     }
   }
 
@@ -70,8 +70,8 @@ export default class PsConversationCtrl {
       });
 
       return res.json({ data: result });
-    } catch (err: any) {
-      return res.status(400).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(400).json({ message: getErrorMessage(err) });
     }
   }
 
@@ -84,8 +84,8 @@ export default class PsConversationCtrl {
         userId
       );
       return res.json({ data: conversations });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 
@@ -112,11 +112,10 @@ export default class PsConversationCtrl {
       return res.json({
         data: conversation,
       });
-    } catch (err: any) {
-      if (err?.message === "Not a participant.") {
-        return res.status(403).json({ message: err.message });
-      }
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      const message = getErrorMessage(err);
+        return res.status(403).json({ message });
+      return res.status(500).json({ message });
     }
   }
 
@@ -154,11 +153,10 @@ export default class PsConversationCtrl {
         .emit(PS_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
 
       return res.json({ data: readState });
-    } catch (err: any) {
-      if (err?.message === "Not a participant.") {
-        return res.status(403).json({ message: err.message });
-      }
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      const message = getErrorMessage(err);
+        return res.status(403).json({ message });
+      return res.status(500).json({ message });
     }
   }
 }

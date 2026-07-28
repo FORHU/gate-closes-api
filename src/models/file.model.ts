@@ -4,7 +4,7 @@ export type TFile = {
   _id?: ObjectId;
   fileUrl: string;
   fileName: string;
-  metaData?: Record<string, any>;
+  metaData?: Record<string, unknown>;
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date | null;
@@ -14,7 +14,7 @@ export type TFileUpdateOptions = {
   _id?: ObjectId | string;
   fileUrl?: string;
   fileName?: string;
-  metaData?: Record<string, any>;
+  metaData?: Record<string, unknown>;
   updatedAt?: Date;
   deletedAt?: Date | null;
 };
@@ -23,7 +23,7 @@ export class MFile implements Partial<TFile> {
   _id?: ObjectId;
   fileUrl: string;
   fileName: string;
-  metaData?: Record<string, any>;
+  metaData?: Record<string, unknown>;
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date | null;

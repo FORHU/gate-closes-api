@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import AirportSvc from "../services/airport.service";
+import { getErrorMessage } from "../utils/error.util";
     
 export default class AirportCtrl {
 
@@ -24,8 +25,8 @@ export default class AirportCtrl {
     try {
       const results = await AirportSvc.search(value.q, value.limit ?? 10);
       return res.json({ data: results });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 
@@ -84,8 +85,8 @@ export default class AirportCtrl {
         lng: Number(lng),
       });
       return res.json({ data: nearest });
-    } catch (error: any) {
-      return res.status(500).json({ message: error?.message ?? error });
+    } catch (error) {
+      return res.status(500).json({ message: getErrorMessage(error) });
     }
   }
 
@@ -117,8 +118,8 @@ export default class AirportCtrl {
       }
 
       return res.json({ data: result });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 
@@ -149,8 +150,8 @@ export default class AirportCtrl {
         lng: Number(lng),
       });
       return res.json({ data: result });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 
@@ -180,20 +181,18 @@ export default class AirportCtrl {
         message: "Airport boundary sync completed.",
         data: result,
       });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 
   // GET /airport/geojson
   static async getAllAsGeoJson(req: Request, res: Response) {
-    const userId = req.user?.userId as string;
-
     try {
       const geojson = await AirportSvc.getAllAsGeoJson();
       return res.json({ data: geojson });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 }

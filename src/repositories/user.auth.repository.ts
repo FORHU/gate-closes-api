@@ -10,7 +10,7 @@ export default class UserAuthRepo {
   static async createForManualRegister(userId: string | ObjectId) {
     try {
       userId = new ObjectId(userId);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid user id.");
     }
     const auth: TUserAuth = { userId, provider: "local" };
@@ -24,7 +24,7 @@ export default class UserAuthRepo {
   static async findByUserId(userId: string | ObjectId) {
     try {
       userId = new ObjectId(userId);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid user id.");
     }
     return this.collection().findOne({ userId });
@@ -60,13 +60,13 @@ export default class UserAuthRepo {
   static async update(auth: TUserAuthUpdateOptions) {
     try {
       if (auth.userId) auth.userId = new ObjectId(auth.userId);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid user id.");
     }
     
     const updatedAt = new Date();
 
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
     if (auth.password != null) setFields.password = auth.password;
     if (auth.provider != null) setFields.provider = auth.provider;
     if (auth.googleId != null) setFields.googleId = auth.googleId;
