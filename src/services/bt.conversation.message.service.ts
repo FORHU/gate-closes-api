@@ -4,10 +4,17 @@ import BtConversationMessageReactionRepo from "../repositories/bt.conversation.m
 import FileSvc from "./file.service";
 
 export default class BtConversationMessageSvc {
-    static async sendMessage(params: {btConversationId: ObjectId, btSenderId: ObjectId, fileUrl: string, fileName: string}) {
-        const { btConversationId, btSenderId, fileUrl, fileName } = params;
+    static async sendMessage(params: {btConversationId: ObjectId, btSenderId: ObjectId, fileUrl: string, fileName: string, audioDuration?: number, waveformData?: number[]}) {
+        const { btConversationId, btSenderId, fileUrl, fileName, audioDuration, waveformData } = params;
 
-        const fileCreateResult = await FileSvc.create({fileUrl, fileName})
+        const fileCreateResult = await FileSvc.create({
+            fileUrl,
+            fileName,
+            metaData: {
+                audioDuration: audioDuration ?? 0,
+                waveformData: waveformData ?? [],
+            },
+        });
 
         return BtConversationMessageRepo.create({btConversationId, btSenderId, fileId: fileCreateResult.insertedId} as any);
     }
