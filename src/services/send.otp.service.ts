@@ -2,9 +2,25 @@ import { createTransport } from "nodemailer";
 import * as path from "path";
 import { MAILER_TRANSPORT_HOST, MAILER_TRANSPORT_PORT, MAILER_EMAIL, MAILER_PASSWORD } from "../config";
 
+export type OtpPurpose = "email_verify" | "reset_password";
 
+const OTP_CONFIG: Record<OtpPurpose, { subject: string; headline: string; subtext: string; preheader: string }> = {
+  email_verify: {
+    subject: "Verify Your Email - Gate Closes",
+    headline: "Verify Your Email Address",
+    subtext: "Use this code to verify your account. This code is valid for the next",
+    preheader: "Your one-time verification code is ready. It expires in 5 minutes.",
+  },
+  reset_password: {
+    subject: "Reset Your Password - Gate Closes",
+    headline: "Reset Your Password",
+    subtext: "Use this code to reset your password. This code is valid for the next",
+    preheader: "Your one-time reset code is ready. It expires in 5 minutes.",
+  },
+};
 
-export async function sendOtpEmail(to: string, otp: string) {
+export async function sendOtpEmail(to: string, otp: string, purpose: OtpPurpose) {
+  const config = OTP_CONFIG[purpose];
   const transporter = createTransport({
     host: MAILER_TRANSPORT_HOST,
     port: MAILER_TRANSPORT_PORT,
@@ -21,8 +37,8 @@ export async function sendOtpEmail(to: string, otp: string) {
   return transporter.sendMail({
     from: `"noreply" <${MAILER_EMAIL}>`,
     to,
-    subject: "Your One Time Password (OTP) from Gate Closes",
-    text: `Your verification code is text: ${otp}. It expires in 5 minutes.`,
+    subject: config.subject,
+    text: `Your code is: ${otp}. It expires in 5 minutes.`,
     html: `<html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -33,7 +49,7 @@ export async function sendOtpEmail(to: string, otp: string) {
 
   <!-- Preheader text (hidden in inbox preview) -->
   <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
-    Your one-time verification code is ready. It expires in 5 minutes.
+    ${config.preheader}
   </div>
 
   <!-- Outer Wrapper -->
@@ -65,11 +81,11 @@ export async function sendOtpEmail(to: string, otp: string) {
             <td style="padding: 24px 40px 32px 40px;">
               <!-- Greeting -->
               <h1 style="margin: 0 0 16px 0; font-size: 26px; font-weight: 700; color: #000000; line-height: 1.3; text-align:center;">
-                Verification Code
+                ${config.headline}
               </h1>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color:#333333;">
                 Hi there <br/>
-                Use this code to verify your account. This code is valid for the next <strong style="color:#000000;">5 minutes</strong>.
+                ${config.subtext} <strong style="color:#000000;">5 minutes</strong>.
               </p>
 
               <!-- OTP Code Box -->
