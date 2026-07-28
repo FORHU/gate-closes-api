@@ -7,7 +7,6 @@ import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { sendOtpEmail } from "./send.otp.service";
 import { createAccessToken, createRefreshToken } from "../utils/jwt";
 import { GOOGLE_CLIENT_ID } from "../config";
-import { sendOtpResetEmail } from "./send.otp.forgot";
 
 const googleClient = new OAuth2Client();
 
@@ -49,7 +48,7 @@ export default class UserAuthSvc {
       attempts: 0,
     });
 
-    await sendOtpEmail(email, otp);
+    await sendOtpEmail(email, otp, "email_verify");
 
     return { userId, signupStep: "email_verification" as const };
   }
@@ -118,7 +117,7 @@ export default class UserAuthSvc {
       attempts: 0,
     });
 
-    await sendOtpEmail(user.email, otp);
+    await sendOtpEmail(user.email, otp, "email_verify");
 
     return { message: "OTP resent successfully." };
   }
@@ -148,7 +147,7 @@ export default class UserAuthSvc {
       attempts: 0,
     });
 
-    await sendOtpResetEmail(user.email, otp);
+    await sendOtpEmail(user.email, otp, "reset_password");
 
     return { userId, message: "Reset code sent to email." };
   }
@@ -177,7 +176,7 @@ export default class UserAuthSvc {
       attempts: 0,
     });
 
-    await sendOtpResetEmail(user.email, otp);
+    await sendOtpEmail(user.email, otp, "reset_password");
 
     return { message: "Reset code resent. It expires in 1 minute." };
   }
