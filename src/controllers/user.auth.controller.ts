@@ -57,8 +57,9 @@ export default class AuthController {
         message: "Email verified. Proceed to set password.",
         signupStep: "set_password",
       });
-    } catch (error: any) {
-      return res.status(400).json({ message: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      return res.status(400).json({ message });
     }
   }
 
@@ -81,12 +82,13 @@ export default class AuthController {
         message: "Password set. Proceed to set gender.",
         signupStep: "completed",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
       const status =
-        error.message?.startsWith("Invalid step.") || error.message === "Email not verified."
+        message.startsWith("Invalid step.") || message === "Email not verified."
           ? 400
           : 500;
-      return res.status(status).json({ message: error.message || "Server error." });
+      return res.status(status).json({ message });
     }
   }
 
@@ -128,9 +130,10 @@ export default class AuthController {
     try {
       const { message } = await UserAuthSvc.resendResetCode(value.userId);
       return res.status(200).json({ message });
-    } catch (error: any) {
-      const status = error.message === "User not found." ? 404 : 500;
-      return res.status(status).json({ message: error.message || "Server error." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      const status = message === "User not found." ? 404 : 500;
+      return res.status(status).json({ message });
     }
   }
 
@@ -149,8 +152,9 @@ export default class AuthController {
     try {
       const { message } = await UserAuthSvc.verifyResetCode(value.userId, value.code);
       return res.status(200).json({ message });
-    } catch (error: any) {
-      return res.status(400).json({ message: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      return res.status(400).json({ message });
     }
   }
 
@@ -170,8 +174,9 @@ export default class AuthController {
     try {
       const { message } = await UserAuthSvc.resetPasswordForgot(value.userId, value.password);
       return res.status(200).json({ message });
-    } catch (error: any) {
-      return res.status(400).json({ message: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      return res.status(400).json({ message });
     }
   }
 
@@ -191,14 +196,15 @@ export default class AuthController {
       return res.status(200).json({
         message: "OTP resent successfully.",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
       const status =
-        error.message?.startsWith("Cannot resend OTP") ||
-        error.message?.startsWith("Please wait") ||
-        error.message === "User not found."
+        message.startsWith("Cannot resend OTP") ||
+        message.startsWith("Please wait") ||
+        message === "User not found."
           ? 400
           : 500;
-      return res.status(status).json({ message: error.message || "Server error." });
+      return res.status(status).json({ message });
     }
   }
 
@@ -223,9 +229,10 @@ export default class AuthController {
         signupStep: "completed",
         signupCompleted: true,
       });
-    } catch (error: any) {
-      const status = error.message?.startsWith("Invalid step.") ? 400 : 500;
-      return res.status(status).json({ message: error.message || "Server error." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      const status = message.startsWith("Invalid step.") ? 400 : 500;
+      return res.status(status).json({ message });
     }
   }
 
@@ -321,8 +328,9 @@ export default class AuthController {
         refreshToken,
         requiresProfileCompletion,
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message || "Server error." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 

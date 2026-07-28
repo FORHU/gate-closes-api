@@ -42,7 +42,7 @@ export default class VerificationCodeRepo {
     }
 
     const updatedAt = new Date();
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
     if (data.codeHash !== undefined) setFields.codeHash = data.codeHash;
     if (data.expiresAt !== undefined) setFields.expiresAt = data.expiresAt;
     if (data.resendAfter !== undefined) setFields.resendAfter = data.resendAfter;
@@ -58,14 +58,14 @@ export default class VerificationCodeRepo {
   static async delete(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid verification code id.");
     }
 
     try {
       await this.collection().deleteOne({ _id });
       return Promise.resolve("Successfully deleted verification code.");
-    } catch (error) {
+    } catch {
       return Promise.reject("Server internal error.");
     }
   }

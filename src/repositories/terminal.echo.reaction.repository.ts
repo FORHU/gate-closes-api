@@ -3,8 +3,10 @@ import {
   MTerminalEchoReaction,
   TTerminalEchoReaction,
   TTerminalEchoReactionQuery,
+  TTerminalEchoReactionType,
 } from "../models/terminal.echo.reaction.model";
 import { getDB } from "../utils/mongo";
+import { isDuplicateKeyError } from "../utils/error.util";
 
 export default class TerminalEchoReactionRepo {
   static collection() {
@@ -16,7 +18,7 @@ export default class TerminalEchoReactionRepo {
   }
 
   static async findOne(query: TTerminalEchoReactionQuery) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.terminalEchoId)
       filter.terminalEchoId = new ObjectId(query.terminalEchoId as string);
@@ -27,7 +29,7 @@ export default class TerminalEchoReactionRepo {
   }
 
   static async deleteOne(query: TTerminalEchoReactionQuery) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.terminalEchoId)
       filter.terminalEchoId = new ObjectId(query.terminalEchoId as string);
@@ -63,7 +65,7 @@ export default class TerminalEchoReactionRepo {
     params: {
       terminalEchoId: string | ObjectId;
       userId: string | ObjectId;
-      reaction: string;
+      reaction: TTerminalEchoReactionType;
     },
     maxRetries = 3
   ): Promise<"increment" | "decrement"> {
@@ -87,15 +89,15 @@ export default class TerminalEchoReactionRepo {
       // Step 2: nothing existed to delete — try to insert.
       try {
         await this.collection().insertOne(
-          new MTerminalEchoReaction({ terminalEchoId, userId, reaction } as any)
+          new MTerminalEchoReaction({ terminalEchoId, userId, reaction })
         );
         return "increment";
-      } catch (err: any) {
+      } catch (err) {
         // 11000 = duplicate key error. Someone else's insert won the
         // race between our delete attempt and our own insert — retry
         // the whole sequence; the next delete attempt will now find
         // and remove that just-inserted document correctly.
-        if (err?.code === 11000) {
+        if (isDuplicateKeyError(err)) {
           continue;
         }
         throw err;

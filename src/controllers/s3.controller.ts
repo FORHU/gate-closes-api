@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import S3Svc from "../services/s3.service";
+import { getErrorMessage } from "../utils/error.util";
 
 
 export default class S3Controller {
@@ -24,8 +25,8 @@ export default class S3Controller {
       );
       
       return res.status(200).json(result);
-    } catch (err: any) {
-      const message = err?.message || "Failed to upload file to S3";
+    } catch (err) {
+      const message = getErrorMessage(err) || "Failed to upload file to S3";
       return res.status(500).json({ message });
     }
   }
@@ -60,15 +61,13 @@ export default class S3Controller {
       );
 
       return res.status(200).json(result);
-    } catch (err: any) {
-      const message = err?.message || "Failed to generate presigned URL";
+    } catch (err) {
+      const message = getErrorMessage(err) || "Failed to generate presigned URL";
       return res.status(500).json({ message });
     }
   }
 
   static async getGetUrl(req: Request, res: Response) {
-    const userId = req.user?.userId as string;
-
     const { key } = req.query;
 
     const schema = Joi.object({
@@ -89,8 +88,8 @@ export default class S3Controller {
       );
 
       return res.status(200).json(result);
-    } catch (err: any) {
-      const message = err?.message || "Failed to generate presigned URL";
+    } catch (err) {
+      const message = getErrorMessage(err) || "Failed to generate presigned URL";
       return res.status(500).json({ message });
     }
   }

@@ -7,7 +7,7 @@ type TDtConversationLatestEventUpdate = {
   at: Date;
   actorId: ObjectId;
   actorName: string;
-  payload: Record<string, any> | null;
+  payload: Record<string, unknown> | null;
   text: string;
 };
 

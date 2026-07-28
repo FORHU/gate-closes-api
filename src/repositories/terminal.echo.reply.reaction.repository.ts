@@ -3,8 +3,10 @@ import {
   MTerminalEchoReplyReaction,
   TTerminalEchoReplyReaction,
   TTerminalEchoReplyReactionQuery,
+  TTerminalEchoReplyReactionType,
 } from "../models/terminal.echo.reply.reaction.model";
 import { getDB } from "../utils/mongo";
+import { isDuplicateKeyError } from "../utils/error.util";
 
 export default class TerminalEchoReplyReactionRepo {
   static collection() {
@@ -18,7 +20,7 @@ export default class TerminalEchoReplyReactionRepo {
   }
 
   static async findOne(query: TTerminalEchoReplyReactionQuery) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.terminalEchoReplyId)
       filter.terminalEchoReplyId = new ObjectId(
@@ -31,7 +33,7 @@ export default class TerminalEchoReplyReactionRepo {
   }
 
   static async deleteOne(query: TTerminalEchoReplyReactionQuery) {
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.terminalEchoReplyId)
       filter.terminalEchoReplyId = new ObjectId(
@@ -58,7 +60,7 @@ export default class TerminalEchoReplyReactionRepo {
     params: {
       terminalEchoReplyId: string | ObjectId;
       userId: string | ObjectId;
-      reaction: string;
+      reaction: TTerminalEchoReplyReactionType;
     },
     maxRetries = 3
   ): Promise<"increment" | "decrement"> {
@@ -83,11 +85,11 @@ export default class TerminalEchoReplyReactionRepo {
             terminalEchoReplyId,
             userId,
             reaction,
-          } as any)
+          })
         );
         return "increment";
-      } catch (err: any) {
-        if (err?.code === 11000) {
+      } catch (err) {
+        if (isDuplicateKeyError(err)) {
           continue;
         }
         throw err;

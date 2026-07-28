@@ -36,7 +36,7 @@ export default class PsConversationMessageReactionSvc {
       psConversationMessageId: new ObjectId(psConversationMessageId),
       userId,
       reaction,
-    } as any);
+    });
 
     const messageUpdate = await PsConversationMessageRepo.updateReaction(
       psConversationMessageId,

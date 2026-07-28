@@ -257,19 +257,19 @@ export default class TerminalEchoRepo {
           },
         },
       ],
-      { returnDocument: "after" }
+      { returnDocument: "after", includeResultMetadata: true }
     );
   }
 
   static async update(echo: TTerminalEchoUpdateOptions) {
     try {
       echo._id = new ObjectId(echo._id as string);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid terminal echo id.");
     }
 
     const updatedAt = new Date();
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
     if (echo.senderId !== undefined) setFields.senderId = new ObjectId(echo.senderId as string);
     if (echo.airportName !== undefined) setFields.airportName = echo.airportName;
     if (echo.fileId !== undefined) setFields.fileId = new ObjectId(echo.fileId as string);
@@ -289,14 +289,14 @@ export default class TerminalEchoRepo {
   static async delete(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid terminal echo id.");
     }
 
     try {
       await this.collection().deleteOne({ _id });
       return Promise.resolve("Successfully deleted terminal echo.");
-    } catch (error) {
+    } catch {
       return Promise.reject("Server internal error.");
     }
   }

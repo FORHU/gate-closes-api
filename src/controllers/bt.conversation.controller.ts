@@ -3,10 +3,10 @@ import Joi from "joi";
 import BtConversationSvc from "../services/bt.conversation.service";
 import { io } from "../app";
 import {
-  ERROR_MESSAGE,
   BT_SOCKET_EVENT,
   TBtConversationReadStateSocketPayload,
 } from "../const";
+import { getErrorMessage } from "../utils/error.util";
 
 export default class BtConversationCtrl {
 
@@ -28,12 +28,12 @@ export default class BtConversationCtrl {
                 otherUserId: value.otherUserId,
             });
 
-            const participants = (convo as any)?.participants ?? [];
+            const participants = convo?.participants ?? [];
             for (const participantId of participants) {
                 const participantIdStr = String(participantId);
                 const conversationForParticipant =
                     await BtConversationSvc.getConversationDetailForUser({
-                        conversationId: String((convo as any)._id),
+                        conversationId: String(convo?._id),
                         requesterId: participantIdStr,
                     });
 
@@ -44,11 +44,12 @@ export default class BtConversationCtrl {
             }
 
             return res.json({ data: convo });
-        } catch (err: any) {
-            if (err?.message === "Conversation already exists.") {
-                return res.status(409).json({ message: err.message });
+        } catch (err) {
+            const message = getErrorMessage(err);
+            if (message === "Conversation already exists.") {
+                return res.status(409).json({ message });
             }
-            return res.status(400).json({ message: err?.message ?? err });
+            return res.status(400).json({ message });
         }
     }
 
@@ -70,8 +71,8 @@ export default class BtConversationCtrl {
             });
 
             return res.json({ data: result });
-        } catch (err: any) {
-            return res.status(400).json({ message: err?.message ?? err });
+        } catch (err) {
+            return res.status(400).json({ message: getErrorMessage(err) });
         }
     }
 
@@ -83,8 +84,8 @@ export default class BtConversationCtrl {
                 userId
             );
             return res.json({ data: conversations });
-        } catch (err: any) {
-            return res.status(500).json({ message: err?.message ?? err });
+        } catch (err) {
+            return res.status(500).json({ message: getErrorMessage(err) });
         }
     }
 
@@ -110,11 +111,12 @@ export default class BtConversationCtrl {
             return res.json({
                 data: conversation,
             });
-        } catch (err: any) {
-            if (err?.message === "Not a participant.") {
-                return res.status(403).json({ message: err.message });
+        } catch (err) {
+            const message = getErrorMessage(err);
+            if (message === "Not a participant.") {
+                return res.status(403).json({ message });
             }
-            return res.status(500).json({ message: err?.message ?? err });
+            return res.status(500).json({ message });
         }
     }
 
@@ -151,11 +153,12 @@ export default class BtConversationCtrl {
                 .emit(BT_SOCKET_EVENT.CONVERSATION_READ_STATE_UPDATED, payload);
 
             return res.json({ data: readState });
-        } catch (err: any) {
-            if (err?.message === "Not a participant.") {
-                return res.status(403).json({ message: err.message });
+        } catch (err) {
+            const message = getErrorMessage(err);
+            if (message === "Not a participant.") {
+                return res.status(403).json({ message });
             }
-            return res.status(500).json({ message: err?.message ?? err });
+            return res.status(500).json({ message });
         }
     }
 }

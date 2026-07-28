@@ -28,7 +28,7 @@ export default class FileRepo {
     }
 
     const updatedAt = new Date();
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
     if (file.fileUrl !== undefined) setFields.fileUrl = file.fileUrl;
     if (file.fileName !== undefined) setFields.fileName = file.fileName;
     if (file.metaData !== undefined) setFields.metaData = file.metaData;

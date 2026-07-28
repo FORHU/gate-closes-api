@@ -12,7 +12,7 @@ export default class BtConversationMessageReactionRepo {
     }
 
     static async findOne(query: TBtConversationMessageReactionQuery) {
-        const filter: any = {};
+        const filter: Record<string, unknown> = {};
         if (query._id) filter._id = new ObjectId(query._id as string);
         if (query.btConversationMessageId) filter.btConversationMessageId = new ObjectId(query.btConversationMessageId as string);
         if (query.userId) filter.userId = new ObjectId(query.userId as string);
@@ -22,7 +22,7 @@ export default class BtConversationMessageReactionRepo {
     }
 
     static async deleteOne(query: TBtConversationMessageReactionQuery) {
-        const filter: any = {};
+        const filter: Record<string, unknown> = {};
         if (query._id) filter._id = new ObjectId(query._id as string);
         if (query.btConversationMessageId) filter.btConversationMessageId = new ObjectId(query.btConversationMessageId as string);
         if (query.userId) filter.userId = new ObjectId(query.userId as string);

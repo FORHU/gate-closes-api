@@ -34,7 +34,7 @@ export default class DtConversationMessageReactionSvc {
             dtConversationMessageId: new ObjectId(dtConversationMessageId),
             userId,
             reaction,
-        } as any);
+        });
 
         const messageUpdate = await DtConversationMessageRepo.updateReaction(
             dtConversationMessageId,

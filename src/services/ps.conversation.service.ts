@@ -1,16 +1,17 @@
-import { ObjectId } from "mongodb";
+import { Document, ObjectId } from "mongodb";
 import { ERROR_MESSAGE } from "../const";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationReadStateRepo from "../repositories/ps.conversation.read.state.repository";
 import UserRepo from "../repositories/user.repository";
+import { isDuplicateKeyError } from "../utils/error.util";
 
 type TPsLatestEventType =
   | "message_sent"
   | "message_reacted"
   | "message_reaction_removed";
 
-type TPsLatestEventPayload = Record<string, any> | null;
+type TPsLatestEventPayload = Record<string, unknown> | null;
 
 export default class PsConversationSvc {
   static computeHasUnread(params: {
@@ -70,7 +71,7 @@ export default class PsConversationSvc {
       { _id: actorId },
       { projection: { username: 1 } }
     );
-    return this.safeActorName((actor as any)?.username ?? null);
+    return this.safeActorName(actor?.username ?? null);
   }
 
   static async refreshConversationLatestEvent(params: {
@@ -92,32 +93,32 @@ export default class PsConversationSvc {
     return latestEvent;
   }
 
-  static shapeConversationForUser(convo: any, requesterId: ObjectId) {
-    const participants = convo.participants ?? [];
-    const participantsDetail = convo.participantsDetail ?? [];
+  static shapeConversationForUser(convo: Document, requesterId: ObjectId) {
+    const participants: Document[] = convo.participants ?? [];
+    const participantsDetail: Document[] = convo.participantsDetail ?? [];
     const participantById = new Map(
-      participantsDetail.map((p: any) => [String(p._id), p])
+      participantsDetail.map((p) => [String(p._id), p])
     );
 
     const orderedParticipantsDetail = participants
-      .map((id: any) => participantById.get(String(id)))
-      .filter(Boolean)
-      .map((p: any) => ({
+      .map((id) => participantById.get(String(id)))
+      .filter((p): p is Document => Boolean(p))
+      .map((p) => ({
         ...p,
         name: p.username ?? null,
-      }));
+      } as Document));
 
     const normalizedParticipantsDetail =
       orderedParticipantsDetail.length > 0
         ? orderedParticipantsDetail
-        : participantsDetail.map((p: any) => ({
+        : participantsDetail.map((p) => ({
             ...p,
             name: p.username ?? null,
-          }));
+          } as Document));
 
     const otherUser =
       normalizedParticipantsDetail.find(
-        (p: any) => String(p._id) !== String(requesterId)
+        (p) => String(p._id) !== String(requesterId)
       ) ?? null;
 
     const normalizedLatestEventPayload = convo.lastEventPayload ?? null;
@@ -212,11 +213,11 @@ export default class PsConversationSvc {
       const result = await PsConversationRepo.create({
         participants: [requesterId, otherUserId],
         dmKey,
-      } as any);
+      });
       return PsConversationRepo.collection().findOne({ _id: result.insertedId });
-    } catch (err: any) {
-      if (err?.code === 11000) {
-        throw new Error("Conversation already exists.");
+    } catch (err) {
+      if (isDuplicateKeyError(err)) {
+        throw new Error("Conversation already exists.", { cause: err });
       }
       throw err;
     }
@@ -252,7 +253,7 @@ export default class PsConversationSvc {
       ERROR_MESSAGE.INVALID_USER_ID
     );
     const convos = await this.listMyConversations(requesterObjectId);
-    return (convos as any[]).map((convo: any) =>
+    return convos.map((convo) =>
       this.shapeConversationForUser(convo, requesterObjectId)
     );
   }
@@ -307,7 +308,7 @@ export default class PsConversationSvc {
       otherUser: otherUser
         ? {
             ...otherUser,
-            name: (otherUser as any).username ?? null,
+            name: otherUser.username ?? null,
           }
         : null,
     };
@@ -396,7 +397,7 @@ export default class PsConversationSvc {
     ]);
     if (!conversation) return null;
 
-    const lastReadAt = (readState as any)?.lastReadAt ?? null;
+    const lastReadAt = readState?.lastReadAt ?? null;
     const shaped = this.shapeConversationForUser(conversation, params.requesterId);
     const hasUnread = this.computeHasUnread({
       requesterId: params.requesterId,
