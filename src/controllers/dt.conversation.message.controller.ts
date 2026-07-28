@@ -16,16 +16,18 @@ export default class DtConversationMessageCtrl {
   static async send(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
-    const { fileUrl, fileName } = req.body;
+    const { fileUrl, fileName, audioDuration, waveformData } = req.body;
     const conversationId = req.params.conversationId as string;
 
     const schema = Joi.object({
       conversationId: Joi.string().required(),
       fileUrl: Joi.string().uri().required(),
       fileName: Joi.string().min(1).required(),
+      audioDuration: Joi.number().optional().default(0),
+      waveformData: Joi.array().items(Joi.number()).optional().default([]),
     });
 
-    const { error, value } = schema.validate({ conversationId, fileUrl, fileName });
+    const { error, value } = schema.validate({ conversationId, fileUrl, fileName, audioDuration, waveformData });
     if (error) return res.status(400).json({ message: error.message });
 
     try {
@@ -51,6 +53,8 @@ export default class DtConversationMessageCtrl {
         dtSenderId: senderId,
         fileUrl: value.fileUrl,
         fileName: value.fileName,
+        audioDuration: value.audioDuration,
+        waveformData: value.waveformData,
       });
 
       await DtConversationSvc.refreshConversationLatestEvent({

@@ -11,12 +11,18 @@ export default class PsConversationMessageSvc {
     psSenderId: ObjectId;
     fileUrl: string;
     fileName: string;
+    audioDuration?: number;
+    waveformData?: number[];
   }) {
-    const { psConversationId, psSenderId, fileUrl, fileName } = params;
+    const { psConversationId, psSenderId, fileUrl, fileName, audioDuration, waveformData } = params;
 
     const fileCreateResult = await FileSvc.create({
       fileUrl,
       fileName,
+      metaData: {
+        audioDuration: audioDuration ?? 0,
+        waveformData: waveformData ?? [],
+      },
     });
 
     return PsConversationMessageRepo.create({

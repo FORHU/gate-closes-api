@@ -4,10 +4,17 @@ import DtConversationMessageReactionRepo from "../repositories/dt.conversation.m
 import FileSvc from "./file.service";
 
 export default class DtConversationMessageSvc {
-    static async sendMessage(params: {dtConversationId: ObjectId, dtSenderId: ObjectId, fileUrl: string, fileName: string}) {
-        const { dtConversationId, dtSenderId, fileUrl, fileName } = params;
+    static async sendMessage(params: {dtConversationId: ObjectId, dtSenderId: ObjectId, fileUrl: string, fileName: string, audioDuration?: number, waveformData?: number[]}) {
+        const { dtConversationId, dtSenderId, fileUrl, fileName, audioDuration, waveformData } = params;
 
-        const fileCreateResult = await FileSvc.create({fileUrl, fileName})
+        const fileCreateResult = await FileSvc.create({
+            fileUrl,
+            fileName,
+            metaData: {
+                audioDuration: audioDuration ?? 0,
+                waveformData: waveformData ?? [],
+            },
+        });
 
         return DtConversationMessageRepo.create({dtConversationId, dtSenderId, fileId: fileCreateResult.insertedId} as any);
     }
