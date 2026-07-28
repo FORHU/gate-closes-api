@@ -1,8 +1,8 @@
-const {
+import {
   getAirportByIata,
   getAirportByIcao,
   findNearbyAirports,
-} = require("airport-data-js");
+} from "airport-data-js";
 import * as turf from "@turf/turf";
 import { ObjectId } from "mongodb";
 import AirportRepo from "../repositories/airport.repository";
@@ -52,11 +52,11 @@ export default class AirportSvc {
     lng: number,
     radiusKm: number
   ): Promise<TAirport[]> {
-    const rawAirports: RawAirport[] = await findNearbyAirports(
+    const rawAirports = (await findNearbyAirports(
       lat,
       lng,
       radiusKm
-    );
+    )) as RawAirport[];
 
     const mappedAirports: TAirport[] = rawAirports.map((a) =>
       this.mapRawAirport(a)
@@ -80,7 +80,7 @@ export default class AirportSvc {
     const raw = await getAirportByIata(upper);
     if (!raw) return null;
 
-    const mapped = this.mapRawAirport(raw);
+    const mapped = this.mapRawAirport(raw as RawAirport);
     await AirportRepo.upsertByIataOrIcao(mapped);
     return mapped;
   }
@@ -94,7 +94,7 @@ export default class AirportSvc {
     const raw = await getAirportByIcao(upper);
     if (!raw) return null;
 
-    const mapped = this.mapRawAirport(raw);
+    const mapped = this.mapRawAirport(raw as RawAirport);
     await AirportRepo.upsertByIataOrIcao(mapped);
     return mapped;
   }
@@ -108,7 +108,7 @@ export default class AirportSvc {
     lng: number;
   }) {
     const { lat, lng } = params;
-    const airport: any = await AirportRepo.findInsideBoundary({ lat, lng });
+    const airport = await AirportRepo.findInsideBoundary({ lat, lng });
     if (!airport) return null;
 
     return {
@@ -135,7 +135,7 @@ export default class AirportSvc {
     let updatedCount = 0;
     let skippedCount = 0;
 
-    for (const airport of airports as any[]) {
+    for (const airport of airports) {
       const hasBoundary =
         airport?.boundary?.type === "Polygon" &&
         Array.isArray(airport?.boundary?.coordinates);
@@ -180,12 +180,12 @@ export default class AirportSvc {
 
   static async getAllAsGeoJson() {
     const cacheKey = "airport:geojson:v1";
-    const cached = await RedisUtil.getJson<any>(cacheKey);
+    const cached = await RedisUtil.getJson<unknown>(cacheKey);
     if (cached) return cached;
 
     const airports = await AirportRepo.findAllWithBoundary();
 
-    const features = (airports as any[])
+    const features = airports
       .filter(
         (airport) =>
           airport?.boundary?.type === "Polygon" &&

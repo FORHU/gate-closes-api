@@ -129,7 +129,7 @@ const main = async () => {
 
     if (!conversations.length) break;
 
-    for (const conversation of conversations as any[]) {
+    for (const conversation of conversations) {
       processed += 1;
       lastSeenId = conversation._id as ObjectId;
 

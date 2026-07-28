@@ -14,7 +14,7 @@ export default class TodoRepo {
   static async update(organization: TTodoUpdateOptions) {
     try {
       organization._id = new ObjectId(organization._id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid organization id.");
     }
     const { title, description } = organization;
@@ -25,14 +25,14 @@ export default class TodoRepo {
   static async delete(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid organization id.");
     }
 
     try {
       await this.collection().deleteOne({ _id: new ObjectId(_id) });
       return Promise.resolve("Successfully deleted organization.");
-    } catch (error) {
+    } catch {
       return Promise.reject("Server internal error.");
     }
   }

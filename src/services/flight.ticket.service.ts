@@ -11,7 +11,7 @@ export default class FlightTicketSvc {
     return FlightTicketRepo.findActiveOrLatestByUserId(userId);
   }
 
-  static async update(userId: ObjectId, updateData: Record<string, any>) {
+  static async update(userId: ObjectId, updateData: Record<string, unknown>) {
   const result = await FlightTicketRepo.updateByUserId(userId, updateData);
   
   if (!result) {

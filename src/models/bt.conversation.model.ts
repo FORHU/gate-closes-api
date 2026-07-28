@@ -10,7 +10,7 @@ export type TBtConversation = {
   lastEventAt?: Date;
   lastEventActorId?: ObjectId;
   lastEventActorName?: string;
-  lastEventPayload?: Record<string, any> | null;
+  lastEventPayload?: Record<string, unknown> | null;
   lastEventText?: string;
 };
 
@@ -30,7 +30,7 @@ export class MBtConversation implements Partial<TBtConversation> {
   lastEventAt?: Date;
   lastEventActorId?: ObjectId;
   lastEventActorName?: string;
-  lastEventPayload?: Record<string, any> | null;
+  lastEventPayload?: Record<string, unknown> | null;
   lastEventText?: string;
 
   constructor({

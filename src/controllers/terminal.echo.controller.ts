@@ -17,15 +17,6 @@ import type { TerminalEchoMapBounds } from "../const";
 import TerminalEchoSvc from "../services/terminal.echo.service";
 import { io } from "../app";
 
-const REACTION_FIELD_MAP: Record<string, string> = {
-  like: "countReactLike",
-  love: "countReactLove",
-  haha: "countReactHaha",
-  wow: "countReactWow",
-  sad: "countReactSad",
-  angry: "countReactAngry",
-};
-
 export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
@@ -60,7 +51,7 @@ export default class TerminalEchoCtrl {
       return res.status(400).json({ message: error.message });
     }
 
-    let result: any;
+    let result: Awaited<ReturnType<typeof TerminalEchoSvc.createTerminalEcho>>;
     try {
       result = await TerminalEchoSvc.createTerminalEcho({
         userId,
@@ -72,8 +63,9 @@ export default class TerminalEchoCtrl {
         audioDuration: value.audioDuration,
         waveformData: value.waveformData,
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message || "Server error." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server error.";
+      return res.status(500).json({ message });
     }
 
     try {
@@ -81,7 +73,7 @@ export default class TerminalEchoCtrl {
         type: "create",
         data: result,
       });
-    } catch (broadcastErr: any) {
+    } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoCtrl.create] Echo saved successfully, but broadcast failed:",
         broadcastErr
@@ -113,10 +105,9 @@ export default class TerminalEchoCtrl {
         userId
       );
       return res.json({ data: echoes });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -175,10 +166,9 @@ export default class TerminalEchoCtrl {
     try {
       const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, mapBounds);
       return res.json({ data: geojson });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -201,10 +191,9 @@ export default class TerminalEchoCtrl {
         return res.status(404).json({ message: "Terminal echo not found." });
       }
       return res.json({ data: { properties: echo } });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -223,10 +212,9 @@ export default class TerminalEchoCtrl {
     try {
       const result = await TerminalEchoSvc.incrementListen(value.id);
       return res.json({ data: result?.value ?? null });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
   }
 
@@ -250,17 +238,16 @@ export default class TerminalEchoCtrl {
       return res.status(400).json({ message: error.message });
     }
 
-    let result: any;
+    let result: Awaited<ReturnType<typeof TerminalEchoSvc.updateReaction>>;
     try {
       result = await TerminalEchoSvc.updateReaction({
         terminalEchoId: value.id,
         reaction: value.reaction,
         userId,
       });
-    } catch (err: any) {
-      return res
-        .status(500)
-        .json({ message: err.message || "Server error." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
     }
 
     // ── Broadcast, best-effort. Mirrors terminal_echo:reply_added's
@@ -275,7 +262,7 @@ export default class TerminalEchoCtrl {
         action: result?.action ?? "increment",
         triggeredByUserId: userId,
       });
-    } catch (broadcastErr: any) {
+    } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoCtrl.updateReaction] Reaction saved, but broadcast failed:",
         broadcastErr

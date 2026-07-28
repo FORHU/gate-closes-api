@@ -12,7 +12,7 @@ export default class DtConversationMessageReactionRepo {
     }
 
     static async findOne(query: TDtConversationMessageReactionQuery) {
-        const filter: any = {};
+        const filter: Record<string, unknown> = {};
         if (query._id) filter._id = new ObjectId(query._id as string);
         if (query.dtConversationMessageId) filter.dtConversationMessageId = new ObjectId(query.dtConversationMessageId as string);
         if (query.userId) filter.userId = new ObjectId(query.userId as string);
@@ -22,7 +22,7 @@ export default class DtConversationMessageReactionRepo {
     }
 
     static async deleteOne(query: TDtConversationMessageReactionQuery) {
-        const filter: any = {};
+        const filter: Record<string, unknown> = {};
         if (query._id) filter._id = new ObjectId(query._id as string);
         if (query.dtConversationMessageId) filter.dtConversationMessageId = new ObjectId(query.dtConversationMessageId as string);
         if (query.userId) filter.userId = new ObjectId(query.userId as string);

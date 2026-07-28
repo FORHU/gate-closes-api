@@ -11,6 +11,7 @@ import {
   DT_SOCKET_EVENT,
   TDtConversationReadStateSocketPayload,
 } from "../const";
+import { getErrorMessage } from "../utils/error.util";
 
 export default class DtConversationMessageReactionCtrl {
   static async updateReaction(req: Request, res: Response) {
@@ -69,7 +70,7 @@ export default class DtConversationMessageReactionCtrl {
         },
       });
 
-      const participants = (convo as any)?.participants ?? [];
+      const participants = convo?.participants ?? [];
       for (const participantId of participants) {
         const participantObjectId = FlightTicketRepo.parseObjectId(
           String(participantId),
@@ -112,8 +113,8 @@ export default class DtConversationMessageReactionCtrl {
       }
 
       return res.json({ data: result?.messageUpdate?.value ?? null });
-    } catch (err: any) {
-      return res.status(500).json({ message: err?.message ?? err });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
 }

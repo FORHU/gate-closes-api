@@ -14,7 +14,7 @@ export default class TerminalEchoReplyRepo {
   static async findById(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid terminal echo reply id.");
     }
     return this.collection().findOne({ _id });
@@ -23,7 +23,7 @@ export default class TerminalEchoReplyRepo {
   static async findByTerminalEchoId(terminalEchoId: string | ObjectId) {
     try {
       terminalEchoId = new ObjectId(terminalEchoId);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid terminal echo id.");
     }
     return this.collection().find({ terminalEchoId }).toArray();
@@ -155,12 +155,12 @@ export default class TerminalEchoReplyRepo {
   static async update(reply: TTerminalEchoReplyUpdateOptions) {
     try {
       reply._id = new ObjectId(reply._id as string);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid terminal echo reply id.");
     }
 
     const updatedAt = new Date();
-    const setFields: any = { updatedAt };
+    const setFields: Record<string, unknown> = { updatedAt };
     if (reply.terminalEchoId !== undefined)
       setFields.terminalEchoId = new ObjectId(reply.terminalEchoId as string);
     if (reply.senderId !== undefined)
@@ -272,14 +272,14 @@ export default class TerminalEchoReplyRepo {
   static async delete(_id: string | ObjectId) {
     try {
       _id = new ObjectId(_id);
-    } catch (error) {
+    } catch {
       return Promise.reject("Invalid terminal echo reply id.");
     }
 
     try {
       await this.collection().deleteOne({ _id });
       return Promise.resolve("Successfully deleted terminal echo reply.");
-    } catch (error) {
+    } catch {
       return Promise.reject("Server internal error.");
     }
   }
