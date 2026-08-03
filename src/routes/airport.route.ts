@@ -16,6 +16,8 @@ router.get("/check-inside-specific-airport", AirportCtrl.checkInsideSpecificAirp
 
 router.post("/boundary/sync", AirportCtrl.syncBoundaries);
 
+router.post("/crawl", AirportCtrl.crawl);
+
 router.get("/geojson", sessionMiddleware, AirportCtrl.getAllAsGeoJson);
 
 export default router;

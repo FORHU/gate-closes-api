@@ -5,9 +5,42 @@ import {
 } from "airport-data-js";
 import * as turf from "@turf/turf";
 import { ObjectId } from "mongodb";
+import * as fs from "fs";
+import * as path from "path";
 import AirportRepo from "../repositories/airport.repository";
 import { TAirport } from "../models/airport.model";
 import RedisUtil from "../utils/redis.util";
+
+// Shape of records in the static gate-closes.airport.json export — a Mongo
+// export of already-normalized airport data (unlike RawAirport, which is the
+// shape returned by the airport-data-js API).
+type CrawlAirport = {
+  iata?: string | null;
+  icao?: string | null;
+  time?: string | null;
+  countryCode?: string | null;
+  continent?: string | null;
+  airport?: string | null;
+  elevation?: number | null;
+  type?: string | null;
+  scheduledService?: string;
+  wikipedia?: string | null;
+  website?: string | null;
+  runwayLength?: number | null;
+  flightradar24Url?: string | null;
+  radarboxUrl?: string | null;
+  flightawareUrl?: string | null;
+  location?: { type: "Point"; coordinates: [number, number] };
+  radiusKm?: number;
+};
+
+const AIRPORT_CRAWL_FILE = path.join(
+  __dirname,
+  "..",
+  "assets",
+  "gate-closes.airport.json"
+);
+const AIRPORT_CRAWL_BATCH_SIZE = 500;
 
 type RawAirport = {
   iata?: string;
@@ -126,6 +159,63 @@ export default class AirportSvc {
 
   static async search(q: string, limit: number): Promise<TAirport[]> {
     return AirportRepo.searchByText(q, limit) as Promise<TAirport[]>;
+  }
+
+  // Bulk-load airports from the static gate-closes.airport.json export.
+  // Insert-if-absent per record (see ADR-0001) — safe to re-trigger or
+  // resume after an interruption, never overwrites an already-stored airport.
+  static async crawlFromAssetFile() {
+    const raw = fs.readFileSync(AIRPORT_CRAWL_FILE, "utf-8");
+    const records = JSON.parse(raw) as CrawlAirport[];
+
+    const airports = records.map((record) => this.mapCrawlAirport(record));
+
+    let upsertedCount = 0;
+    let matchedCount = 0;
+
+    for (let i = 0; i < airports.length; i += AIRPORT_CRAWL_BATCH_SIZE) {
+      const batch = airports.slice(i, i + AIRPORT_CRAWL_BATCH_SIZE);
+      const result = await AirportRepo.bulkInsertMissing(batch);
+      upsertedCount += result.upsertedCount;
+      matchedCount += result.matchedCount;
+    }
+
+    return {
+      total: airports.length,
+      insertedCount: upsertedCount,
+      skippedCount: matchedCount,
+    };
+  }
+
+  private static mapCrawlAirport(a: CrawlAirport): TAirport {
+    const location = a.location;
+    const radiusKm = a.radiusKm;
+
+    const boundary =
+      location && radiusKm && radiusKm > 0
+        ? this.buildBoundaryFromLocationAndRadius({ location, radiusKm })
+        : undefined;
+
+    return {
+      iata: a.iata ? a.iata.toUpperCase() : a.iata,
+      icao: a.icao ? a.icao.toUpperCase() : a.icao,
+      time: a.time,
+      countryCode: a.countryCode,
+      continent: a.continent,
+      airport: a.airport,
+      elevation: a.elevation,
+      type: a.type,
+      scheduledService: a.scheduledService === "TRUE",
+      wikipedia: a.wikipedia,
+      website: a.website,
+      runwayLength: a.runwayLength,
+      flightradar24Url: a.flightradar24Url,
+      radarboxUrl: a.radarboxUrl,
+      flightawareUrl: a.flightawareUrl,
+      location,
+      boundary,
+      radiusKm,
+    };
   }
 
   static async syncBoundaries(params?: { force?: boolean }) {
