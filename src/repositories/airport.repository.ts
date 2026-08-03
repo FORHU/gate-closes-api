@@ -264,6 +264,34 @@ export default class AirportRepo {
       .toArray();
   }
 
+  // Insert-if-absent per record, keyed by iata (falling back to icao). Never
+  // overwrites an already-stored airport — see ADR-0001.
+  static async bulkInsertMissing(airports: TAirport[]) {
+    if (airports.length === 0) {
+      return { upsertedCount: 0, matchedCount: 0 };
+    }
+
+    const ops = airports.map((airport) => {
+      const filter: Record<string, string> = airport.iata
+        ? { iata: airport.iata }
+        : { icao: airport.icao as string };
+
+      return {
+        updateOne: {
+          filter,
+          update: { $setOnInsert: new MAirport(airport) },
+          upsert: true,
+        },
+      };
+    });
+
+    const result = await this.collection().bulkWrite(ops, { ordered: false });
+    return {
+      upsertedCount: result.upsertedCount,
+      matchedCount: result.matchedCount,
+    };
+  }
+
   static async findInsideBoundary(params: { lat: number; lng: number }) {
     const { lat, lng } = params;
 

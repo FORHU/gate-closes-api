@@ -186,6 +186,19 @@ export default class AirportCtrl {
     }
   }
 
+  // POST /airport/crawl
+  static async crawl(req: Request, res: Response) {
+    try {
+      const result = await AirportSvc.crawlFromAssetFile();
+      return res.json({
+        message: "Airport crawl completed.",
+        data: result,
+      });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
+    }
+  }
+
   // GET /airport/geojson
   static async getAllAsGeoJson(req: Request, res: Response) {
     try {
