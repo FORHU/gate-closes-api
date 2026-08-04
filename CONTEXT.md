@@ -17,7 +17,7 @@ _Not used by_: the primary `check-inside-airport` endpoint, which checks `distan
 _Avoid_: "geofence" (implies precision this data doesn't have), "airport shape"/"airport footprint" (implies real perimeter data).
 
 **Airport Crawl**:
-The one-time bulk load of airport records from the static `gate-closes.airport.json` export into the `airport` collection, computing each record's Airport Boundary at load time. Insert-if-absent per record (keyed by `iata`, falling back to `icao`) — safe to re-trigger or resume after an interruption, but never updates an already-stored record. See [ADR-0001](./docs/adr/0001-airport-crawl-import-strategy.md).
+The one-time bulk load of airport records from the static `gate-closes.airport.json` export into the `airport` collection, computing each record's Airport Boundary at load time. Insert-if-absent per record (keyed by `iata`, falling back to `icao`) — safe to re-trigger or resume after an interruption, but never updates an already-stored record. Scoped to airports with scheduled service and `type` of `large_airport`/`medium_airport` — the app only cares about "am I at my gate" for commercial airports, not private airfields, heliports, or seaplane bases. A record is skipped entirely (not stored at all) if it's out of scope, or in scope but can't produce a boundary — every airport this process stores is guaranteed to have one. See [ADR-0001](./docs/adr/0001-airport-crawl-import-strategy.md).
 _Avoid_: "seed", "sync" (sync implies it refreshes existing data — it doesn't).
 
 ## Flagged ambiguities

@@ -20,7 +20,7 @@ export default class S3Svc {
       throw new Error("Audio file size must be 10MB or below");
     }
 
-    const key = `users/${userId}/uploads/${crypto.randomUUID()}.${ext}`;
+    const key = `gate-closes/${userId}/uploads/${crypto.randomUUID()}.${ext}`;
 
     const url = await uploadBufferToS3({
       key,
@@ -48,7 +48,7 @@ export default class S3Svc {
       throw new Error("Audio file size must be 10MB or below");
     }
 
-    const key = `users/${userId}/uploads/${crypto.randomUUID()}.${ext}`;
+    const key = `gate-closes/${userId}/uploads/${crypto.randomUUID()}.${ext}`;
 
     const url = await getPutObjectPresignedUrl({
       key,
