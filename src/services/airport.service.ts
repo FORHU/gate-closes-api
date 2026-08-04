@@ -41,6 +41,7 @@ const AIRPORT_CRAWL_FILE = path.join(
   "gate-closes.airport.json"
 );
 const AIRPORT_CRAWL_BATCH_SIZE = 500;
+const AIRPORT_CRAWL_ELIGIBLE_TYPES = ["large_airport", "medium_airport"];
 
 type RawAirport = {
   iata?: string;
@@ -162,13 +163,24 @@ export default class AirportSvc {
   }
 
   // Bulk-load airports from the static gate-closes.airport.json export.
-  // Insert-if-absent per record (see ADR-0001) — safe to re-trigger or
-  // resume after an interruption, never overwrites an already-stored airport.
+  // Scoped to scheduled large/medium airports with a computable boundary —
+  // every airport this stores is guaranteed to have one (see ADR-0001).
+  // Insert-if-absent per record — safe to re-trigger or resume after an
+  // interruption, never overwrites an already-stored airport.
   static async crawlFromAssetFile() {
     const raw = fs.readFileSync(AIRPORT_CRAWL_FILE, "utf-8");
     const records = JSON.parse(raw) as CrawlAirport[];
 
-    const airports = records.map((record) => this.mapCrawlAirport(record));
+    const eligible = records.filter(
+      (record) =>
+        record.scheduledService === "TRUE" &&
+        !!record.type &&
+        AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(record.type)
+    );
+
+    const airports = eligible
+      .map((record) => this.mapCrawlAirport(record))
+      .filter((airport) => airport.boundary !== undefined);
 
     let upsertedCount = 0;
     let matchedCount = 0;
@@ -181,9 +193,12 @@ export default class AirportSvc {
     }
 
     return {
-      total: airports.length,
+      totalInSource: records.length,
+      eligible: eligible.length,
+      skippedOutOfScope: records.length - eligible.length,
+      skippedNoBoundary: eligible.length - airports.length,
       insertedCount: upsertedCount,
-      skippedCount: matchedCount,
+      skippedAlreadyStored: matchedCount,
     };
   }
 
