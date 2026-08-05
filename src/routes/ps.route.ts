@@ -7,6 +7,7 @@ import PsConversationMessageReactionCtrl from "../controllers/ps.conversation.me
 
 router.get("/conversations", PsConversationCtrl.listMyConversations);
 router.post("/conversations", PsConversationCtrl.create);
+router.get("/conversations/search", PsConversationCtrl.searchMyConversations);
 router.get("/conversations/dm/existence", PsConversationCtrl.checkDmExists);
 router.get("/conversations/:conversationId", PsConversationCtrl.getById);
 router.post("/conversations/:conversationId/read", PsConversationCtrl.markRead);
