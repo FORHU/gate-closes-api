@@ -16,6 +16,60 @@ export default class BtConversationRepo {
     return getDB().collection("btConversation");
   }
 
+  private static escapeRegex(input: string) {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  // Shared read-state + hasUnread stages, appended after participantsLookupStage()
+  static readStateAndUnreadStages(btUserId: ObjectId) {
+    return [
+      {
+        $lookup: {
+          from: "btConversationReadState",
+          let: { conversationId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$btConversationId", "$$conversationId"] },
+                    { $eq: ["$userId", btUserId] },
+                  ],
+                },
+              },
+            },
+            { $project: { _id: 0, lastReadAt: 1 } },
+            { $limit: 1 },
+          ],
+          as: "readState",
+        },
+      },
+      {
+        $addFields: {
+          lastReadAt: {
+            $ifNull: [{ $arrayElemAt: ["$readState.lastReadAt", 0] }, null],
+          },
+        },
+      },
+      {
+        $addFields: {
+          hasUnread: {
+            $and: [
+              { $ne: ["$lastEventAt", null] },
+              { $ne: ["$lastEventActorId", btUserId] },
+              {
+                $or: [
+                  { $eq: ["$lastReadAt", null] },
+                  { $gt: ["$lastEventAt", "$lastReadAt"] },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    ];
+  }
+
   static participantsLookupStage() {
     return {
       $lookup: {
@@ -64,55 +118,35 @@ export default class BtConversationRepo {
         { $match: { participants: btUserId } },
         { $sort: { lastEventAt: -1, updatedAt: -1, createdAt: -1 } },
         this.participantsLookupStage(),
+        ...this.readStateAndUnreadStages(btUserId),
+        { $project: { readState: 0 } },
+      ])
+      .toArray();
+  }
+
+  // Search the user's own conversations by the other participant's username.
+  static async searchByUserIdAndParticipantName(btUserId: ObjectId, q: string) {
+    const rx = new RegExp(this.escapeRegex(q.trim()), "i");
+
+    return this.collection()
+      .aggregate([
+        { $match: { participants: btUserId } },
+        this.participantsLookupStage(),
         {
-          $lookup: {
-            from: "btConversationReadState",
-            let: { conversationId: "$_id" },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ["$btConversationId", "$$conversationId"] },
-                      { $eq: ["$userId", btUserId] },
-                    ],
-                  },
-                },
+          $addFields: {
+            otherParticipantsDetail: {
+              $filter: {
+                input: "$participantsDetail",
+                as: "p",
+                cond: { $ne: ["$$p._id", btUserId] },
               },
-              { $project: { _id: 0, lastReadAt: 1 } },
-              { $limit: 1 },
-            ],
-            as: "readState",
-          },
-        },
-        {
-          $addFields: {
-            lastReadAt: {
-              $ifNull: [{ $arrayElemAt: ["$readState.lastReadAt", 0] }, null],
             },
           },
         },
-        {
-          $addFields: {
-            hasUnread: {
-              $and: [
-                { $ne: ["$lastEventAt", null] },
-                { $ne: ["$lastEventActorId", btUserId] },
-                {
-                  $or: [
-                    { $eq: ["$lastReadAt", null] },
-                    { $gt: ["$lastEventAt", "$lastReadAt"] },
-                  ],
-                },
-              ],
-            },
-          },
-        },
-        {
-          $project: {
-            readState: 0,
-          },
-        },
+        { $match: { "otherParticipantsDetail.username": rx } },
+        { $sort: { lastEventAt: -1, updatedAt: -1, createdAt: -1 } },
+        ...this.readStateAndUnreadStages(btUserId),
+        { $project: { readState: 0, otherParticipantsDetail: 0 } },
       ])
       .toArray();
   }
