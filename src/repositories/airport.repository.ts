@@ -11,29 +11,24 @@ export default class AirportRepo {
     return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
-  static async searchByText(q: string, limit = 10) {
+  static async searchByName(q: string, limit: number) {
     const trimmed = q.trim();
-    const safeLimit = Math.min(Math.max(limit, 1), 50);
     const rx = new RegExp(this.escapeRegex(trimmed), "i");
 
     return this.collection()
       .find(
-        {
-          $or: [{ airport: rx }, { iata: rx }, { icao: rx }],
-        },
+        { airport: rx },
         {
           projection: {
-            _id: 1,
+            _id: 0,
             airport: 1,
             iata: 1,
             icao: 1,
-            countryCode: 1,
             location: 1,
-            radiusKm: 1,
           },
         }
       )
-      .limit(safeLimit)
+      .limit(limit)
       .toArray();
   }
 

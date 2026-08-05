@@ -42,6 +42,7 @@ const AIRPORT_CRAWL_FILE = path.join(
 );
 const AIRPORT_CRAWL_BATCH_SIZE = 500;
 const AIRPORT_CRAWL_ELIGIBLE_TYPES = ["large_airport", "medium_airport"];
+const AIRPORT_SEARCH_LIMIT = 5;
 
 type RawAirport = {
   iata?: string;
@@ -158,8 +159,8 @@ export default class AirportSvc {
     return AirportRepo.findNearestForAirport(params);
   }
 
-  static async search(q: string, limit: number): Promise<TAirport[]> {
-    return AirportRepo.searchByText(q, limit) as Promise<TAirport[]>;
+  static async searchByName(q: string): Promise<TAirport[]> {
+    return AirportRepo.searchByName(q, AIRPORT_SEARCH_LIMIT) as Promise<TAirport[]>;
   }
 
   // Bulk-load airports from the static gate-closes.airport.json export.
