@@ -51,6 +51,29 @@ export default class PsConversationCtrl {
     }
   }
 
+  // GET /conversations/search?q=name - Search my conversations by the other participant's name
+  static async searchMyConversations(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { q } = req.query;
+
+    const schema = Joi.object({
+      q: Joi.string().trim().min(1).required(),
+    });
+
+    const { error, value } = schema.validate({ q });
+    if (error) return res.status(400).json({ message: error.message });
+
+    try {
+      const conversations = await PsConversationSvc.searchConversationsForUser(
+        userId,
+        value.q
+      );
+      return res.json({ data: conversations });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
+    }
+  }
+
   // GET /conversations/dm/existence - Check whether conversation between users already exists
   static async checkDmExists(req: Request, res: Response) {
     const userId = req.user?.userId as string;

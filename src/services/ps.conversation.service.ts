@@ -258,6 +258,21 @@ export default class PsConversationSvc {
     );
   }
 
+  // Search the requester's own conversations by the other participant's name
+  static async searchConversationsForUser(requesterId: string, q: string) {
+    const requesterObjectId = FlightTicketRepo.parseObjectId(
+      requesterId,
+      ERROR_MESSAGE.INVALID_USER_ID
+    );
+    const convos = await PsConversationRepo.searchByUserIdAndParticipantName(
+      requesterObjectId,
+      q
+    );
+    return convos.map((convo) =>
+      this.shapeConversationForUser(convo, requesterObjectId)
+    );
+  }
+
   // Check whether a DM conversation already exists for two users
   static async getExistingDm(params: {
     requesterId: ObjectId;
