@@ -4,7 +4,7 @@ const router = express.Router();
 import AirportCtrl from "../controllers/airport.controller";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
-router.get("/search", AirportCtrl.search);
+router.get("/search", AirportCtrl.searchByName);
 
 router.get("/nearby", AirportCtrl.findNearby);
 

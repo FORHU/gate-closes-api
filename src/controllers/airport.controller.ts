@@ -5,25 +5,21 @@ import { getErrorMessage } from "../utils/error.util";
     
 export default class AirportCtrl {
 
-  // GET /airports/search?q=ninoy&limit=10
-  static async search(req: Request, res: Response) {
-    const { q, limit } = req.query;
+  // GET /airport/search?q=ninoy
+  static async searchByName(req: Request, res: Response) {
+    const { q } = req.query;
 
     const schema = Joi.object({
       q: Joi.string().trim().min(1).required(),
-      limit: Joi.number().integer().min(1).max(50).optional(),
     });
 
-    const { error, value } = schema.validate(
-      { q, limit: limit !== undefined ? Number(limit) : undefined },
-      { convert: true }
-    );
+    const { error, value } = schema.validate({ q });
     if (error) {
       return res.status(400).json({ message: error.message });
     }
 
     try {
-      const results = await AirportSvc.search(value.q, value.limit ?? 10);
+      const results = await AirportSvc.searchByName(value.q);
       return res.json({ data: results });
     } catch (err) {
       return res.status(500).json({ message: getErrorMessage(err) });
