@@ -266,6 +266,21 @@ export default class BtConversationSvc {
     );
   }
 
+  // Search the requester's own conversations by the other participant's name
+  static async searchConversationsForUser(requesterId: string, q: string) {
+    const requesterObjectId = FlightTicketRepo.parseObjectId(
+      requesterId,
+      ERROR_MESSAGE.INVALID_USER_ID
+    );
+    const convos = await BtConversationRepo.searchByUserIdAndParticipantName(
+      requesterObjectId,
+      q
+    );
+    return convos.map((convo) =>
+      this.shapeConversationForUser(convo, requesterObjectId)
+    );
+  }
+
   static async getExistingDm(params: {
     requesterId: ObjectId;
     otherUserId: ObjectId;
