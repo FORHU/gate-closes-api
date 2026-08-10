@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
       - staging
 
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,3 +36,12 @@ jobs:
 
       - name: Build Gate-closes Project
         run: yarn build
+
+  cd:
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Automatic deployment
+        run: curl -X POST "${{ secrets.COOLIFY_WEBHOOK }}"
