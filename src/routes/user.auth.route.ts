@@ -27,5 +27,6 @@ router.get("/me", sessionMiddleware, AuthController.me);
 router.post("/change-password", sessionMiddleware, AuthController.changePassword);
 router.post("/change-username", sessionMiddleware, AuthController.changeUsername);
 router.post("/change-gender", sessionMiddleware, AuthController.changeGender);
+router.patch("/edit-profile", sessionMiddleware, AuthController.editProfile);
 
 export default router;

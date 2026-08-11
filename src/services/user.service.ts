@@ -25,6 +25,29 @@ export default class UserSvc {
     return UserRepo.findById(userId);
   }
 
+  /** Edit profile fields (username and/or gender) for authenticated user. Only fields present in `fields` are updated. */
+  static async editProfile(
+    userId: string,
+    fields: { username?: string; gender?: "Male" | "Female" }
+  ) {
+    const user = await UserRepo.findById(userId);
+    if (!user) throw new Error("User not found.");
+
+    if (fields.username !== undefined) {
+      const existing = await UserRepo.findByUsername(fields.username);
+      if (existing && String(existing._id) !== String(userId)) {
+        throw new Error("Username is already taken.");
+      }
+    }
+
+    const updateData: TUserUpdateOptions = { _id: userId };
+    if (fields.username !== undefined) updateData.username = fields.username;
+    if (fields.gender !== undefined) updateData.gender = fields.gender;
+
+    await UserRepo.update(updateData);
+    return UserRepo.findById(userId);
+  }
+
   static async setUsernameGender(
     userId: string,
     gender: "Male" | "Female",
