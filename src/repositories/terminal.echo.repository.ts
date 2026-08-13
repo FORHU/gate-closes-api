@@ -127,11 +127,19 @@ export default class TerminalEchoRepo {
     return this.collection().insertOne(new MTerminalEcho(echo));
   }
 
-  static async findByAirportNameWithFile(airportName: string) {
-    const regex = new RegExp(airportName, "i");
+  /**
+   * Terminal echo feed with file/user/reply joins. Pass airportName to
+   * filter to one terminal; omit it to fetch every echo (Feed tab's
+   * unfiltered default) — latest first either way.
+   */
+  static async findByAirportNameWithFile(airportName?: string) {
+    const matchStage = airportName
+      ? [{ $match: { airportName: new RegExp(airportName, "i") } }]
+      : [];
     return this.collection()
       .aggregate([
-        { $match: { airportName: regex } },
+        ...matchStage,
+        { $sort: { createdAt: -1, _id: -1 } },
         {
           $lookup: {
             from: "file",

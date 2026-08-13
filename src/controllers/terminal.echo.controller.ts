@@ -90,7 +90,9 @@ export default class TerminalEchoCtrl {
     const { airportName } = req.query;
 
     const schema = Joi.object({
-      airportName: Joi.string().min(1).required(),
+      // Optional: omitting airportName fetches all echoes (used as the
+      // Feed tab's default, unfiltered view — see TerminalEchoSvc.findByAirportName).
+      airportName: Joi.string().min(1).optional(),
     });
 
     const { error, value } = schema.validate({ airportName });
@@ -101,7 +103,7 @@ export default class TerminalEchoCtrl {
     try {
       const userId = req.user?.userId as string | undefined;
       const echoes = await TerminalEchoSvc.findByAirportName(
-        value.airportName as string,
+        value.airportName as string | undefined,
         userId
       );
       return res.json({ data: echoes });

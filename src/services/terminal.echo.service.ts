@@ -155,7 +155,7 @@ export default class TerminalEchoSvc {
   }
 
   static async findByAirportName(
-    airportName: string,
+    airportName?: string,
     userId?: string
   ): Promise<Document[]> {
     const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName);
