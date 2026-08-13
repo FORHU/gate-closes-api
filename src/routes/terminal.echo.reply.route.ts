@@ -15,13 +15,18 @@ const router = express.Router();
 import TerminalEchoReplyCtrl from "../controllers/terminal.echo.reply.controller";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
-// GET is public — anyone can read replies (controller handles optional userId for reactions)
-router.get("/", TerminalEchoReplyCtrl.getByTerminalEchoId);
+// sessionMiddleware required (not actually "public" — the comment this
+// replaced described a state that was never reachable: without it, req.user
+// is never populated for ANY caller, including logged-in ones, which
+// silently broke each reply's currentUserReactions on every fetch). This
+// app has no genuinely anonymous read path (every screen requires login),
+// so there's no public-access behavior lost here.
+router.get("/", sessionMiddleware, TerminalEchoReplyCtrl.getByTerminalEchoId);
 
 // Fetch a single reply by id — used by the frontend to append a newly
 // created reply to an already-loaded thread, instead of re-fetching
 // the entire reply list every time one new reply arrives.
-router.get("/:id", TerminalEchoReplyCtrl.getById);
+router.get("/:id", sessionMiddleware, TerminalEchoReplyCtrl.getById);
 
 // POST and PATCH require authentication
 router.post("/", sessionMiddleware, TerminalEchoReplyCtrl.create);
