@@ -285,7 +285,19 @@ export default class TerminalEchoSvc {
       }
     }
 
-    return { ...echo, type };
+    // Without this, a freshly-fetched single echo (e.g. opening a thread
+    // after a reload, when it isn't already sitting in the local feed
+    // cache — see getThread's knownPost fallback in echoService.ts) always
+    // comes back with no currentUserReactions, so the user's own prior
+    // reactions show as un-reacted even though they're still recorded.
+    // Matches the same pattern findByAirportName uses for the feed.
+    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
+      userId,
+      [echo._id as ObjectId]
+    );
+    const currentUserReactions = reactions.map((r) => r.reaction);
+
+    return { ...echo, type, currentUserReactions };
   }
 
   static async incrementListen(terminalEchoId: string) {
