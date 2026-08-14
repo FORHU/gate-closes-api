@@ -24,6 +24,7 @@ export default class AirportRepo {
             airport: 1,
             iata: 1,
             icao: 1,
+            countryCode: 1,
             location: 1,
           },
         }
@@ -69,6 +70,19 @@ export default class AirportRepo {
 
   static async findByIcao(icao: string) {
     return this.collection().findOne({ icao: icao.toUpperCase() });
+  }
+
+  // Flight tickets store fromAirport/toAirport as a single code string that
+  // may be either IATA or ICAO (whichever the client's airport picker had) —
+  // this is the one lookup point used to resolve that code back to a real
+  // airport document (for its countryCode) without the caller needing to
+  // know which kind of code it's holding.
+  static async findByIataOrIcao(code: string) {
+    const upper = code.trim().toUpperCase();
+    return (
+      (await this.collection().findOne({ iata: upper })) ??
+      (await this.collection().findOne({ icao: upper }))
+    );
   }
 
   static async update(airport: TAirportUpdateOptions) {

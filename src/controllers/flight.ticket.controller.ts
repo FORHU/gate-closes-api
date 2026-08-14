@@ -12,16 +12,16 @@ export default class FlightTicketCtrl {
 
     const {
       flightNumber,
-      fromCity,
-      toCity,
+      fromAirport,
+      toAirport,
       departureDateTime,
       returnDateTime,
     } = req.body;
 
     const schema = Joi.object({
       flightNumber: Joi.string().trim().required(),
-      fromCity: Joi.string().trim().required(),
-      toCity: Joi.string().trim().required(),
+      fromAirport: Joi.string().trim().required(),
+      toAirport: Joi.string().trim().required(),
       departureDateTime: Joi.date().required(),
       returnDateTime: Joi.date().required(),
     });
@@ -29,8 +29,8 @@ export default class FlightTicketCtrl {
     const { error, value } = schema.validate(
       {
         flightNumber,
-        fromCity,
-        toCity,
+        fromAirport,
+        toAirport,
         departureDateTime,
         returnDateTime,
       },
@@ -50,8 +50,8 @@ export default class FlightTicketCtrl {
       const result = await FlightTicketSvc.create({
         userId: userObjectId,
         flightNumber: value.flightNumber,
-        fromCity: value.fromCity,
-        toCity: value.toCity,
+        fromAirport: value.fromAirport,
+        toAirport: value.toAirport,
         departureDateTime: value.departureDateTime,
         returnDateTime: value.returnDateTime,
       });
@@ -97,8 +97,8 @@ export default class FlightTicketCtrl {
 
     const {
       flightNumber,
-      fromCity,
-      toCity,
+      fromAirport,
+      toAirport,
       departureDateTime,
       returnDateTime,
     } = req.body;
@@ -106,14 +106,14 @@ export default class FlightTicketCtrl {
   // Fields are marked .optional() because an edit might only change one thing
     const schema = Joi.object({
       flightNumber: Joi.string().trim().optional(),
-      fromCity: Joi.string().trim().optional(),
-      toCity: Joi.string().trim().optional(),
+      fromAirport: Joi.string().trim().optional(),
+      toAirport: Joi.string().trim().optional(),
       departureDateTime: Joi.date().optional(),
       returnDateTime: Joi.date().optional(),
     });
 
     const { error, value } = schema.validate(
-      { flightNumber, fromCity, toCity, departureDateTime, returnDateTime },
+      { flightNumber, fromAirport, toAirport, departureDateTime, returnDateTime },
       { convert: true, stripUnknown: true }
     );
 

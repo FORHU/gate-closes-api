@@ -176,7 +176,7 @@ export default class DtConversationSvc {
     const myTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
       requesterId
     );
-    if (!myTicket?.toCity) {
+    if (!myTicket?.toAirport) {
       throw new Error("No active flight ticket found for user.");
     }
 
@@ -184,16 +184,16 @@ export default class DtConversationSvc {
       otherUserId
     );
 
-    const toCity = myTicket.toCity;
+    const toAirport = myTicket.toAirport;
 
     const [meEligible, otherEligible] = await Promise.all([
       FlightTicketRepo.userHasSameDestination({
         userId: requesterId,
-        toCity,
+        toAirport,
       }),
       FlightTicketRepo.userHasSameDestination({
         userId: otherUserId,
-        toCity,
+        toAirport,
       }),
     ]);
 
@@ -202,11 +202,11 @@ export default class DtConversationSvc {
     }
 
     if (
-      myTicket.fromCity &&
-      otherTicket?.fromCity &&
-      myTicket.fromCity === otherTicket.fromCity
+      myTicket.fromAirport &&
+      otherTicket?.fromAirport &&
+      myTicket.fromAirport === otherTicket.fromAirport
     ) {
-      throw new Error("Users are from the same city. Not eligible for destination threads.");
+      throw new Error("Users are from the same airport. Not eligible for destination threads.");
     }
 
     const authMonthDay = new Date(myTicket.departureDateTime).toISOString().slice(5, 10);
