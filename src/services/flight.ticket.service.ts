@@ -3,15 +3,16 @@ import { TFlightTicket } from "../models/flight.ticket.model";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import AirportRepo from "../repositories/airport.repository";
 
-// fromCountry/toCountry are never accepted from the client — they're always
-// derived here from the submitted fromAirport/toAirport code, so they can
-// never drift out of sync with the airport they're supposed to describe.
-async function resolveAirportCountry(code: string): Promise<string | null> {
+// fromCountry/toCountry/fromAirportName/toAirportName are never accepted
+// from the client — they're always derived here from the submitted
+// fromAirport/toAirport code, so they can never drift out of sync with the
+// airport they're supposed to describe.
+async function resolveAirportDetails(code: string): Promise<{ name: string | null; countryCode: string | null }> {
   const airport = await AirportRepo.findByIataOrIcao(code);
   if (!airport) {
     throw new Error(`Unknown airport code: ${code}`);
   }
-  return airport.countryCode ?? null;
+  return { name: airport.airport ?? null, countryCode: airport.countryCode ?? null };
 }
 
 export default class FlightTicketSvc {
@@ -19,10 +20,14 @@ export default class FlightTicketSvc {
     const doc: TFlightTicket = { ...ticket };
 
     if (doc.fromAirport) {
-      doc.fromCountry = await resolveAirportCountry(doc.fromAirport);
+      const details = await resolveAirportDetails(doc.fromAirport);
+      doc.fromAirportName = details.name;
+      doc.fromCountry = details.countryCode;
     }
     if (doc.toAirport) {
-      doc.toCountry = await resolveAirportCountry(doc.toAirport);
+      const details = await resolveAirportDetails(doc.toAirport);
+      doc.toAirportName = details.name;
+      doc.toCountry = details.countryCode;
     }
 
     return FlightTicketRepo.create(doc);
@@ -36,10 +41,14 @@ export default class FlightTicketSvc {
     const nextUpdate: Record<string, unknown> = { ...updateData };
 
     if (typeof nextUpdate.fromAirport === "string" && nextUpdate.fromAirport) {
-      nextUpdate.fromCountry = await resolveAirportCountry(nextUpdate.fromAirport);
+      const details = await resolveAirportDetails(nextUpdate.fromAirport);
+      nextUpdate.fromAirportName = details.name;
+      nextUpdate.fromCountry = details.countryCode;
     }
     if (typeof nextUpdate.toAirport === "string" && nextUpdate.toAirport) {
-      nextUpdate.toCountry = await resolveAirportCountry(nextUpdate.toAirport);
+      const details = await resolveAirportDetails(nextUpdate.toAirport);
+      nextUpdate.toAirportName = details.name;
+      nextUpdate.toCountry = details.countryCode;
     }
 
     const result = await FlightTicketRepo.updateByUserId(userId, nextUpdate);
