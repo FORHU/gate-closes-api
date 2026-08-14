@@ -134,6 +134,26 @@ export default class FlightTicketCtrl {
       return res.status(500).json({ message: getErrorMessage(err) });
     }
   }
+
+  // DELETE /flight-ticket
+  static async deleteByUserId(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+
+    try {
+      const userObjectId = FlightTicketRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
+
+      await FlightTicketSvc.deleteByUserId(userObjectId);
+
+      return res.json({ message: "Ticket deleted successfully" });
+    } catch (err) {
+      const message = getErrorMessage(err);
+      const status = message === "Flight ticket not found" ? 404 : 500;
+      return res.status(status).json({ message });
+    }
+  }
 }
 
 

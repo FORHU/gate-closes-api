@@ -137,11 +137,19 @@ static async updateByUserId(userId: ObjectId, updateData: Record<string, unknown
   const result = await this.collection().findOneAndUpdate(
     { userId },
     { $set: dataToUpdate },
-    { returnDocument: "after" } 
+    { returnDocument: "after" }
   );
 
   return result;
 }
+
+  // Deletes ALL tickets for the user, not just the active/latest one —
+  // findActiveOrLatestByUserId doesn't distinguish, so leaving older rows
+  // behind would let a stale one resurface as "latest" once the current
+  // one is gone.
+  static async deleteAllByUserId(userId: ObjectId) {
+    return this.collection().deleteMany({ userId });
+  }
 
 }
 

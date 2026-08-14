@@ -59,6 +59,16 @@ export default class FlightTicketSvc {
 
     return result.value ?? result;
   }
+
+  static async deleteByUserId(userId: ObjectId) {
+    const result = await FlightTicketRepo.deleteAllByUserId(userId);
+
+    if (!result.deletedCount) {
+      throw new Error("Flight ticket not found");
+    }
+
+    return result;
+  }
 }
 
 
