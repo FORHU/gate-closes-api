@@ -77,44 +77,44 @@ export default class TerminalEchoSvc {
     const otherDeparture = this.dateKey(otherTicket.departureDateTime);
 
     const authFlightNumber = (authTicket.flightNumber ?? "").trim();
-    const authFromCity = (authTicket.fromCity ?? "").trim();
-    const authToCity = (authTicket.toCity ?? "").trim();
+    const authFromAirport = (authTicket.fromAirport ?? "").trim();
+    const authToAirport = (authTicket.toAirport ?? "").trim();
 
     const otherFlightNumber = (otherTicket.flightNumber ?? "").trim();
-    const otherFromCity = (otherTicket.fromCity ?? "").trim();
-    const otherToCity = (otherTicket.toCity ?? "").trim();
+    const otherFromAirport = (otherTicket.fromAirport ?? "").trim();
+    const otherToAirport = (otherTicket.toAirport ?? "").trim();
 
-    // parallel_soul: same flight number, toCity, and departureDate
+    // parallel_soul: same flight number, toAirport, and departureDate
     if (
       authFlightNumber &&
-      authToCity &&
+      authToAirport &&
       authDeparture &&
       authFlightNumber === otherFlightNumber &&
-      authToCity === otherToCity &&
+      authToAirport === otherToAirport &&
       authDeparture === otherDeparture
     ) {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
-    // destination_thread: same destination, same day (month+day), different flight and different origin
+    // destination_thread: same destination airport, same day (month+day), different flight and different origin
     const authMonthDay = this.monthDayKey(authTicket.departureDateTime);
     const otherMonthDay = this.monthDayKey(otherTicket.departureDateTime);
 
     if (
-      authToCity &&
-      otherToCity &&
-      authToCity === otherToCity &&
+      authToAirport &&
+      otherToAirport &&
+      authToAirport === otherToAirport &&
       authMonthDay === otherMonthDay &&
       authFlightNumber !== otherFlightNumber &&
-      authFromCity !== otherFromCity
+      authFromAirport !== otherFromAirport
     ) {
       return TERMINAL_ECHO_TYPE.DESTINATION_THREAD;
     }
 
     // baton_touch: cross-directional — one arriving, one departing
     if (
-      ((authToCity && otherFromCity && authToCity === otherFromCity) ||
-        (authFromCity && otherToCity && authFromCity === otherToCity)) &&
+      ((authToAirport && otherFromAirport && authToAirport === otherFromAirport) ||
+        (authFromAirport && otherToAirport && authFromAirport === otherToAirport)) &&
       (authFlightNumber !== otherFlightNumber || authDeparture !== otherDeparture)
     ) {
       return TERMINAL_ECHO_TYPE.BATON_TOUCH;

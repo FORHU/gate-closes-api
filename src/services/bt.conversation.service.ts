@@ -187,14 +187,14 @@ export default class BtConversationSvc {
       throw new Error("Other user has no active flight ticket.");
     }
 
-    const myToCity = (myTicket.toCity ?? "").trim();
-    const myFromCity = (myTicket.fromCity ?? "").trim();
-    const otherToCity = (otherTicket.toCity ?? "").trim();
-    const otherFromCity = (otherTicket.fromCity ?? "").trim();
+    const myToAirport = (myTicket.toAirport ?? "").trim();
+    const myFromAirport = (myTicket.fromAirport ?? "").trim();
+    const otherToAirport = (otherTicket.toAirport ?? "").trim();
+    const otherFromAirport = (otherTicket.fromAirport ?? "").trim();
 
     const isCrossDirectionalMatch =
-      (myToCity && otherFromCity && myToCity === otherFromCity) ||
-      (myFromCity && otherToCity && myFromCity === otherToCity);
+      (myToAirport && otherFromAirport && myToAirport === otherFromAirport) ||
+      (myFromAirport && otherToAirport && myFromAirport === otherToAirport);
 
     if (!isCrossDirectionalMatch) {
       throw new Error("Users are not eligible for baton touch.");
