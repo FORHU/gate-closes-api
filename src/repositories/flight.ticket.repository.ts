@@ -101,15 +101,6 @@ export default class FlightTicketRepo {
     return ids;
   }
 
-  static async userHasFlight(params: {userId: ObjectId; flightNumber: string; departureDateTime: Date}): Promise<boolean> {
-    const { userId, flightNumber, departureDateTime } = params;
-    const doc = await this.collection().findOne(
-      { userId, flightNumber, departureDateTime },
-      { projection: { _id: 1 } }
-    );
-    return !!doc;
-  }
-
   static async userHasSameDestination(params: {userId: ObjectId; toAirport: string}): Promise<boolean> {
     const { userId, toAirport } = params;
     const doc = await this.collection().findOne(
