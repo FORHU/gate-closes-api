@@ -84,14 +84,18 @@ export default class TerminalEchoSvc {
     const otherFromAirport = (otherTicket.fromAirport ?? "").trim();
     const otherToAirport = (otherTicket.toAirport ?? "").trim();
 
-    // parallel_soul: same flight number, toAirport, and departureDate
+    // parallel_soul: same route — same fromAirport AND same toAirport.
+    // Matches PsConversationSvc.createDm's eligibility check exactly, so a
+    // pin classified here is always actually eligible to start a Parallel
+    // Soul conversation (previously required an exact flightNumber +
+    // departureDateTime match, which was stricter than this classification
+    // used to be — a ticket entered a few minutes apart from another
+    // user's showed the CTA here but then 409'd there).
     if (
-      authFlightNumber &&
+      authFromAirport &&
       authToAirport &&
-      authDeparture &&
-      authFlightNumber === otherFlightNumber &&
-      authToAirport === otherToAirport &&
-      authDeparture === otherDeparture
+      authFromAirport === otherFromAirport &&
+      authToAirport === otherToAirport
     ) {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }

@@ -165,6 +165,14 @@ export default class PsConversationSvc {
   }
 
   // Create conversation. Throws if conversation already exists.
+  // Eligibility: same route (fromAirport + toAirport) as the other user —
+  // matches terminal.echo.service.ts's computeType() PARALLEL_SOUL branch
+  // exactly, so a map pin classified as Parallel Soul is always actually
+  // eligible to start a conversation (previously this checked an exact
+  // flightNumber + departureDateTime match, which was stricter than what
+  // computeType used to decide the pin/CTA — a ticket entered a few
+  // minutes off from another user's would show the Parallel Soul CTA and
+  // then 409 here).
   static async createDm(params: {
     requesterId: ObjectId;
     otherUserId: ObjectId;
@@ -175,31 +183,24 @@ export default class PsConversationSvc {
       throw new Error("Cannot create conversation with yourself.");
     }
 
-    const myTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      requesterId
-    );
-    if (!myTicket?.flightNumber || !myTicket?.departureDateTime) {
-      throw new Error("No active flight ticket found for user.");
-    }
-
-    const flightNumber = myTicket.flightNumber;
-    const departureDateTime = myTicket.departureDateTime;
-
-    const [meEligible, otherEligible] = await Promise.all([
-      FlightTicketRepo.userHasFlight({
-        userId: requesterId,
-        flightNumber,
-        departureDateTime,
-      }),
-      FlightTicketRepo.userHasFlight({
-        userId: otherUserId,
-        flightNumber,
-        departureDateTime,
-      }),
+    const [myTicket, otherTicket] = await Promise.all([
+      FlightTicketRepo.findActiveOrLatestByUserId(requesterId),
+      FlightTicketRepo.findActiveOrLatestByUserId(otherUserId),
     ]);
 
-    if (!meEligible || !otherEligible) {
-      throw new Error("Users are not eligible to chat for this flight.");
+    if (!myTicket?.fromAirport || !myTicket?.toAirport) {
+      throw new Error("No active flight ticket found for user.");
+    }
+    if (!otherTicket?.fromAirport || !otherTicket?.toAirport) {
+      throw new Error("Other user has no active flight ticket.");
+    }
+
+    const sameRoute =
+      myTicket.fromAirport === otherTicket.fromAirport &&
+      myTicket.toAirport === otherTicket.toAirport;
+
+    if (!sameRoute) {
+      throw new Error("Users are not traveling the same route to be eligible for Parallel Soul.");
     }
 
     const dmKey = this.dmKeyForUsers(requesterId, otherUserId);
