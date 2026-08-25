@@ -4,6 +4,7 @@ import UserSvc from "../services/user.service";
 import UserAuthSvc from "../services/user.auth.service";
 import UserRepo from "../repositories/user.repository";
 import { verifyRefreshToken, createAccessToken } from "../utils/jwt";
+import { passwordSchema } from "../utils/password.validator";
 
 export default class AuthController {
   /** SignupStep1: Send OTP to email (and verify email ownership request). */
@@ -68,7 +69,7 @@ export default class AuthController {
     const { userId, password, confirmPassword } = req.body;
     const schema = Joi.object({
       userId: Joi.string().required(),
-      password: Joi.string().min(8).required(),
+      password: passwordSchema,
       confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
     });
     const { error, value } = schema.validate({ userId, password, confirmPassword });
@@ -163,7 +164,7 @@ export default class AuthController {
     const { userId, password, confirmPassword } = req.body;
     const schema = Joi.object({
       userId: Joi.string().required(),
-      password: Joi.string().min(8).required(),
+      password: passwordSchema,
       confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
     });
     const { error, value } = schema.validate({ userId, password, confirmPassword });
@@ -340,7 +341,7 @@ export default class AuthController {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     const schema = Joi.object({
       currentPassword: Joi.string().required(),
-      newPassword: Joi.string().min(8).required(),
+      newPassword: passwordSchema,
       confirmPassword: Joi.string().valid(Joi.ref("newPassword")).required(),
     });
     const { error, value } = schema.validate({
