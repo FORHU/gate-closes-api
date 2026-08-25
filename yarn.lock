@@ -3114,12 +3114,7 @@
     debug "^4.4.3"
     ts-api-utils "^2.5.0"
 
-"@typescript-eslint/types@^8.65.0":
-  version "8.65.0"
-  resolved "https://registry.npmjs.org/@typescript-eslint/types/-/types-8.65.0.tgz"
-  integrity sha512-JSSwWNy+H0E/01jJEM+hrX6N0OFDzFzeIhHFSAS01tlVaevpG8cFyYRPhS5yjGOvBUx3sqQHVMjCL1CAZZMxBg==
-
-"@typescript-eslint/types@8.65.0":
+"@typescript-eslint/types@^8.65.0", "@typescript-eslint/types@8.65.0":
   version "8.65.0"
   resolved "https://registry.npmjs.org/@typescript-eslint/types/-/types-8.65.0.tgz"
   integrity sha512-JSSwWNy+H0E/01jJEM+hrX6N0OFDzFzeIhHFSAS01tlVaevpG8cFyYRPhS5yjGOvBUx3sqQHVMjCL1CAZZMxBg==
@@ -3391,13 +3386,6 @@ brace-expansion@^2.0.1:
   integrity sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==
   dependencies:
     balanced-match "^1.0.0"
-
-brace-expansion@^5.0.2:
-  version "5.0.4"
-  resolved "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.4.tgz"
-  integrity sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==
-  dependencies:
-    balanced-match "^4.0.2"
 
 brace-expansion@^5.0.8:
   version "5.0.9"
@@ -3927,12 +3915,7 @@ eslint-visitor-keys@^3.4.3:
   resolved "https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-3.4.3.tgz"
   integrity sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag==
 
-eslint-visitor-keys@^5.0.0:
-  version "5.0.1"
-  resolved "https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-5.0.1.tgz"
-  integrity sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA==
-
-eslint-visitor-keys@^5.0.1:
+eslint-visitor-keys@^5.0.0, eslint-visitor-keys@^5.0.1:
   version "5.0.1"
   resolved "https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-5.0.1.tgz"
   integrity sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA==
@@ -4258,6 +4241,15 @@ gaxios@^7.0.0, gaxios@^7.1.4:
     extend "^3.0.2"
     https-proxy-agent "^7.0.1"
     node-fetch "^3.3.2"
+
+gcp-metadata@^7.0.1:
+  version "7.0.1"
+  resolved "https://registry.npmjs.org/gcp-metadata/-/gcp-metadata-7.0.1.tgz"
+  integrity sha512-UcO3kefx6dCcZkgcTGgVOTFb7b1LlQ02hY1omMjjrrBzkajRMCFgYOjs7J71WqnuG1k2b+9ppGL7FsOfhZMQKQ==
+  dependencies:
+    gaxios "^7.0.0"
+    google-logging-utils "^1.0.0"
+    json-bigint "^1.0.0"
 
 gcp-metadata@8.1.2:
   version "8.1.2"
@@ -4810,28 +4802,7 @@ mime@2.6.0:
   resolved "https://registry.npmjs.org/mime/-/mime-2.6.0.tgz"
   integrity sha512-USPkMeET31rOMiarsBNIHZKLGgvKc/LrjofAnBlOttf5ajRvqiRA8QsenbcooctK6d6Ts6aqZXBA+XbkKthiQg==
 
-minimatch@^10.2.1:
-  version "10.2.4"
-  resolved "https://registry.npmjs.org/minimatch/-/minimatch-10.2.4.tgz"
-  integrity sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg==
-  dependencies:
-    brace-expansion "^5.0.2"
-
-minimatch@^10.2.2:
-  version "10.2.6"
-  resolved "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz"
-  integrity sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==
-  dependencies:
-    brace-expansion "^5.0.8"
-
-minimatch@^10.2.4:
-  version "10.2.6"
-  resolved "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz"
-  integrity sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==
-  dependencies:
-    brace-expansion "^5.0.8"
-
-minimatch@^10.2.5:
+minimatch@^10.2.1, minimatch@^10.2.2, minimatch@^10.2.4, minimatch@^10.2.5:
   version "10.2.6"
   resolved "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz"
   integrity sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==
