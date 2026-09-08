@@ -1,19 +1,16 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
-  AWS_ACCESS_KEY,
-  AWS_SECRET_ACCESS_KEY,
   AWS_REGION,
   AWS_S3_BUCKET,
   CLOUD_FRONT_DOMAIN,
 } from "../config";
 
+// No explicit credentials: the SDK's default provider chain applies,
+// so this relies on an IAM role attached to the running instance/task
+// instead of static keys.
 const s3Client = new S3Client({
   region: AWS_REGION,
-  credentials: {
-    accessKeyId: AWS_ACCESS_KEY,
-    secretAccessKey: AWS_SECRET_ACCESS_KEY,
-  },
 });
 
 export async function getPutObjectPresignedUrl(params: {
