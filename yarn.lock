@@ -1313,6 +1313,15 @@
   resolved "https://registry.npmjs.org/@socket.io/component-emitter/-/component-emitter-3.1.2.tgz"
   integrity sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==
 
+"@socket.io/redis-adapter@^8.3.0":
+  version "8.3.0"
+  resolved "https://registry.npmjs.org/@socket.io/redis-adapter/-/redis-adapter-8.3.0.tgz"
+  integrity sha512-ly0cra+48hDmChxmIpnESKrc94LjRL80TEmZVscuQ/WWkRP81nNj8W8cCGMqbI4L6NCuAaPRSzZF1a9GlAxxnA==
+  dependencies:
+    debug "~4.3.1"
+    notepack.io "~3.0.1"
+    uid2 "1.0.0"
+
 "@tsconfig/node10@^1.0.7":
   version "1.0.12"
   resolved "https://registry.npmjs.org/@tsconfig/node10/-/node10-1.0.12.tgz"
@@ -3695,6 +3704,13 @@ debug@^4, debug@^4.3.1, debug@^4.3.2, debug@^4.3.4, debug@^4.3.5, debug@^4.4.3, 
   dependencies:
     ms "^2.1.3"
 
+debug@~4.3.1:
+  version "4.3.7"
+  resolved "https://registry.npmjs.org/debug/-/debug-4.3.7.tgz"
+  integrity sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ==
+  dependencies:
+    ms "^2.1.3"
+
 debug@2.6.9:
   version "2.6.9"
   resolved "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz"
@@ -4241,15 +4257,6 @@ gaxios@^7.0.0, gaxios@^7.1.4:
     extend "^3.0.2"
     https-proxy-agent "^7.0.1"
     node-fetch "^3.3.2"
-
-gcp-metadata@^7.0.1:
-  version "7.0.1"
-  resolved "https://registry.npmjs.org/gcp-metadata/-/gcp-metadata-7.0.1.tgz"
-  integrity sha512-UcO3kefx6dCcZkgcTGgVOTFb7b1LlQ02hY1omMjjrrBzkajRMCFgYOjs7J71WqnuG1k2b+9ppGL7FsOfhZMQKQ==
-  dependencies:
-    gaxios "^7.0.0"
-    google-logging-utils "^1.0.0"
-    json-bigint "^1.0.0"
 
 gcp-metadata@8.1.2:
   version "8.1.2"
@@ -5017,6 +5024,11 @@ normalize-path@^3.0.0, normalize-path@~3.0.0:
   resolved "https://registry.npmjs.org/normalize-path/-/normalize-path-3.0.0.tgz"
   integrity sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==
 
+notepack.io@~3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmjs.org/notepack.io/-/notepack.io-3.0.1.tgz"
+  integrity sha512-TKC/8zH5pXIAMVQio2TvVDTtPRX+DJPHDqjRbxogtFiByHyzKmy96RA0JtCQJ+WouyyL4A10xomQzgbUT+1jCg==
+
 npmlog@^5.0.1:
   version "5.0.1"
   resolved "https://registry.npmjs.org/npmlog/-/npmlog-5.0.1.tgz"
@@ -5474,7 +5486,7 @@ skmeans@0.9.7:
   resolved "https://registry.npmjs.org/skmeans/-/skmeans-0.9.7.tgz"
   integrity sha512-hNj1/oZ7ygsfmPZ7ZfN5MUBRoGg1gtpnImuJBgLO0ljQ67DtJuiQaiYdS4lUA6s0KCwnPhGivtC/WRwIZLkHyg==
 
-socket.io-adapter@~2.5.2:
+socket.io-adapter@^2.5.4, socket.io-adapter@~2.5.2:
   version "2.5.6"
   resolved "https://registry.npmjs.org/socket.io-adapter/-/socket.io-adapter-2.5.6.tgz"
   integrity sha512-DkkO/dz7MGln0dHn5bmN3pPy+JmywNICWrJqVWiVOyvXjWQFIv9c2h24JrQLLFJ2aQVQf/Cvl1vblnd4r2apLQ==
@@ -5795,6 +5807,11 @@ uglify-js@^3.1.4:
   version "3.19.3"
   resolved "https://registry.npmjs.org/uglify-js/-/uglify-js-3.19.3.tgz"
   integrity sha512-v3Xu+yuwBXisp6QYTcH4UbH+xYJXqnq2m/LtQVWKWzYc1iehYnLixoQDN9FH6/j9/oybfd6W9Ghwkl8+UMKTKQ==
+
+uid2@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.npmjs.org/uid2/-/uid2-1.0.0.tgz"
+  integrity sha512-+I6aJUv63YAcY9n4mQreLUt0d4lvwkkopDNmpomkAUz0fAkEMV9pRWxN0EjhW1YfRhcuyHg2v3mwddCDW1+LFQ==
 
 undefsafe@^2.0.5:
   version "2.0.5"

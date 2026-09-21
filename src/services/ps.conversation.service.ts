@@ -5,6 +5,7 @@ import PsConversationRepo from "../repositories/ps.conversation.repository";
 import PsConversationReadStateRepo from "../repositories/ps.conversation.read.state.repository";
 import UserRepo from "../repositories/user.repository";
 import { isDuplicateKeyError } from "../utils/error.util";
+import { EligibilityFactory } from "../domain/conversation/eligibility.factory";
 
 type TPsLatestEventType =
   | "message_sent"
@@ -188,19 +189,18 @@ export default class PsConversationSvc {
       FlightTicketRepo.findActiveOrLatestByUserId(otherUserId),
     ]);
 
-    if (!myTicket?.fromAirport || !myTicket?.toAirport) {
-      throw new Error("No active flight ticket found for user.");
-    }
-    if (!otherTicket?.fromAirport || !otherTicket?.toAirport) {
-      throw new Error("Other user has no active flight ticket.");
-    }
+    const strategy = EligibilityFactory.getStrategy("parallel_soul");
+    const eligibilityResult = await strategy.checkEligibility({
+      requesterId,
+      otherUserId,
+      myTicket: myTicket as any,
+      otherTicket: otherTicket as any,
+    });
 
-    const sameRoute =
-      myTicket.fromAirport === otherTicket.fromAirport &&
-      myTicket.toAirport === otherTicket.toAirport;
-
-    if (!sameRoute) {
-      throw new Error("Users are not traveling the same route to be eligible for Parallel Soul.");
+    if (!eligibilityResult.eligible) {
+      throw new Error(
+        eligibilityResult.message || "Users are not eligible for Parallel Soul."
+      );
     }
 
     const dmKey = this.dmKeyForUsers(requesterId, otherUserId);

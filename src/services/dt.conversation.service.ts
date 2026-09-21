@@ -5,6 +5,7 @@ import DtConversationRepo from "../repositories/dt.conversation.repository";
 import DtConversationReadStateRepo from "../repositories/dt.conversation.read.state.repository";
 import UserRepo from "../repositories/user.repository";
 import { isDuplicateKeyError } from "../utils/error.util";
+import { EligibilityFactory } from "../domain/conversation/eligibility.factory";
 
 type TDtLatestEventType =
   | "message_sent"
@@ -173,59 +174,23 @@ export default class DtConversationSvc {
       throw new Error("Cannot create conversation with yourself.");
     }
 
-    const myTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      requesterId
-    );
-    if (!myTicket?.toAirport) {
-      throw new Error("No active flight ticket found for user.");
-    }
-
-    const otherTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      otherUserId
-    );
-
-    const toAirport = myTicket.toAirport;
-
-    const [meEligible, otherEligible] = await Promise.all([
-      FlightTicketRepo.userHasSameDestination({
-        userId: requesterId,
-        toAirport,
-      }),
-      FlightTicketRepo.userHasSameDestination({
-        userId: otherUserId,
-        toAirport,
-      }),
+    const [myTicket, otherTicket] = await Promise.all([
+      FlightTicketRepo.findActiveOrLatestByUserId(requesterId),
+      FlightTicketRepo.findActiveOrLatestByUserId(otherUserId),
     ]);
 
-    if (!meEligible || !otherEligible) {
-      throw new Error("Users are not eligible for destination threads.");
-    }
+    const strategy = EligibilityFactory.getStrategy("destination_thread");
+    const eligibilityResult = await strategy.checkEligibility({
+      requesterId,
+      otherUserId,
+      myTicket: myTicket as any,
+      otherTicket: otherTicket as any,
+    });
 
-    if (
-      myTicket.fromAirport &&
-      otherTicket?.fromAirport &&
-      myTicket.fromAirport === otherTicket.fromAirport
-    ) {
-      throw new Error("Users are from the same airport. Not eligible for destination threads.");
-    }
-
-    const authMonthDay = new Date(myTicket.departureDateTime).toISOString().slice(5, 10);
-    const otherMonthDay = otherTicket?.departureDateTime
-      ? new Date(otherTicket.departureDateTime).toISOString().slice(5, 10)
-      : "";
-    if (authMonthDay !== otherMonthDay) {
-      throw new Error("Users are not departing on the same day. Not eligible for destination threads.");
-    }
-
-    if (
-      myTicket.flightNumber &&
-      otherTicket?.flightNumber &&
-      myTicket.flightNumber === otherTicket.flightNumber &&
-      myTicket.departureDateTime &&
-      otherTicket?.departureDateTime &&
-      new Date(myTicket.departureDateTime).getTime() === new Date(otherTicket.departureDateTime).getTime()
-    ) {
-      throw new Error("Users are on the same flight. Use parallel soul instead.");
+    if (!eligibilityResult.eligible) {
+      throw new Error(
+        eligibilityResult.message || "Users are not eligible for destination threads."
+      );
     }
 
     const dmKey = this.dmKeyForUsers(requesterId, otherUserId);

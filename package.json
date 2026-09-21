@@ -10,11 +10,13 @@
     "build": "tsc && npm run copy-assets",
     "copy-assets": "node -e \"require('fs').cpSync('src/assets', 'dist/assets', { recursive: true })\"",
     "start": "node ./dist/server.js",
-    "backfill:ps-latest-events": "ts-node --files ./src/scripts/backfill-ps-latest-events.ts"
+    "backfill:ps-latest-events": "ts-node --files ./src/scripts/backfill-ps-latest-events.ts",
+    "seed": "ts-node --files ./src/scripts/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.998.0",
     "@aws-sdk/s3-request-presigner": "^3.998.0",
+    "@socket.io/redis-adapter": "^8.3.0",
     "@turf/turf": "^7.3.4",
     "@types/winston": "^2.4.4",
     "airport-data-js": "^3.0.1",

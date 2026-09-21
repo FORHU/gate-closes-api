@@ -1,6 +1,7 @@
 import { Document, ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
+import AirportRepo from "../repositories/airport.repository";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import { TERMINAL_ECHO_TYPE, type TerminalEchoMapBounds, type TerminalEchoType } from "../const";
@@ -100,15 +101,27 @@ export default class TerminalEchoSvc {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
-    // destination_thread: same destination airport, same day (month+day), different flight and different origin
-    const authMonthDay = this.monthDayKey(authTicket.departureDateTime);
-    const otherMonthDay = this.monthDayKey(otherTicket.departureDateTime);
+    // destination_thread: same destination airport, valid arrival window (<= 24h), different flight and different origin
+    const authArrival = authTicket.arrivalDateTime
+      ? new Date(authTicket.arrivalDateTime)
+      : (authTicket.departureDateTime ? new Date(authTicket.departureDateTime) : null);
+    const otherArrival = otherTicket.arrivalDateTime
+      ? new Date(otherTicket.arrivalDateTime)
+      : (otherTicket.departureDateTime ? new Date(otherTicket.departureDateTime) : null);
+
+    const isWithinDtWindow = Boolean(
+      authArrival &&
+      otherArrival &&
+      !Number.isNaN(authArrival.getTime()) &&
+      !Number.isNaN(otherArrival.getTime()) &&
+      Math.abs(authArrival.getTime() - otherArrival.getTime()) <= 24 * 60 * 60 * 1000
+    );
 
     if (
       authToAirport &&
       otherToAirport &&
       authToAirport === otherToAirport &&
-      authMonthDay === otherMonthDay &&
+      isWithinDtWindow &&
       authFlightNumber !== otherFlightNumber &&
       authFromAirport !== otherFromAirport
     ) {
@@ -140,6 +153,27 @@ export default class TerminalEchoSvc {
     const { userId, fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } =
       params;
 
+    // Server-authoritative airport resolution (§18.1)
+    let canonicalAirportIata = "";
+    let resolvedAirportName = airportName || "";
+
+    if (location && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+      const [lng, lat] = location.coordinates;
+      if (typeof lng === "number" && typeof lat === "number") {
+        try {
+          const nearest = await AirportRepo.findNearestWithDistance({ lat, lng });
+          if (nearest) {
+            canonicalAirportIata = (nearest.iata || nearest.icao || "").toUpperCase();
+            if (nearest.airport) {
+              resolvedAirportName = nearest.airport;
+            }
+          }
+        } catch (err) {
+          console.warn("[TerminalEchoSvc.createTerminalEcho] Error resolving nearest airport:", err);
+        }
+      }
+    }
+
     const fileCreateResult = await FileSvc.create({
       fileUrl,
       fileName,
@@ -149,13 +183,20 @@ export default class TerminalEchoSvc {
       },
     });
 
-    return TerminalEchoRepo.create({
+    const inserted = await TerminalEchoRepo.create({
       senderId: new ObjectId(userId),
       fileId: fileCreateResult.insertedId,
       textMessage,
       location: location ?? { type: "Point", coordinates: [0, 0] },
-      airportName,
+      airportName: resolvedAirportName,
+      airportIata: canonicalAirportIata,
     });
+
+    return {
+      ...inserted,
+      airportIata: canonicalAirportIata,
+      airportName: resolvedAirportName,
+    };
   }
 
   static async findByAirportName(

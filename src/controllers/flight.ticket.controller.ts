@@ -15,6 +15,7 @@ export default class FlightTicketCtrl {
       fromAirport,
       toAirport,
       departureDateTime,
+      arrivalDateTime,
       returnDateTime,
     } = req.body;
 
@@ -23,6 +24,7 @@ export default class FlightTicketCtrl {
       fromAirport: Joi.string().trim().required(),
       toAirport: Joi.string().trim().required(),
       departureDateTime: Joi.date().required(),
+      arrivalDateTime: Joi.date().optional(),
       returnDateTime: Joi.date().required(),
     });
 
@@ -32,6 +34,7 @@ export default class FlightTicketCtrl {
         fromAirport,
         toAirport,
         departureDateTime,
+        arrivalDateTime,
         returnDateTime,
       },
       { convert: true }
@@ -53,6 +56,7 @@ export default class FlightTicketCtrl {
         fromAirport: value.fromAirport,
         toAirport: value.toAirport,
         departureDateTime: value.departureDateTime,
+        arrivalDateTime: value.arrivalDateTime,
         returnDateTime: value.returnDateTime,
       });
 
@@ -100,6 +104,7 @@ export default class FlightTicketCtrl {
       fromAirport,
       toAirport,
       departureDateTime,
+      arrivalDateTime,
       returnDateTime,
     } = req.body;
 
@@ -109,11 +114,12 @@ export default class FlightTicketCtrl {
       fromAirport: Joi.string().trim().optional(),
       toAirport: Joi.string().trim().optional(),
       departureDateTime: Joi.date().optional(),
+      arrivalDateTime: Joi.date().optional(),
       returnDateTime: Joi.date().optional(),
     });
 
     const { error, value } = schema.validate(
-      { flightNumber, fromAirport, toAirport, departureDateTime, returnDateTime },
+      { flightNumber, fromAirport, toAirport, departureDateTime, arrivalDateTime, returnDateTime },
       { convert: true, stripUnknown: true }
     );
 

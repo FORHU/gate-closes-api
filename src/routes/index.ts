@@ -8,6 +8,7 @@ import flightTicketRoutes from "./flight.ticket.route";
 import psRoutes from "./ps.route";
 import btRoutes from "./bt.route";
 import dtRoutes from "./dt.route";
+import conversationRoutes from "./conversation.route";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
 const router = express.Router();
@@ -27,5 +28,6 @@ router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
 router.use("/ps", sessionMiddleware, psRoutes);
 router.use("/bt", sessionMiddleware, btRoutes);
 router.use("/dt", sessionMiddleware, dtRoutes);
+router.use("/conversations", sessionMiddleware, conversationRoutes);
 
 export default router;

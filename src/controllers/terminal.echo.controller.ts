@@ -68,11 +68,21 @@ export default class TerminalEchoCtrl {
       return res.status(500).json({ message });
     }
 
+    const airportIata = (result as { airportIata?: string })?.airportIata;
+    const room = airportIata ? `airport:${airportIata.toUpperCase()}` : null;
+
     try {
-      io.of("/terminal-echo").emit("terminal_echo:changed", {
-        type: "create",
-        data: result,
-      });
+      if (room) {
+        io.of("/terminal-echo").to(room).emit("terminal_echo:changed", {
+          type: "create",
+          data: result,
+        });
+      } else {
+        io.of("/terminal-echo").emit("terminal_echo:changed", {
+          type: "create",
+          data: result,
+        });
+      }
     } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoCtrl.create] Echo saved successfully, but broadcast failed:",
@@ -83,6 +93,7 @@ export default class TerminalEchoCtrl {
     return res.status(201).json({
       message: "Terminal echo created.",
       insertedId: result.insertedId,
+      airportIata: airportIata || null,
     });
   }
 

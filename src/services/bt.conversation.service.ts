@@ -5,6 +5,7 @@ import BtConversationRepo from "../repositories/bt.conversation.repository";
 import BtConversationReadStateRepo from "../repositories/bt.conversation.read.state.repository";
 import UserRepo from "../repositories/user.repository";
 import { isDuplicateKeyError } from "../utils/error.util";
+import { EligibilityFactory } from "../domain/conversation/eligibility.factory";
 
 type TBtLatestEventType =
   | "message_sent"
@@ -173,42 +174,23 @@ export default class BtConversationSvc {
       throw new Error("Cannot create conversation with yourself.");
     }
 
-    const myTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      requesterId
-    );
-    if (!myTicket) {
-      throw new Error("No active flight ticket found for user.");
-    }
+    const [myTicket, otherTicket] = await Promise.all([
+      FlightTicketRepo.findActiveOrLatestByUserId(requesterId),
+      FlightTicketRepo.findActiveOrLatestByUserId(otherUserId),
+    ]);
 
-    const otherTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      otherUserId
-    );
-    if (!otherTicket) {
-      throw new Error("Other user has no active flight ticket.");
-    }
+    const strategy = EligibilityFactory.getStrategy("baton_touch");
+    const eligibilityResult = await strategy.checkEligibility({
+      requesterId,
+      otherUserId,
+      myTicket: myTicket as any,
+      otherTicket: otherTicket as any,
+    });
 
-    const myToAirport = (myTicket.toAirport ?? "").trim();
-    const myFromAirport = (myTicket.fromAirport ?? "").trim();
-    const otherToAirport = (otherTicket.toAirport ?? "").trim();
-    const otherFromAirport = (otherTicket.fromAirport ?? "").trim();
-
-    const isCrossDirectionalMatch =
-      (myToAirport && otherFromAirport && myToAirport === otherFromAirport) ||
-      (myFromAirport && otherToAirport && myFromAirport === otherToAirport);
-
-    if (!isCrossDirectionalMatch) {
-      throw new Error("Users are not eligible for baton touch.");
-    }
-
-    if (
-      myTicket.flightNumber &&
-      otherTicket.flightNumber &&
-      myTicket.flightNumber === otherTicket.flightNumber &&
-      myTicket.departureDateTime &&
-      otherTicket.departureDateTime &&
-      new Date(myTicket.departureDateTime).getTime() === new Date(otherTicket.departureDateTime).getTime()
-    ) {
-      throw new Error("Users are on the same flight. Use parallel soul instead.");
+    if (!eligibilityResult.eligible) {
+      throw new Error(
+        eligibilityResult.message || "Users are not eligible for baton touch."
+      );
     }
 
     const dmKey = this.dmKeyForUsers(requesterId, otherUserId);
