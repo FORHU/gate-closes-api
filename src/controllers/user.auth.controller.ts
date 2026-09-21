@@ -3,7 +3,7 @@ import Joi from "joi";
 import UserSvc from "../services/user.service";
 import UserAuthSvc from "../services/user.auth.service";
 import UserRepo from "../repositories/user.repository";
-import { verifyRefreshToken, createAccessToken } from "../utils/jwt";
+import { verifyRefreshToken, createAccessToken, createRefreshToken } from "../utils/jwt";
 import { passwordSchema } from "../utils/password.validator";
 
 export default class AuthController {
@@ -293,7 +293,8 @@ export default class AuthController {
     try {
       const payload = verifyRefreshToken(value.refreshToken);
       const accessToken = createAccessToken({ userId: payload.userId, email: payload.email });
-      return res.status(200).json({ accessToken });
+      const newRefreshToken = createRefreshToken({ userId: payload.userId, email: payload.email });
+      return res.status(200).json({ accessToken, refreshToken: newRefreshToken });
     } catch {
       return res.status(401).json({ message: "Invalid or expired refresh token." });
     }

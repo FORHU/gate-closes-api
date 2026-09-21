@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import {
   ACCESS_TOKEN_SECRET,
@@ -10,6 +11,7 @@ import {
 export type TokenPayload = {
   userId: string;
   email?: string;
+  jti?: string;
 };
 
 export function createAccessToken(payload: TokenPayload): string {
@@ -19,7 +21,11 @@ export function createAccessToken(payload: TokenPayload): string {
 }
 
 export function createRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+  const tokenPayload: TokenPayload = {
+    ...payload,
+    jti: crypto.randomUUID(),
+  };
+  return jwt.sign(tokenPayload, REFRESH_TOKEN_SECRET, {
     expiresIn: REFRESH_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"],
   });
 }

@@ -14,12 +14,28 @@ export default class FlightTicketRepo {
   static async findActiveOrLatestByUserId(userId: ObjectId) {
     const now = new Date();
 
+    // 1. In-transit check: user has departed and has not yet completed arrival (+1h dwell)
+    const inTransit = await this.collection().findOne(
+      {
+        userId,
+        departureDateTime: { $lte: now },
+        $or: [
+          { arrivalDateTime: { $gte: new Date(now.getTime() - 60 * 60 * 1000) } },
+          { arrivalDateTime: { $exists: false }, departureDateTime: { $gte: new Date(now.getTime() - 4 * 60 * 60 * 1000) } },
+        ],
+      },
+      { sort: { departureDateTime: -1 } }
+    );
+    if (inTransit) return inTransit;
+
+    // 2. Upcoming flight: soonest future departure
     const upcoming = await this.collection().findOne(
       { userId, departureDateTime: { $gte: now } },
       { sort: { departureDateTime: 1 } }
     );
     if (upcoming) return upcoming;
 
+    // 3. Historical fallback: latest past flight
     const latest = await this.collection().findOne(
       { userId },
       { sort: { departureDateTime: -1 } }
@@ -29,13 +45,36 @@ export default class FlightTicketRepo {
 
   /**
    * Batch version of findActiveOrLatestByUserId:
-   * - Prefer the soonest upcoming departureDateTime (>= now) per user
-   * - Otherwise fallback to latest (max departureDateTime) per user
+   * - Priority 1: In-transit flight (departed, within arrival window)
+   * - Priority 2: Soonest upcoming departureDateTime (>= now)
+   * - Priority 3: Fallback to latest (max departureDateTime)
    */
   static async findActiveOrLatestByUserIds(userIds: ObjectId[]) {
     if (!userIds?.length) return new Map<string, Document>();
 
     const now = new Date();
+
+    const inTransit = await this.collection()
+      .aggregate([
+        {
+          $match: {
+            userId: { $in: userIds },
+            departureDateTime: { $lte: now },
+            $or: [
+              { arrivalDateTime: { $gte: new Date(now.getTime() - 60 * 60 * 1000) } },
+              { arrivalDateTime: { $exists: false }, departureDateTime: { $gte: new Date(now.getTime() - 4 * 60 * 60 * 1000) } },
+            ],
+          },
+        },
+        { $sort: { userId: 1, departureDateTime: -1, _id: -1 } },
+        {
+          $group: {
+            _id: "$userId",
+            ticket: { $first: "$$ROOT" },
+          },
+        },
+      ])
+      .toArray();
 
     const upcoming = await this.collection()
       .aggregate([
@@ -73,6 +112,9 @@ export default class FlightTicketRepo {
       map.set(String(row._id), row.ticket);
     }
     for (const row of upcoming) {
+      map.set(String(row._id), row.ticket);
+    }
+    for (const row of inTransit) {
       map.set(String(row._id), row.ticket);
     }
     return map;
