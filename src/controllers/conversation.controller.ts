@@ -5,6 +5,7 @@ import ConversationRepo from "../repositories/conversation.repository";
 import { ERROR_MESSAGE } from "../const";
 import { getErrorMessage } from "../utils/error.util";
 import { ConversationType } from "../domain/conversation/conversation.types";
+import { io } from "../app";
 
 export default class ConversationCtrl {
   static async create(req: Request, res: Response) {
@@ -180,6 +181,147 @@ export default class ConversationCtrl {
       return res.json({ exists });
     } catch (err) {
       return res.status(500).json({ message: getErrorMessage(err) });
+    }
+  }
+
+  static async sendMessage(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { conversationId } = req.params;
+    const { fileUrl, fileName, textMessage, audioDuration, waveformData } = req.body;
+
+    const schema = Joi.object({
+      fileUrl: Joi.string().uri().optional(),
+      fileName: Joi.string().optional(),
+      textMessage: Joi.string().optional().allow(""),
+      audioDuration: Joi.number().optional().default(0),
+      waveformData: Joi.array().items(Joi.number()).optional().default([]),
+    }).or("fileUrl", "textMessage");
+
+    const { error, value } = schema.validate({
+      fileUrl,
+      fileName,
+      textMessage,
+      audioDuration,
+      waveformData,
+    });
+    if (error) return res.status(400).json({ message: error.message });
+
+    try {
+      const senderId = ConversationRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
+      const convoObjectId = ConversationRepo.parseObjectId(
+        conversationId,
+        "Invalid conversation ID"
+      );
+
+      const result = await ConversationSvc.sendMessage({
+        conversationId: convoObjectId,
+        senderId,
+        textMessage: value.textMessage,
+        fileUrl: value.fileUrl,
+        fileName: value.fileName,
+        audioDuration: value.audioDuration,
+        waveformData: value.waveformData,
+      });
+
+      try {
+        io.of("/conversations").to(conversationId).emit("message:received", result.message);
+        const convoType = result.conversation.type;
+        if (convoType === "parallel_soul") io.of("/ps").to(conversationId).emit("new_message", result.message);
+        else if (convoType === "destination_thread") io.of("/dt").to(conversationId).emit("new_message", result.message);
+        else if (convoType === "baton_touch") io.of("/bt").to(conversationId).emit("new_message", result.message);
+      } catch (err) {
+        console.warn("[ConversationCtrl.sendMessage] Broadcast warning:", err);
+      }
+
+      return res.status(201).json({ data: result.message });
+    } catch (err) {
+      const message = String(getErrorMessage(err));
+      const status = message.includes("Not a participant") ? 403 : 500;
+      return res.status(status).json({ message });
+    }
+  }
+
+  static async listMessages(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { conversationId } = req.params;
+    const limit = Number(req.query.limit) || 50;
+
+    try {
+      const userObjectId = ConversationRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
+      const convoObjectId = ConversationRepo.parseObjectId(
+        conversationId,
+        "Invalid conversation ID"
+      );
+
+      const messages = await ConversationSvc.listMessages({
+        conversationId: convoObjectId,
+        userId: userObjectId,
+        limit,
+      });
+
+      return res.json({ data: messages });
+    } catch (err) {
+      const message = String(getErrorMessage(err));
+      const status = message.includes("Not a participant") ? 403 : 500;
+      return res.status(status).json({ message });
+    }
+  }
+
+  static async updateReaction(req: Request, res: Response) {
+    const userId = req.user?.userId as string;
+    const { conversationId, messageId } = req.params;
+    const { reaction } = req.body;
+
+    const schema = Joi.object({
+      reaction: Joi.string()
+        .valid("like", "love", "haha", "wow", "sad", "angry")
+        .required(),
+    });
+    const { error, value } = schema.validate({ reaction });
+    if (error) return res.status(400).json({ message: error.message });
+
+    try {
+      const userObjectId = ConversationRepo.parseObjectId(
+        userId,
+        ERROR_MESSAGE.INVALID_USER_ID
+      );
+      const convoObjectId = ConversationRepo.parseObjectId(
+        conversationId,
+        "Invalid conversation ID"
+      );
+      const msgObjectId = ConversationRepo.parseObjectId(
+        messageId,
+        "Invalid message ID"
+      );
+
+      const result = await ConversationSvc.updateMessageReaction({
+        conversationId: convoObjectId,
+        messageId: msgObjectId,
+        userId: userObjectId,
+        reaction: value.reaction,
+      });
+
+      try {
+        io.of("/conversations").to(conversationId).emit("reaction:updated", result);
+        const convoType = result.conversation.type;
+        if (convoType === "parallel_soul") io.of("/ps").to(conversationId).emit("message_reaction_updated", result);
+        else if (convoType === "destination_thread") io.of("/dt").to(conversationId).emit("message_reaction_updated", result);
+        else if (convoType === "baton_touch") io.of("/bt").to(conversationId).emit("message_reaction_updated", result);
+      } catch (err) {
+        console.warn("[ConversationCtrl.updateReaction] Broadcast warning:", err);
+      }
+
+      return res.json({ data: result });
+    } catch (err) {
+      const message = String(getErrorMessage(err));
+      const status = message.includes("Not a participant") ? 403 : 500;
+      return res.status(status).json({ message });
     }
   }
 }

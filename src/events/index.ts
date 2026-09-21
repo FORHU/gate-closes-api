@@ -4,6 +4,7 @@ import terminalEchoEvents from "./terminal.echo.events";
 import psConversationEvents from "./ps.conversation.events";
 import dtConversationEvents from "./dt.conversation.events";
 import btConversationEvents from "./bt.conversation.events";
+import conversationEvents from "./conversation.events";
 
 export default function events(io: Server) {
   organizationEvents(io);
@@ -11,4 +12,5 @@ export default function events(io: Server) {
   psConversationEvents(io);
   dtConversationEvents(io);
   btConversationEvents(io);
+  conversationEvents(io);
 }

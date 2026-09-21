@@ -5,6 +5,9 @@ import ConversationRepo, {
   TConversationLatestEventUpdate,
 } from "../repositories/conversation.repository";
 import ConversationReadStateRepo from "../repositories/conversation.read.state.repository";
+import ConversationMessageRepo from "../repositories/conversation.message.repository";
+import ConversationMessageReactionRepo from "../repositories/conversation.message.reaction.repository";
+import FileSvc from "./file.service";
 import UserRepo from "../repositories/user.repository";
 import { isDuplicateKeyError } from "../utils/error.util";
 import { ConversationType } from "../domain/conversation/conversation.types";
@@ -310,5 +313,154 @@ export default class ConversationSvc {
     );
     const existing = await ConversationRepo.findByDmKey(dmKey);
     return Boolean(existing);
+  }
+
+  static async sendMessage(params: {
+    conversationId: ObjectId;
+    senderId: ObjectId;
+    textMessage?: string;
+    fileUrl?: string;
+    fileName?: string;
+    audioDuration?: number;
+    waveformData?: number[];
+  }) {
+    const {
+      conversationId,
+      senderId,
+      textMessage,
+      fileUrl,
+      fileName,
+      audioDuration,
+      waveformData,
+    } = params;
+
+    const convo = await ConversationRepo.collection().findOne({
+      _id: conversationId,
+      participants: senderId,
+    });
+    if (!convo) {
+      throw new Error("Not a participant or conversation does not exist.");
+    }
+
+    let fileId: ObjectId | null = null;
+    if (fileUrl && fileName) {
+      const fileDoc = await FileSvc.create({
+        fileUrl,
+        fileName,
+        metaData: {
+          audioDuration: audioDuration ?? 0,
+          waveformData: waveformData ?? [],
+        },
+      });
+      fileId = fileDoc.insertedId;
+    }
+
+    const insertResult = await ConversationMessageRepo.create({
+      conversationId,
+      senderId,
+      fileId,
+      textMessage: textMessage ?? "",
+      reactions: {},
+      createdAt: new Date(),
+    });
+
+    await this.refreshConversationLatestEvent({
+      conversationId,
+      type: "message_sent",
+      actorId: senderId,
+      payload: {
+        messageId: insertResult.insertedId,
+        fileName: fileName ?? null,
+      },
+    });
+
+    const fullMessage = await ConversationMessageRepo.findByIdWithDetails(
+      insertResult.insertedId
+    );
+
+    return {
+      message: fullMessage,
+      conversation: convo,
+    };
+  }
+
+  static async listMessages(params: {
+    conversationId: ObjectId;
+    userId: ObjectId;
+    limit?: number;
+  }) {
+    const { conversationId, userId, limit = 50 } = params;
+
+    const convo = await ConversationRepo.collection().findOne({
+      _id: conversationId,
+      participants: userId,
+    });
+    if (!convo) {
+      throw new Error("Not a participant or conversation does not exist.");
+    }
+
+    const messages = await ConversationMessageRepo.listByConversationId(
+      conversationId,
+      limit
+    );
+
+    const messageIds = messages.map((m) => m._id);
+    const userReactions =
+      await ConversationMessageReactionRepo.findByUserIdAndMessageIds(
+        userId,
+        messageIds
+      );
+
+    const reactionMap = new Map<string, string[]>();
+    for (const r of userReactions) {
+      const mId = String(r.messageId);
+      if (!reactionMap.has(mId)) reactionMap.set(mId, []);
+      reactionMap.get(mId)!.push(r.reaction);
+    }
+
+    return messages.map((msg) => ({
+      ...msg,
+      currentUserReactions: reactionMap.get(String(msg._id)) ?? [],
+    }));
+  }
+
+  static async updateMessageReaction(params: {
+    conversationId: ObjectId;
+    messageId: ObjectId;
+    userId: ObjectId;
+    reaction: string;
+  }) {
+    const { conversationId, messageId, userId, reaction } = params;
+
+    const convo = await ConversationRepo.collection().findOne({
+      _id: conversationId,
+      participants: userId,
+    });
+    if (!convo) {
+      throw new Error("Not a participant or conversation does not exist.");
+    }
+
+    const action = await ConversationMessageReactionRepo.toggleReaction({
+      messageId,
+      userId,
+      reaction,
+    });
+
+    const delta = action === "increment" ? 1 : -1;
+    await ConversationMessageRepo.updateReaction(messageId, reaction, delta);
+
+    await this.refreshConversationLatestEvent({
+      conversationId,
+      type: action === "increment" ? "message_reacted" : "message_reaction_removed",
+      actorId: userId,
+      payload: { messageId, reaction },
+    });
+
+    return {
+      action,
+      messageId,
+      reaction,
+      conversation: convo,
+    };
   }
 }
