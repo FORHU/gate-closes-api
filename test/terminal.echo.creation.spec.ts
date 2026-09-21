@@ -70,5 +70,13 @@ describe("TerminalEchoSvc (Server-Side Airport Resolution)", () => {
     expect(savedEchoDoc.airportIata).to.equal("SIN");
     expect(savedEchoDoc.airportName).to.equal("Singapore Changi Airport");
     expect(savedEchoDoc.fileId.toString()).to.equal("650000000000000000000010");
+    // Geospatial privacy: coordinates quantized to 3 decimals (103.9915 -> 103.992, 1.3644 -> 1.364)
+    expect(savedEchoDoc.location.coordinates).to.deep.equal([103.992, 1.364]);
+  });
+
+  it("should correctly quantize coordinates to preserve privacy", () => {
+    const raw: [number, number] = [121.0194827, 14.5086123];
+    const quantized = TerminalEchoSvc.quantizeCoordinates(raw, 3);
+    expect(quantized).to.deep.equal([121.019, 14.509]);
   });
 });

@@ -140,8 +140,24 @@ export default class TerminalEchoSvc {
     return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
   }
 
+  /**
+   * Quantizes coordinates to a given decimal precision to protect user
+   * privacy (prevent pinpointing exact bench/seat location inside a terminal).
+   * Default precision 3 gives ~110m resolution at equator.
+   */
+  static quantizeCoordinates(
+    coordinates: [number, number],
+    precision = 3
+  ): [number, number] {
+    const factor = Math.pow(10, precision);
+    return [
+      Math.round(coordinates[0] * factor) / factor,
+      Math.round(coordinates[1] * factor) / factor,
+    ];
+  }
+
   static async createTerminalEcho(params: {
-    userId: string | ObjectId;
+    userId: ObjectId | string;
     fileUrl: string;
     fileName: string;
     textMessage?: string;
@@ -183,11 +199,23 @@ export default class TerminalEchoSvc {
       },
     });
 
+    // Quantize coordinates to preserve geospatial privacy (§30)
+    let persistedLocation: { type: "Point"; coordinates: [number, number] } = {
+      type: "Point",
+      coordinates: [0, 0],
+    };
+    if (location && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+      persistedLocation = {
+        type: "Point",
+        coordinates: this.quantizeCoordinates(location.coordinates as [number, number], 3),
+      };
+    }
+
     const inserted = await TerminalEchoRepo.create({
       senderId: new ObjectId(userId),
       fileId: fileCreateResult.insertedId,
       textMessage,
-      location: location ?? { type: "Point", coordinates: [0, 0] },
+      location: persistedLocation,
       airportName: resolvedAirportName,
       airportIata: canonicalAirportIata,
     });
