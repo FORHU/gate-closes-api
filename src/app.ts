@@ -1,6 +1,5 @@
 // src/app.ts
 import express from "express";
-import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { connectToMongo } from "./utils/mongo";
 import router from "./routes";
@@ -27,6 +26,12 @@ const corsOriginHandler = (
   return callback(new Error(`Origin ${origin} not allowed by CORS`));
 };
 
+import healthRoutes from "./routes/health.route";
+import { requestIdMiddleware } from "./middleware/request-id.middleware";
+import { generalRateLimiter } from "./middleware/rate-limiter.middleware";
+
+app.use(requestIdMiddleware);
+
 app.use(
   cors({
     origin: corsOriginHandler,
@@ -36,20 +41,15 @@ app.use(
 
 app.use(express.json());
 
-// Set up rate limiting middleware
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-});
-
-if (!isDev) app.use(limiter);
-
 // Set up security headers
 app.use(helmet());
 app.disable("x-powered-by");
 
-// Use router for routing
-app.use("/api", router);
+// Cloud health probes (un-throttled liveness/readiness for load balancers)
+app.use(healthRoutes);
+
+// General rate limiting on API endpoints
+app.use("/api", generalRateLimiter, router);
 
 const server = createServer(app);
 

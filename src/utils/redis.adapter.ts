@@ -62,6 +62,10 @@ export class RedisAdapterManager {
     };
   }
 
+  static isAdapterAttached(): boolean {
+    return Boolean(this.pubClient?.isOpen && this.subClient?.isOpen);
+  }
+
   static async close(): Promise<void> {
     const promises: Promise<unknown>[] = [];
     if (this.pubClient?.isOpen) {

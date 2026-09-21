@@ -1,0 +1,41 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - 'arch/**'
+  pull_request:
+    branches:
+      - main
+      - staging
+      - 'arch/**'
+
+jobs:
+  test-and-typecheck:
+    name: Test & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: TypeScript Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run Automated Test Suite
+        run: NODE_ENV=development npx mocha --require ts-node/register "test/**/*.spec.ts" --exit
+        env:
+          JWT_SECRET: ci-test-jwt-secret-very-secure-32chars
+          REFRESH_SECRET: ci-test-refresh-secret-very-secure-32chars
+          SECRET_KEY: ci-test-secret-key-very-secure-32chars
