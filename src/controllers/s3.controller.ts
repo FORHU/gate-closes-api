@@ -71,15 +71,25 @@ export default class S3Controller {
     const { key } = req.query;
 
     const schema = Joi.object({
-      key: Joi.string().min(1).required()
+      key: Joi.string()
+        .min(1)
+        .max(512)
+        .pattern(/^(gate-closes\/|echoes\/|audio\/|uploads\/)/)
+        .custom((val, helpers) => {
+          if (val.includes("..")) {
+            return helpers.error("any.invalid");
+          }
+          return val;
+        })
+        .required(),
     });
 
     const { error, value } = schema.validate({
-      key
+      key,
     });
 
     if (error) {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json({ message: "Invalid media key or access prohibited" });
     }
 
     try {

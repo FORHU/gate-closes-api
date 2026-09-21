@@ -11,7 +11,8 @@
     "copy-assets": "node -e \"require('fs').cpSync('src/assets', 'dist/assets', { recursive: true })\"",
     "start": "node ./dist/server.js",
     "backfill:ps-latest-events": "ts-node --files ./src/scripts/backfill-ps-latest-events.ts",
-    "seed": "ts-node --files ./src/scripts/seed.ts"
+    "seed": "ts-node --files ./src/scripts/seed.ts",
+    "db:init-indexes": "ts-node --files ./src/scripts/init-indexes.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.998.0",
