@@ -69,10 +69,7 @@ describe("Refresh Token Reuse Protection (§Blocker 2)", () => {
     });
 
     const { res, getStatus, getBody } = fakeRes();
-    await AuthController.refresh(
-      { body: { refreshToken: token } } as unknown as Request,
-      res
-    );
+    await AuthController.refresh({ body: { refreshToken: token } } as unknown as Request, res);
 
     expect(getStatus()).to.equal(200);
     expect(getBody()).to.have.property("refreshToken");
@@ -101,13 +98,12 @@ describe("Refresh Token Reuse Protection (§Blocker 2)", () => {
     });
 
     const { res, getStatus, getBody } = fakeRes();
-    await AuthController.refresh(
-      { body: { refreshToken: token } } as unknown as Request,
-      res
-    );
+    await AuthController.refresh({ body: { refreshToken: token } } as unknown as Request, res);
 
     expect(getStatus()).to.equal(401);
-    expect(getBody()).to.deep.equal({ message: "Refresh token reuse detected. Please log in again." });
+    expect(getBody()).to.deep.equal({
+      message: "Refresh token reuse detected. Please log in again.",
+    });
     expect(revokedFamily).to.equal("fam-2");
     // A reused token must never mint fresh credentials.
     expect(registerValidCalled).to.equal(false);
@@ -128,10 +124,7 @@ describe("Refresh Token Reuse Protection (§Blocker 2)", () => {
     });
 
     const { res, getStatus, getBody } = fakeRes();
-    await AuthController.refresh(
-      { body: { refreshToken: token } } as unknown as Request,
-      res
-    );
+    await AuthController.refresh({ body: { refreshToken: token } } as unknown as Request, res);
 
     expect(getStatus()).to.equal(401);
     expect(getBody()).to.deep.equal({ message: "Session revoked. Please log in again." });
@@ -155,10 +148,7 @@ describe("Refresh Token Reuse Protection (§Blocker 2)", () => {
     });
 
     const { res, getStatus } = fakeRes();
-    await AuthController.refresh(
-      { body: { refreshToken: token } } as unknown as Request,
-      res
-    );
+    await AuthController.refresh({ body: { refreshToken: token } } as unknown as Request, res);
 
     expect(getStatus()).to.equal(200);
     // Nothing to mark rotated — there was no prior record.
@@ -170,7 +160,10 @@ describe("Refresh Token Reuse Protection (§Blocker 2)", () => {
   it("grandfathers a pre-existing token with no fam claim into a brand-new family instead of rejecting it", async () => {
     stub(RefreshSessionStore, "isAvailable", () => true);
     // No `fam` passed — simulates a refresh token minted before this feature shipped.
-    const legacyToken = createRefreshToken({ userId: "650000000000000000000099", email: "t@t.com" });
+    const legacyToken = createRefreshToken({
+      userId: "650000000000000000000099",
+      email: "t@t.com",
+    });
 
     let isFamilyRevokedCalled = false;
     stub(RefreshSessionStore, "isFamilyRevoked", async () => {

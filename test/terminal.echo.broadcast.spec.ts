@@ -79,7 +79,10 @@ describe("terminal.echo.broadcast (airport room isolation)", () => {
       const { fake, calls } = fakeIo();
 
       broadcastToAirportRoom(fake, null, "terminal_echo:changed", { type: "create", data: {} });
-      broadcastToAirportRoom(fake, undefined, "terminal_echo:changed", { type: "create", data: {} });
+      broadcastToAirportRoom(fake, undefined, "terminal_echo:changed", {
+        type: "create",
+        data: {},
+      });
       broadcastToAirportRoom(fake, "", "terminal_echo:changed", { type: "create", data: {} });
 
       // The old bug: falling through to a bare namespace-wide .emit().

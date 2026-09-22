@@ -96,13 +96,19 @@ describe("Terminal Echo airport isolation — controller wiring (§Blocker 1)", 
 
       const { res: resA } = fakeRes();
       await TerminalEchoCtrl.create(
-        { user: { userId: "u1" }, body: { ...baseBody, airportName: "SIN-hint" } } as unknown as Request,
+        {
+          user: { userId: "u1" },
+          body: { ...baseBody, airportName: "SIN-hint" },
+        } as unknown as Request,
         resA
       );
 
       const { res: resB } = fakeRes();
       await TerminalEchoCtrl.create(
-        { user: { userId: "u2" }, body: { ...baseBody, airportName: "LHR-hint" } } as unknown as Request,
+        {
+          user: { userId: "u2" },
+          body: { ...baseBody, airportName: "LHR-hint" },
+        } as unknown as Request,
         resB
       );
 

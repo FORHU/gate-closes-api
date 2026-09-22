@@ -66,7 +66,11 @@ export default class RefreshSessionStore {
   }): Promise<void> {
     if (!this.isAvailable()) return;
     try {
-      const record: SessionRecord = { userId: params.userId, familyId: params.familyId, status: "valid" };
+      const record: SessionRecord = {
+        userId: params.userId,
+        familyId: params.familyId,
+        status: "valid",
+      };
       await RedisUtil.setJson(`${JTI_PREFIX}${params.jti}`, record, {
         ttlSeconds: refreshTtlSeconds(),
       });
