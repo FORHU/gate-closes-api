@@ -5,8 +5,25 @@ import UserAuthRepo from "../repositories/user.auth.repository";
 import UserRepo from "../repositories/user.repository";
 import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { sendOtpEmail } from "./send.otp.service";
-import { createAccessToken, createRefreshToken } from "../utils/jwt";
+import { createAccessToken, createRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import RefreshSessionStore from "../utils/refresh.session.store";
 import { GOOGLE_CLIENT_ID } from "../config";
+
+/**
+ * Mints a refresh token that starts a brand-new session family and
+ * registers it (best-effort) so reuse detection has a baseline to
+ * compare rotations against. Shared by both login paths so neither
+ * one can drift from the other (see MERGE_HARDENING_PLAN.md Blocker 2).
+ */
+async function issueNewSessionRefreshToken(userId: string, email?: string): Promise<string> {
+  const familyId = RefreshSessionStore.newFamilyId();
+  const refreshToken = createRefreshToken({ userId, email, fam: familyId });
+  const { jti } = verifyRefreshToken(refreshToken);
+  if (jti) {
+    await RefreshSessionStore.registerValid({ jti, userId, familyId });
+  }
+  return refreshToken;
+}
 
 const googleClient = new OAuth2Client();
 
@@ -261,7 +278,7 @@ export default class UserAuthSvc {
     }
     const userId = String(user._id);
     const accessToken = createAccessToken({ userId, email: user.email });
-    const refreshToken = createRefreshToken({ userId, email: user.email });
+    const refreshToken = await issueNewSessionRefreshToken(userId, user.email);
 
     return {
       user,
@@ -322,7 +339,7 @@ export default class UserAuthSvc {
 
     const userId = String(user!._id);
     const accessToken = createAccessToken({ userId, email: user!.email });
-    const refreshToken = createRefreshToken({ userId, email: user!.email });
+    const refreshToken = await issueNewSessionRefreshToken(userId, user!.email);
     return {
       user,
       accessToken,

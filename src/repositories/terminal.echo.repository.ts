@@ -131,6 +131,20 @@ export default class TerminalEchoRepo {
     return this.collection().insertOne(new MTerminalEcho(echo));
   }
 
+  /** Minimal lookup used to scope reply/reaction broadcasts to the parent echo's airport room. */
+  static async findAirportIataById(_id: string | ObjectId): Promise<string | null> {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return null;
+    }
+    const doc = await this.collection().findOne<{ airportIata?: string }>(
+      { _id },
+      { projection: { airportIata: 1 } }
+    );
+    return doc?.airportIata || null;
+  }
+
   /**
    * Terminal echo feed with file/user/reply joins. Pass airportName to
    * filter to one terminal; omit it to fetch every echo (Feed tab's

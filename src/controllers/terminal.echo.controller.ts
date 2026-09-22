@@ -16,6 +16,7 @@ import Joi from "joi";
 import type { TerminalEchoMapBounds } from "../const";
 import TerminalEchoSvc from "../services/terminal.echo.service";
 import { io } from "../app";
+import { broadcastToAirportRoom } from "../events/terminal.echo.broadcast";
 
 export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
@@ -70,20 +71,12 @@ export default class TerminalEchoCtrl {
     }
 
     const airportIata = (result as { airportIata?: string })?.airportIata;
-    const room = airportIata ? `airport:${airportIata.toUpperCase()}` : null;
 
     try {
-      if (room) {
-        io.of("/terminal-echo").to(room).emit("terminal_echo:changed", {
-          type: "create",
-          data: result,
-        });
-      } else {
-        io.of("/terminal-echo").emit("terminal_echo:changed", {
-          type: "create",
-          data: result,
-        });
-      }
+      broadcastToAirportRoom(io, airportIata, "terminal_echo:changed", {
+        type: "create",
+        data: result,
+      });
     } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoCtrl.create] Echo saved successfully, but broadcast failed:",
@@ -258,13 +251,16 @@ export default class TerminalEchoCtrl {
       return res.status(500).json({ message });
     }
 
-    // ── Broadcast, best-effort. Mirrors terminal_echo:reply_added's
-    // pattern exactly — the direction ("increment"/"decrement") is
-    // already known (computed by TerminalEchoSvc.updateReaction), so
+    // ── Broadcast, best-effort. The direction ("increment"/"decrement")
+    // is already known (computed by TerminalEchoSvc.updateReaction), so
     // the frontend just applies +1 or -1 accordingly. No guessing, no
-    // computed totals, no extra DB reads. ──
+    // computed totals, no extra DB reads. Scoped to the echo's airport
+    // room — see MERGE_HARDENING_PLAN.md Blocker 1: this used to
+    // broadcast to the entire /terminal-echo namespace regardless of
+    // airport. ──
     try {
-      io.of("/terminal-echo").emit("terminal_echo:reaction_updated", {
+      const airportIata = (result?.value as { airportIata?: string } | undefined)?.airportIata;
+      broadcastToAirportRoom(io, airportIata, "terminal_echo:reaction_updated", {
         terminalEchoId: value.id,
         reactionKey: value.reaction, // e.g. "like" — backend key, not emoji character
         action: result?.action ?? "increment",

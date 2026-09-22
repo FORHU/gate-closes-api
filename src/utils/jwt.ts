@@ -11,6 +11,8 @@ export type TokenPayload = {
   userId: string;
   email?: string;
   jti?: string;
+  /** Session-family id — links every refresh token minted by one rotation chain (see refresh.session.store.ts). */
+  fam?: string;
 };
 
 export function createAccessToken(payload: TokenPayload): string {

@@ -57,13 +57,6 @@ export default class TerminalEchoSvc {
     return dd.toISOString().slice(0, 10);
   }
 
-  private static monthDayKey(d?: Date) {
-    if (!d) return "";
-    const dd = d instanceof Date ? d : new Date(d);
-    if (Number.isNaN(dd.getTime())) return "";
-    return dd.toISOString().slice(5, 10);
-  }
-
   private static computeType(params: {
     authTicket: Document | null;
     otherTicket: Document | null;
@@ -370,6 +363,11 @@ export default class TerminalEchoSvc {
 
   static async incrementListen(terminalEchoId: string) {
     return TerminalEchoRepo.incrementListen(terminalEchoId);
+  }
+
+  /** Used to scope reply-related broadcasts to the parent echo's airport room. */
+  static async findAirportIataById(terminalEchoId: string): Promise<string | null> {
+    return TerminalEchoRepo.findAirportIataById(terminalEchoId);
   }
 
   static async updateReaction(params: {

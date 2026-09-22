@@ -67,7 +67,9 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import TerminalEchoReplySvc from "../services/terminal.echo.reply.service";
+import TerminalEchoSvc from "../services/terminal.echo.service";
 import { io } from "../app";
+import { broadcastToAirportRoom } from "../events/terminal.echo.broadcast";
 
 export default class TerminalEchoReplyCtrl {
   // POST /terminal-echo-reply
@@ -142,12 +144,17 @@ export default class TerminalEchoReplyCtrl {
           reply: fullReply,
         });
 
-      // Broad broadcast: every connected client (feed, map, wherever)
-      // needs to know this echo's reply count went up, even if they're
-      // not viewing the thread itself. Deliberately minimal payload —
-      // just the echo id — since receivers only need to surgically
-      // bump a counter, not render any reply content.
-      io.of("/terminal-echo").emit("terminal_echo:reply_added", {
+      // Broad-within-airport broadcast: every connected client at this
+      // echo's airport (feed, map, wherever) needs to know this echo's
+      // reply count went up, even if they're not viewing the thread
+      // itself. Deliberately minimal payload — just the echo id — since
+      // receivers only need to surgically bump a counter, not render
+      // any reply content. Scoped to the airport room, not the whole
+      // namespace — see MERGE_HARDENING_PLAN.md Blocker 1: a reply to
+      // an echo at one airport has no reason to reach every connected
+      // client at every other airport too.
+      const airportIata = await TerminalEchoSvc.findAirportIataById(value.terminalEchoId);
+      broadcastToAirportRoom(io, airportIata, "terminal_echo:reply_added", {
         terminalEchoId: value.terminalEchoId,
       });
     } catch (broadcastErr) {

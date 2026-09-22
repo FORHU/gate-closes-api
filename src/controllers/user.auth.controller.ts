@@ -4,6 +4,7 @@ import UserSvc from "../services/user.service";
 import UserAuthSvc from "../services/user.auth.service";
 import UserRepo from "../repositories/user.repository";
 import { verifyRefreshToken, createAccessToken, createRefreshToken } from "../utils/jwt";
+import RefreshSessionStore from "../utils/refresh.session.store";
 import { passwordSchema } from "../utils/password.validator";
 import { getSessionCookieOptions, getRefreshCookieOptions, getClearCookieOptions } from "../config";
 
@@ -307,8 +308,56 @@ export default class AuthController {
 
     try {
       const payload = verifyRefreshToken(tokenToRefresh);
+
+      // Reuse detection (§Blocker 2). Tokens minted before this feature
+      // shipped carry no `fam` claim — grandfather them into a brand-new
+      // family on their first post-deploy refresh rather than rejecting
+      // every currently-logged-in user. Every token minted from this
+      // point forward always carries a family id, so this branch only
+      // ever fires once per pre-existing session.
+      let familyId = payload.fam;
+      if (familyId && payload.jti && RefreshSessionStore.isAvailable()) {
+        if (await RefreshSessionStore.isFamilyRevoked(familyId)) {
+          return res.status(401).json({ message: "Session revoked. Please log in again." });
+        }
+
+        const record = await RefreshSessionStore.getToken(payload.jti);
+        if (record?.status === "rotated") {
+          // This exact refresh token was already used once before to
+          // rotate — someone is replaying a stale token. Assume the
+          // whole chain is compromised, not just this one request.
+          await RefreshSessionStore.revokeFamily(familyId);
+          return res
+            .status(401)
+            .json({ message: "Refresh token reuse detected. Please log in again." });
+        }
+        if (record?.status === "valid") {
+          await RefreshSessionStore.markRotated(payload.jti, record);
+        }
+        // No record found: either a transient Redis gap at issuance time,
+        // or (pre-existing behavior) Redis was unavailable when this
+        // token was minted. Proceed without penalty — see file header.
+      } else if (!familyId) {
+        familyId = RefreshSessionStore.newFamilyId();
+      }
+
       const accessToken = createAccessToken({ userId: payload.userId, email: payload.email });
-      const newRefreshToken = createRefreshToken({ userId: payload.userId, email: payload.email });
+      const newRefreshToken = createRefreshToken({
+        userId: payload.userId,
+        email: payload.email,
+        fam: familyId,
+      });
+
+      if (familyId) {
+        const newPayload = verifyRefreshToken(newRefreshToken);
+        if (newPayload.jti) {
+          await RefreshSessionStore.registerValid({
+            jti: newPayload.jti,
+            userId: payload.userId,
+            familyId,
+          });
+        }
+      }
 
       if (isWeb) {
         res.cookie("session_token", accessToken, getSessionCookieOptions());
@@ -510,8 +559,23 @@ export default class AuthController {
     }
   }
 
-  /** Logout: Clears session and refresh cookies. */
+  /** Logout: revokes the session family server-side (if a refresh token is presented) and clears cookies. */
   static async logout(req: Request, res: Response) {
+    const cookieRefreshToken = req.cookies?.refresh_token;
+    const bodyRefreshToken = req.body?.refreshToken;
+    const token = cookieRefreshToken || bodyRefreshToken;
+
+    if (token && typeof token === "string") {
+      try {
+        const payload = verifyRefreshToken(token);
+        if (payload.fam) {
+          await RefreshSessionStore.revokeFamily(payload.fam);
+        }
+      } catch {
+        // Already invalid/expired — nothing server-side left to revoke.
+      }
+    }
+
     res.clearCookie("session_token", getClearCookieOptions());
     res.clearCookie("refresh_token", getClearCookieOptions());
     return res.status(200).json({ message: "Logged out successfully." });
