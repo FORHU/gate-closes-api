@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { describe, it, afterEach } from "mocha";
 import { ObjectId } from "mongodb";
-import BtConversationSvc from "../src/services/bt.conversation.service";
+import ConversationSvc from "../src/services/conversation.service";
 import FlightTicketRepo from "../src/repositories/flight.ticket.repository";
-import BtConversationRepo from "../src/repositories/bt.conversation.repository";
+import ConversationRepo from "../src/repositories/conversation.repository";
 
-describe("BtConversationSvc (Baton Touch Eligibility Characterization)", () => {
+describe("Baton Touch Eligibility (via ConversationSvc)", () => {
   const originals: Array<() => void> = [];
   afterEach(() => {
     while (originals.length) originals.pop()!();
@@ -24,7 +24,8 @@ describe("BtConversationSvc (Baton Touch Eligibility Characterization)", () => {
 
   it("rejects conversation with self", async () => {
     try {
-      await BtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "baton_touch",
         requesterId: userA,
         otherUserId: userA,
       });
@@ -43,7 +44,8 @@ describe("BtConversationSvc (Baton Touch Eligibility Characterization)", () => {
     });
 
     try {
-      await BtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "baton_touch",
         requesterId: userA,
         otherUserId: userB,
       });
@@ -66,7 +68,8 @@ describe("BtConversationSvc (Baton Touch Eligibility Characterization)", () => {
     });
 
     try {
-      await BtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "baton_touch",
         requesterId: userA,
         otherUserId: userB,
       });
@@ -84,19 +87,20 @@ describe("BtConversationSvc (Baton Touch Eligibility Characterization)", () => {
       return { userId: userB, fromAirport: "NRT", toAirport: "SIN", flightNumber: "JL711" };
     });
 
-    stub(BtConversationRepo, "findByDmKey", async () => null);
+    stub(ConversationRepo, "findByDmKey", async () => null);
 
     let createdRecord: any = null;
-    stub(BtConversationRepo, "create", async (data: any) => {
+    stub(ConversationRepo, "create", async (data: any) => {
       createdRecord = data;
       return { insertedId: new ObjectId("650000000000000000000088") };
     });
 
-    stub(BtConversationRepo, "collection", () => ({
+    stub(ConversationRepo, "collection", () => ({
       findOne: async (query: any) => ({ _id: query._id, ...createdRecord }),
     }));
 
-    const result = await BtConversationSvc.createDm({
+    const result = await ConversationSvc.createDm({
+      type: "baton_touch",
       requesterId: userA,
       otherUserId: userB,
     });

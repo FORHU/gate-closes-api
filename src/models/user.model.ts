@@ -1,9 +1,6 @@
 import { ObjectId } from "mongodb";
 
-export type SignupStep =
-  | "email_verification"
-  | "set_password"
-  | "completed";
+export type SignupStep = "email_verification" | "set_password" | "completed";
 
 export type TUser = {
   _id?: ObjectId;
@@ -41,18 +38,20 @@ export class MUser implements Partial<TUser> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({
-    _id = new ObjectId(),
-    email = "",
-    username,
-    gender,
-    signupStep = "email_verification",
-    signupCompleted = false,
-    isCompleteProfile = false,
-    picture,
-    createdAt = new Date(),
-    updatedAt,
-  } = {} as TUser) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      email = "",
+      username,
+      gender,
+      signupStep = "email_verification",
+      signupCompleted = false,
+      isCompleteProfile = false,
+      picture,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TUser
+  ) {
     this._id = _id;
     this.email = email;
     this.username = username;

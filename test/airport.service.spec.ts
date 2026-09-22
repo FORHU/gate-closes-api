@@ -243,29 +243,46 @@ describe("AirportSvc", () => {
     const fixtureRecords = [
       // eligible, has location + radiusKm -> gets a boundary
       {
-        iata: "aaa", icao: "kaaa", type: "large_airport", scheduledService: "TRUE",
-        location: { type: "Point", coordinates: [1, 2] }, radiusKm: 15,
+        iata: "aaa",
+        icao: "kaaa",
+        type: "large_airport",
+        scheduledService: "TRUE",
+        location: { type: "Point", coordinates: [1, 2] },
+        radiusKm: 15,
       },
       {
-        iata: "bbb", icao: "kbbb", type: "medium_airport", scheduledService: "TRUE",
-        location: { type: "Point", coordinates: [3, 4] }, radiusKm: 8,
+        iata: "bbb",
+        icao: "kbbb",
+        type: "medium_airport",
+        scheduledService: "TRUE",
+        location: { type: "Point", coordinates: [3, 4] },
+        radiusKm: 8,
       },
       // eligible but no location -> no boundary
       { iata: "ccc", type: "large_airport", scheduledService: "TRUE", radiusKm: 15 },
       // eligible but radiusKm is 0 -> no boundary
       {
-        iata: "ddd", type: "medium_airport", scheduledService: "TRUE",
-        location: { type: "Point", coordinates: [5, 6] }, radiusKm: 0,
+        iata: "ddd",
+        type: "medium_airport",
+        scheduledService: "TRUE",
+        location: { type: "Point", coordinates: [5, 6] },
+        radiusKm: 0,
       },
       // out of scope: not a scheduled-service airport
       {
-        iata: "eee", type: "large_airport", scheduledService: "FALSE",
-        location: { type: "Point", coordinates: [7, 8] }, radiusKm: 15,
+        iata: "eee",
+        type: "large_airport",
+        scheduledService: "FALSE",
+        location: { type: "Point", coordinates: [7, 8] },
+        radiusKm: 15,
       },
       // out of scope: small airport
       {
-        iata: "fff", type: "small_airport", scheduledService: "TRUE",
-        location: { type: "Point", coordinates: [9, 10] }, radiusKm: 4,
+        iata: "fff",
+        type: "small_airport",
+        scheduledService: "TRUE",
+        location: { type: "Point", coordinates: [9, 10] },
+        radiusKm: 4,
       },
       // out of scope: no type at all
       { iata: "ggg", scheduledService: "TRUE", location: { type: "Point", coordinates: [11, 12] } },
@@ -392,16 +409,21 @@ describe("AirportSvc", () => {
         return "OK";
       });
       const airportId = new ObjectId();
-      stub(AirportRepo, "findAllWithBoundary", async () => [
-        {
-          _id: airportId,
-          airport: "Changi Airport",
-          countryCode: "SG",
-          boundary: { type: "Polygon", coordinates: [[[0, 0]]] },
-        },
-        // Missing a proper boundary -> must be filtered out of the output.
-        { _id: new ObjectId(), airport: "No Boundary Airport", countryCode: "US" },
-      ] as any);
+      stub(
+        AirportRepo,
+        "findAllWithBoundary",
+        async () =>
+          [
+            {
+              _id: airportId,
+              airport: "Changi Airport",
+              countryCode: "SG",
+              boundary: { type: "Polygon", coordinates: [[[0, 0]]] },
+            },
+            // Missing a proper boundary -> must be filtered out of the output.
+            { _id: new ObjectId(), airport: "No Boundary Airport", countryCode: "US" },
+          ] as any
+      );
 
       const result: any = await AirportSvc.getAllAsGeoJson();
 

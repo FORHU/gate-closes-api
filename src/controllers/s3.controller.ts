@@ -3,27 +3,20 @@ import Joi from "joi";
 import S3Svc from "../services/s3.service";
 import { getErrorMessage } from "../utils/error.util";
 
-
 export default class S3Controller {
   static async uploadProxy(req: Request, res: Response) {
     const userId = req.user?.userId as string;
-    
+
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    
+
     const { originalname, buffer, size } = req.file;
     const contentType = req.body.contentType || req.file.mimetype;
-    
+
     try {
-      const result = await S3Svc.uploadFile(
-        userId,
-        originalname,
-        buffer,
-        contentType,
-        size
-      );
-      
+      const result = await S3Svc.uploadFile(userId, originalname, buffer, contentType, size);
+
       return res.status(200).json(result);
     } catch (err) {
       const message = getErrorMessage(err) || "Failed to upload file to S3";
@@ -38,8 +31,24 @@ export default class S3Controller {
 
     const schema = Joi.object({
       originalFilename: Joi.string().min(1).required(),
-      contentType: Joi.string().valid("audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/webm", "audio/ogg", "audio/mp4", "audio/aac", "audio/x-m4a").required(),
-      sizeOfFile: Joi.number().integer().min(1).max(10 * 1024 * 1024).required()
+      contentType: Joi.string()
+        .valid(
+          "audio/mpeg",
+          "audio/mp3",
+          "audio/wav",
+          "audio/x-wav",
+          "audio/webm",
+          "audio/ogg",
+          "audio/mp4",
+          "audio/aac",
+          "audio/x-m4a"
+        )
+        .required(),
+      sizeOfFile: Joi.number()
+        .integer()
+        .min(1)
+        .max(10 * 1024 * 1024)
+        .required(),
     });
 
     const { error, value } = schema.validate({
@@ -57,7 +66,7 @@ export default class S3Controller {
         userId,
         value.originalFilename,
         value.contentType,
-        value.sizeOfFile,
+        value.sizeOfFile
       );
 
       return res.status(200).json(result);
@@ -93,9 +102,7 @@ export default class S3Controller {
     }
 
     try {
-      const result = await S3Svc.generateDownloadUrl(
-        value.key
-      );
+      const result = await S3Svc.generateDownloadUrl(value.key);
 
       return res.status(200).json(result);
     } catch (err) {

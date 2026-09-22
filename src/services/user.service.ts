@@ -48,11 +48,7 @@ export default class UserSvc {
     return UserRepo.findById(userId);
   }
 
-  static async setUsernameGender(
-    userId: string,
-    gender: "Male" | "Female",
-    username?: string
-  ) {
+  static async setUsernameGender(userId: string, gender: "Male" | "Female", username?: string) {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 

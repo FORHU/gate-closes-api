@@ -1,6 +1,6 @@
 import winston from "winston";
 import "winston-mongodb";
-import { MONGO_DB, MONGO_URI, isDev } from "../config";
+import { MONGO_DB, MONGO_URI } from "../config";
 
 const isTest = process.env.NODE_ENV === "test";
 
@@ -13,9 +13,13 @@ const transports: winston.transport[] = [
 ];
 
 // Only attach MongoDB transport outside of test environments when configured
-if (!isTest && MONGO_URI && (winston.transports as any).MongoDB) {
+const transportsRecord = winston.transports as unknown as Record<
+  string,
+  new (opts: Record<string, unknown>) => winston.transport
+>;
+if (!isTest && MONGO_URI && transportsRecord.MongoDB) {
   try {
-    const MongoTransport = (winston.transports as any).MongoDB;
+    const MongoTransport = transportsRecord.MongoDB;
     transports.push(
       new MongoTransport({
         db: `${MONGO_URI}/${MONGO_DB}`,

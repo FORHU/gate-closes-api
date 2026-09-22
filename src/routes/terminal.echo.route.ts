@@ -9,9 +9,14 @@ import { idempotencyMiddleware } from "../middleware/idempotency.middleware";
 router.get("/", sessionMiddleware, TerminalEchoCtrl.search);
 router.get("/map", sessionMiddleware, TerminalEchoCtrl.getMap);
 router.get("/:id", sessionMiddleware, TerminalEchoCtrl.getById);
-router.post("/", sessionMiddleware, echoCreationRateLimiter, idempotencyMiddleware, TerminalEchoCtrl.create);
+router.post(
+  "/",
+  sessionMiddleware,
+  echoCreationRateLimiter,
+  idempotencyMiddleware,
+  TerminalEchoCtrl.create
+);
 router.patch("/:id/listen", TerminalEchoCtrl.incrementListen);
 router.patch("/:id/reaction", sessionMiddleware, TerminalEchoCtrl.updateReaction);
 
 export default router;
-

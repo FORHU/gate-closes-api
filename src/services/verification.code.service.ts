@@ -1,9 +1,11 @@
-import { TVerificationCode, TVerificationCodeUpdateOptions} from "../models/verification.code.model";
+import {
+  TVerificationCode,
+  TVerificationCodeUpdateOptions,
+} from "../models/verification.code.model";
 import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { ObjectId } from "mongodb";
 
 export default class VerificationCodeSvc {
-
   static create(data: TVerificationCode) {
     return VerificationCodeRepo.create(data);
   }
@@ -12,7 +14,7 @@ export default class VerificationCodeSvc {
     return VerificationCodeRepo.findByUserId(userId);
   }
 
-  static findByUserIdAndPurpose( userId: string, purpose: "email_verify" | "reset_password") {
+  static findByUserIdAndPurpose(userId: string, purpose: "email_verify" | "reset_password") {
     return VerificationCodeRepo.findByUserIdAndPurpose(userId, purpose);
   }
 

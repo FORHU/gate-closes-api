@@ -9,9 +9,7 @@ export class RedisAdapterManager {
 
   static async initAdapter(io: Server): Promise<boolean> {
     if (!REDIS_HOST) {
-      console.log(
-        "[RedisAdapter] REDIS_HOST not configured, using default in-memory adapter"
-      );
+      console.log("[RedisAdapter] REDIS_HOST not configured, using default in-memory adapter");
       return false;
     }
 

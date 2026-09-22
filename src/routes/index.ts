@@ -5,9 +5,6 @@ import terminalEchoRoutes from "./terminal.echo.route";
 import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
 import flightTicketRoutes from "./flight.ticket.route";
-import psRoutes from "./ps.route";
-import btRoutes from "./bt.route";
-import dtRoutes from "./dt.route";
 import conversationRoutes from "./conversation.route";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
@@ -25,9 +22,6 @@ router.use("/terminal-echo", terminalEchoRoutes);
 router.use("/terminal-echo-reply", terminalEchoReplyRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
-router.use("/ps", sessionMiddleware, psRoutes);
-router.use("/bt", sessionMiddleware, btRoutes);
-router.use("/dt", sessionMiddleware, dtRoutes);
 router.use("/conversations", sessionMiddleware, conversationRoutes);
 
 export default router;

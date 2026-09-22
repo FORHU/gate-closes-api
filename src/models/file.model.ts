@@ -28,15 +28,17 @@ export class MFile implements Partial<TFile> {
   updatedAt?: Date;
   deletedAt?: Date | null;
 
-  constructor({
-    _id = new ObjectId(),
-    fileUrl = "",
-    fileName = "",
-    metaData = {},
-    createdAt = new Date(),
-    updatedAt,
-    deletedAt = null,
-  } = {} as TFile) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      fileUrl = "",
+      fileName = "",
+      metaData = {},
+      createdAt = new Date(),
+      updatedAt,
+      deletedAt = null,
+    } = {} as TFile
+  ) {
     this._id = _id;
     this.fileUrl = fileUrl;
     this.fileName = fileName;

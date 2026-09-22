@@ -24,7 +24,7 @@ type Reaction = (typeof REACTIONS)[number];
 const reactionCountField = (reaction: Reaction) =>
   `countReact${reaction[0].toUpperCase()}${reaction.slice(1)}`;
 
-const randomItem = <T,>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
+const randomItem = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
 const randomInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
 const dateOffsetDays = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
@@ -64,26 +64,93 @@ const SEED_USERS: Array<{
 }> = [
   { email: "ava.morgan@example.com", username: "ava_morgan", gender: "Female", provider: "local" },
   { email: "liam.chen@example.com", username: "liam_chen", gender: "Male", provider: "local" },
-  { email: "sofia.reyes@example.com", username: "sofia_reyes", gender: "Female", provider: "local" },
+  {
+    email: "sofia.reyes@example.com",
+    username: "sofia_reyes",
+    gender: "Female",
+    provider: "local",
+  },
   { email: "noah.becker@example.com", username: "noah_becker", gender: "Male", provider: "local" },
   { email: "mia.tanaka@example.com", username: "mia_tanaka", gender: "Female", provider: "local" },
-  { email: "ethan.oconnor@example.com", username: "ethan_oconnor", gender: "Male", provider: "local" },
+  {
+    email: "ethan.oconnor@example.com",
+    username: "ethan_oconnor",
+    gender: "Male",
+    provider: "local",
+  },
   { email: "zara.khan@example.com", username: "zara_khan", gender: "Female", provider: "local" },
   { email: "lucas.silva@example.com", username: "lucas_silva", gender: "Male", provider: "local" },
-  { email: "amelia.novak@example.com", username: "amelia_novak", gender: "Female", provider: "google", googleId: "100000000000000001" },
-  { email: "oliver.dubois@example.com", username: "oliver_dubois", gender: "Male", provider: "google", googleId: "100000000000000002" },
+  {
+    email: "amelia.novak@example.com",
+    username: "amelia_novak",
+    gender: "Female",
+    provider: "google",
+    googleId: "100000000000000001",
+  },
+  {
+    email: "oliver.dubois@example.com",
+    username: "oliver_dubois",
+    gender: "Male",
+    provider: "google",
+    googleId: "100000000000000002",
+  },
 ];
 
-const AIRPORTS: Array<{ code: string; name: string; country: string; coordinates: [number, number] }> = [
-  { code: "JFK", name: "John F. Kennedy International Airport", country: "United States", coordinates: [-73.7781, 40.6413] },
-  { code: "LAX", name: "Los Angeles International Airport", country: "United States", coordinates: [-118.4085, 33.9416] },
-  { code: "LHR", name: "London Heathrow Airport", country: "United Kingdom", coordinates: [-0.4543, 51.4700] },
-  { code: "DXB", name: "Dubai International Airport", country: "United Arab Emirates", coordinates: [55.3644, 25.2532] },
-  { code: "SIN", name: "Singapore Changi Airport", country: "Singapore", coordinates: [103.9915, 1.3644] },
-  { code: "CDG", name: "Charles de Gaulle Airport", country: "France", coordinates: [2.5479, 49.0097] },
+const AIRPORTS: Array<{
+  code: string;
+  name: string;
+  country: string;
+  coordinates: [number, number];
+}> = [
+  {
+    code: "JFK",
+    name: "John F. Kennedy International Airport",
+    country: "United States",
+    coordinates: [-73.7781, 40.6413],
+  },
+  {
+    code: "LAX",
+    name: "Los Angeles International Airport",
+    country: "United States",
+    coordinates: [-118.4085, 33.9416],
+  },
+  {
+    code: "LHR",
+    name: "London Heathrow Airport",
+    country: "United Kingdom",
+    coordinates: [-0.4543, 51.47],
+  },
+  {
+    code: "DXB",
+    name: "Dubai International Airport",
+    country: "United Arab Emirates",
+    coordinates: [55.3644, 25.2532],
+  },
+  {
+    code: "SIN",
+    name: "Singapore Changi Airport",
+    country: "Singapore",
+    coordinates: [103.9915, 1.3644],
+  },
+  {
+    code: "CDG",
+    name: "Charles de Gaulle Airport",
+    country: "France",
+    coordinates: [2.5479, 49.0097],
+  },
   { code: "FRA", name: "Frankfurt Airport", country: "Germany", coordinates: [8.5622, 50.0379] },
-  { code: "SYD", name: "Sydney Kingsford Smith Airport", country: "Australia", coordinates: [151.1772, -33.9399] },
-  { code: "ORD", name: "O'Hare International Airport", country: "United States", coordinates: [-87.9048, 41.9742] },
+  {
+    code: "SYD",
+    name: "Sydney Kingsford Smith Airport",
+    country: "Australia",
+    coordinates: [151.1772, -33.9399],
+  },
+  {
+    code: "ORD",
+    name: "O'Hare International Airport",
+    country: "United States",
+    coordinates: [-87.9048, 41.9742],
+  },
 ];
 
 const FLIGHT_LEGS = [
@@ -127,11 +194,27 @@ type SeededUser = { _id: ObjectId; username: string };
 
 const wipeCollections = async (db: Db) => {
   const names = [
-    "user", "user.auth", "flightTicket", "file", "verification.code",
-    "terminal.echo", "terminal.echo.reaction", "terminal.echo.reply", "terminal.echo.reply.reaction",
-    "btConversation", "btConversationMessage", "btConversationMessage.reaction", "btConversationReadState",
-    "dtConversation", "dtConversationMessage", "dtConversationMessage.reaction", "dtConversationReadState",
-    "psConversation", "psConversationMessage", "psConversationMessage.reaction", "psConversationReadState",
+    "user",
+    "user.auth",
+    "flightTicket",
+    "file",
+    "verification.code",
+    "terminal.echo",
+    "terminal.echo.reaction",
+    "terminal.echo.reply",
+    "terminal.echo.reply.reaction",
+    "btConversation",
+    "btConversationMessage",
+    "btConversationMessage.reaction",
+    "btConversationReadState",
+    "dtConversation",
+    "dtConversationMessage",
+    "dtConversationMessage.reaction",
+    "dtConversationReadState",
+    "psConversation",
+    "psConversationMessage",
+    "psConversationMessage.reaction",
+    "psConversationReadState",
   ];
   console.log(`[seed] wiping ${names.length} collections...`);
   await Promise.all(names.map((name) => db.collection(name).deleteMany({})));
@@ -259,7 +342,8 @@ const seedTerminalEcho = async (db: Db, users: SeededUser[], files: ObjectId[]) 
     }
     if (Object.keys(tally).length > 0) {
       const inc: Record<string, number> = {};
-      for (const [reaction, n] of Object.entries(tally)) inc[reactionCountField(reaction as Reaction)] = n as number;
+      for (const [reaction, n] of Object.entries(tally))
+        inc[reactionCountField(reaction as Reaction)] = n as number;
       await echoCollection.updateOne({ _id: echo._id }, { $inc: inc });
     }
 
@@ -308,9 +392,27 @@ const seedTerminalEcho = async (db: Db, users: SeededUser[], files: ObjectId[]) 
 // vs psSenderId, etc.) — seeded through one generic namespace-driven helper
 // rather than three copy-pasted blocks.
 const CONVERSATION_NAMESPACES = [
-  { prefix: "bt", conversation: "btConversation", message: "btConversationMessage", reaction: "btConversationMessage.reaction", readState: "btConversationReadState" },
-  { prefix: "dt", conversation: "dtConversation", message: "dtConversationMessage", reaction: "dtConversationMessage.reaction", readState: "dtConversationReadState" },
-  { prefix: "ps", conversation: "psConversation", message: "psConversationMessage", reaction: "psConversationMessage.reaction", readState: "psConversationReadState" },
+  {
+    prefix: "bt",
+    conversation: "btConversation",
+    message: "btConversationMessage",
+    reaction: "btConversationMessage.reaction",
+    readState: "btConversationReadState",
+  },
+  {
+    prefix: "dt",
+    conversation: "dtConversation",
+    message: "dtConversationMessage",
+    reaction: "dtConversationMessage.reaction",
+    readState: "dtConversationReadState",
+  },
+  {
+    prefix: "ps",
+    conversation: "psConversation",
+    message: "psConversationMessage",
+    reaction: "psConversationMessage.reaction",
+    readState: "psConversationReadState",
+  },
 ] as const;
 
 const seedConversationNamespace = async (
@@ -329,7 +431,10 @@ const seedConversationNamespace = async (
   const messageIdField = `${ns.prefix}ConversationMessageId`;
 
   const usersById = new Map(users.map((u) => [u._id.toHexString(), u]));
-  const pairs = uniquePairs(users.map((u) => u._id), 4);
+  const pairs = uniquePairs(
+    users.map((u) => u._id),
+    4
+  );
 
   let conversationCount = 0;
   let messageCount = 0;
@@ -359,8 +464,12 @@ const seedConversationNamespace = async (
         [senderIdField]: senderId,
         [conversationIdField]: conversationId,
         fileId: randomItem(files),
-        countReactLike: 0, countReactLove: 0, countReactHaha: 0,
-        countReactWow: 0, countReactSad: 0, countReactAngry: 0,
+        countReactLike: 0,
+        countReactLove: 0,
+        countReactHaha: 0,
+        countReactWow: 0,
+        countReactSad: 0,
+        countReactAngry: 0,
         createdAt: messageCreatedAt,
       });
       messageCount += 1;

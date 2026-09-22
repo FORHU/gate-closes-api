@@ -13,9 +13,7 @@ export default class ConversationCtrl {
     const { type, otherUserId } = req.body;
 
     const schema = Joi.object({
-      type: Joi.string()
-        .valid("parallel_soul", "destination_thread", "baton_touch")
-        .required(),
+      type: Joi.string().valid("parallel_soul", "destination_thread", "baton_touch").required(),
       otherUserId: Joi.string().hex().length(24).required(),
     });
 
@@ -25,10 +23,7 @@ export default class ConversationCtrl {
     }
 
     try {
-      const requesterId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const requesterId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const otherUserObjectId = ConversationRepo.parseObjectId(
         value.otherUserId,
         ERROR_MESSAGE.INVALID_OTHER_USER_ID
@@ -55,15 +50,9 @@ export default class ConversationCtrl {
     const type = req.query.type as ConversationType | undefined;
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
-      const conversations = await ConversationSvc.listMyConversations(
-        userObjectId,
-        type
-      );
+      const conversations = await ConversationSvc.listMyConversations(userObjectId, type);
       return res.json({ data: conversations });
     } catch (err) {
       return res.status(500).json({ message: getErrorMessage(err) });
@@ -76,16 +65,9 @@ export default class ConversationCtrl {
     const type = req.query.type as ConversationType | undefined;
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
-      const conversations = await ConversationSvc.searchMyConversations(
-        userObjectId,
-        q,
-        type
-      );
+      const conversations = await ConversationSvc.searchMyConversations(userObjectId, q, type);
       return res.json({ data: conversations });
     } catch (err) {
       return res.status(500).json({ message: getErrorMessage(err) });
@@ -97,19 +79,13 @@ export default class ConversationCtrl {
     const { conversationId } = req.params;
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const convoObjectId = ConversationRepo.parseObjectId(
         conversationId,
         "Invalid conversation ID"
       );
 
-      const conversation = await ConversationSvc.getById(
-        convoObjectId,
-        userObjectId
-      );
+      const conversation = await ConversationSvc.getById(convoObjectId, userObjectId);
 
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
@@ -126,10 +102,7 @@ export default class ConversationCtrl {
     const { conversationId } = req.params;
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const convoObjectId = ConversationRepo.parseObjectId(
         conversationId,
         "Invalid conversation ID"
@@ -151,9 +124,7 @@ export default class ConversationCtrl {
     const { type, otherUserId } = req.query;
 
     const schema = Joi.object({
-      type: Joi.string()
-        .valid("parallel_soul", "destination_thread", "baton_touch")
-        .required(),
+      type: Joi.string().valid("parallel_soul", "destination_thread", "baton_touch").required(),
       otherUserId: Joi.string().hex().length(24).required(),
     });
 
@@ -163,10 +134,7 @@ export default class ConversationCtrl {
     }
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const otherUserObjectId = ConversationRepo.parseObjectId(
         value.otherUserId,
         ERROR_MESSAGE.INVALID_OTHER_USER_ID
@@ -207,10 +175,7 @@ export default class ConversationCtrl {
     if (error) return res.status(400).json({ message: error.message });
 
     try {
-      const senderId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const senderId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const convoObjectId = ConversationRepo.parseObjectId(
         conversationId,
         "Invalid conversation ID"
@@ -228,10 +193,6 @@ export default class ConversationCtrl {
 
       try {
         io.of("/conversations").to(conversationId).emit("message:received", result.message);
-        const convoType = result.conversation.type;
-        if (convoType === "parallel_soul") io.of("/ps").to(conversationId).emit("new_message", result.message);
-        else if (convoType === "destination_thread") io.of("/dt").to(conversationId).emit("new_message", result.message);
-        else if (convoType === "baton_touch") io.of("/bt").to(conversationId).emit("new_message", result.message);
       } catch (err) {
         console.warn("[ConversationCtrl.sendMessage] Broadcast warning:", err);
       }
@@ -250,10 +211,7 @@ export default class ConversationCtrl {
     const limit = Number(req.query.limit) || 50;
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const convoObjectId = ConversationRepo.parseObjectId(
         conversationId,
         "Invalid conversation ID"
@@ -279,26 +237,18 @@ export default class ConversationCtrl {
     const { reaction } = req.body;
 
     const schema = Joi.object({
-      reaction: Joi.string()
-        .valid("like", "love", "haha", "wow", "sad", "angry")
-        .required(),
+      reaction: Joi.string().valid("like", "love", "haha", "wow", "sad", "angry").required(),
     });
     const { error, value } = schema.validate({ reaction });
     if (error) return res.status(400).json({ message: error.message });
 
     try {
-      const userObjectId = ConversationRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = ConversationRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
       const convoObjectId = ConversationRepo.parseObjectId(
         conversationId,
         "Invalid conversation ID"
       );
-      const msgObjectId = ConversationRepo.parseObjectId(
-        messageId,
-        "Invalid message ID"
-      );
+      const msgObjectId = ConversationRepo.parseObjectId(messageId, "Invalid message ID");
 
       const result = await ConversationSvc.updateMessageReaction({
         conversationId: convoObjectId,
@@ -309,10 +259,6 @@ export default class ConversationCtrl {
 
       try {
         io.of("/conversations").to(conversationId).emit("reaction:updated", result);
-        const convoType = result.conversation.type;
-        if (convoType === "parallel_soul") io.of("/ps").to(conversationId).emit("message_reaction_updated", result);
-        else if (convoType === "destination_thread") io.of("/dt").to(conversationId).emit("message_reaction_updated", result);
-        else if (convoType === "baton_touch") io.of("/bt").to(conversationId).emit("message_reaction_updated", result);
       } catch (err) {
         console.warn("[ConversationCtrl.updateReaction] Broadcast warning:", err);
       }

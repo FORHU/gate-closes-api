@@ -20,22 +20,35 @@ export const REDIS_HOST = process.env.REDIS_HOST as string;
 export const REDIS_PORT = Number(process.env.REDIS_PORT);
 export const REDIS_PASSWORD = process.env.REDIS_PASSWORD as string;
 export const SERVICE_ACCOUNT = process.env.SERVICE_ACCOUNT as string;
-export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID.split(',').map(id => id.trim()) : [];
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
+  ? process.env.GOOGLE_CLIENT_ID.split(",").map((id) => id.trim())
+  : [];
 
 export const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET as string;
 export const AWS_REGION = process.env.AWS_REGION as string;
 export const CLOUD_FRONT_DOMAIN = process.env.CLOUD_FRONT_DOMAIN as string | undefined;
 
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
-  : ["http://localhost:3000", "http://localhost:8081", "http://localhost:19006", "http://localhost:3001"];
+  ? process.env.ALLOWED_ORIGINS.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean)
+  : [
+      "http://localhost:3000",
+      "http://localhost:8081",
+      "http://localhost:19006",
+      "http://localhost:3001",
+    ];
 
 if (!isDev) {
   const insecureSecrets: string[] = [];
-  if (!ACCESS_TOKEN_SECRET || ACCESS_TOKEN_SECRET === "dev-access-secret") insecureSecrets.push("ACCESS_TOKEN_SECRET");
-  if (!REFRESH_TOKEN_SECRET || REFRESH_TOKEN_SECRET === "dev-refresh-secret") insecureSecrets.push("REFRESH_TOKEN_SECRET");
+  if (!ACCESS_TOKEN_SECRET || ACCESS_TOKEN_SECRET === "dev-access-secret")
+    insecureSecrets.push("ACCESS_TOKEN_SECRET");
+  if (!REFRESH_TOKEN_SECRET || REFRESH_TOKEN_SECRET === "dev-refresh-secret")
+    insecureSecrets.push("REFRESH_TOKEN_SECRET");
   if (!SECRET_KEY || SECRET_KEY === "dev-secret") insecureSecrets.push("SECRET_KEY");
   if (insecureSecrets.length > 0) {
-    throw new Error(`[Config Error] Insecure or missing production secrets: ${insecureSecrets.join(", ")}`);
+    throw new Error(
+      `[Config Error] Insecure or missing production secrets: ${insecureSecrets.join(", ")}`
+    );
   }
 }

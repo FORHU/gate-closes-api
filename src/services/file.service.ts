@@ -6,4 +6,3 @@ export default class FileSvc {
     return FileRepo.create(file);
   }
 }
-

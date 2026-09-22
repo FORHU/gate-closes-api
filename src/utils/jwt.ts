@@ -7,7 +7,6 @@ import {
   REFRESH_TOKEN_EXPIRY,
 } from "../config";
 
-
 export type TokenPayload = {
   userId: string;
   email?: string;

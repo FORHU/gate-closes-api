@@ -45,10 +45,7 @@ export default class FlightTicketCtrl {
     }
 
     try {
-      const userObjectId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = FlightTicketRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
       const result = await FlightTicketSvc.create({
         userId: userObjectId,
@@ -94,7 +91,6 @@ export default class FlightTicketCtrl {
     }
   }
 
-
   // PUT /flight-ticket
   static async update(req: Request, res: Response) {
     const userId = req.user?.userId as string;
@@ -108,7 +104,7 @@ export default class FlightTicketCtrl {
       returnDateTime,
     } = req.body;
 
-  // Fields are marked .optional() because an edit might only change one thing
+    // Fields are marked .optional() because an edit might only change one thing
     const schema = Joi.object({
       flightNumber: Joi.string().trim().optional(),
       fromAirport: Joi.string().trim().optional(),
@@ -128,10 +124,7 @@ export default class FlightTicketCtrl {
     }
 
     try {
-      const userObjectId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = FlightTicketRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
       const updatedTicket = await FlightTicketSvc.update(userObjectId, value);
 
@@ -146,10 +139,7 @@ export default class FlightTicketCtrl {
     const userId = req.user?.userId as string;
 
     try {
-      const userObjectId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = FlightTicketRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
       await FlightTicketSvc.deleteByUserId(userObjectId);
 
@@ -161,5 +151,3 @@ export default class FlightTicketCtrl {
     }
   }
 }
-
-

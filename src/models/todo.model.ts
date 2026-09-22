@@ -23,7 +23,16 @@ export class MOrganization implements Partial<TTodo> {
   updatedAt?: Date;
   status?: string;
 
-  constructor({ _id = new ObjectId(), title = "", description = "", createdAt = new Date(), updatedAt, status = "active" } = {} as TTodo) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      title = "",
+      description = "",
+      createdAt = new Date(),
+      updatedAt,
+      status = "active",
+    } = {} as TTodo
+  ) {
     this._id = _id;
     this.title = title;
     this.description = description;

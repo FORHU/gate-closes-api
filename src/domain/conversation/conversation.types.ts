@@ -1,10 +1,7 @@
 import { ObjectId } from "mongodb";
 import { TFlightTicket } from "../../models/flight.ticket.model";
 
-export type ConversationType =
-  | "parallel_soul"
-  | "destination_thread"
-  | "baton_touch";
+export type ConversationType = "parallel_soul" | "destination_thread" | "baton_touch";
 
 export type EligibilityReason =
   | "ELIGIBLE"

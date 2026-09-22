@@ -14,18 +14,14 @@ export default class TerminalEchoReplyReactionRepo {
   }
 
   static async create(reaction: TTerminalEchoReplyReaction) {
-    return this.collection().insertOne(
-      new MTerminalEchoReplyReaction(reaction)
-    );
+    return this.collection().insertOne(new MTerminalEchoReplyReaction(reaction));
   }
 
   static async findOne(query: TTerminalEchoReplyReactionQuery) {
     const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.terminalEchoReplyId)
-      filter.terminalEchoReplyId = new ObjectId(
-        query.terminalEchoReplyId as string
-      );
+      filter.terminalEchoReplyId = new ObjectId(query.terminalEchoReplyId as string);
     if (query.userId) filter.userId = new ObjectId(query.userId as string);
     if (query.reaction) filter.reaction = query.reaction;
 
@@ -36,9 +32,7 @@ export default class TerminalEchoReplyReactionRepo {
     const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
     if (query.terminalEchoReplyId)
-      filter.terminalEchoReplyId = new ObjectId(
-        query.terminalEchoReplyId as string
-      );
+      filter.terminalEchoReplyId = new ObjectId(query.terminalEchoReplyId as string);
     if (query.userId) filter.userId = new ObjectId(query.userId as string);
     if (query.reaction) filter.reaction = query.reaction;
 
@@ -102,10 +96,7 @@ export default class TerminalEchoReplyReactionRepo {
   }
 
   /** Batch: all reactions by this user for the given reply ids. Used to enrich reply list. */
-  static async findByUserIdAndReplyIds(
-    userId: string | ObjectId,
-    replyIds: (string | ObjectId)[]
-  ) {
+  static async findByUserIdAndReplyIds(userId: string | ObjectId, replyIds: (string | ObjectId)[]) {
     const ids = replyIds.map((id) => new ObjectId(id));
     return this.collection()
       .find({

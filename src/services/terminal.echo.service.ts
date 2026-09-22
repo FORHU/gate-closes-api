@@ -67,8 +67,7 @@ export default class TerminalEchoSvc {
   private static computeType(params: {
     authTicket: Document | null;
     otherTicket: Document | null;
-  }):
-    TerminalEchoType {
+  }): TerminalEchoType {
     const { authTicket, otherTicket } = params;
 
     if (!authTicket) return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
@@ -104,10 +103,14 @@ export default class TerminalEchoSvc {
     // destination_thread: same destination airport, valid arrival window (<= 24h), different flight and different origin
     const authArrival = authTicket.arrivalDateTime
       ? new Date(authTicket.arrivalDateTime)
-      : (authTicket.departureDateTime ? new Date(authTicket.departureDateTime) : null);
+      : authTicket.departureDateTime
+        ? new Date(authTicket.departureDateTime)
+        : null;
     const otherArrival = otherTicket.arrivalDateTime
       ? new Date(otherTicket.arrivalDateTime)
-      : (otherTicket.departureDateTime ? new Date(otherTicket.departureDateTime) : null);
+      : otherTicket.departureDateTime
+        ? new Date(otherTicket.departureDateTime)
+        : null;
 
     const isWithinDtWindow = Boolean(
       authArrival &&
@@ -145,10 +148,7 @@ export default class TerminalEchoSvc {
    * privacy (prevent pinpointing exact bench/seat location inside a terminal).
    * Default precision 3 gives ~110m resolution at equator.
    */
-  static quantizeCoordinates(
-    coordinates: [number, number],
-    precision = 3
-  ): [number, number] {
+  static quantizeCoordinates(coordinates: [number, number], precision = 3): [number, number] {
     const factor = Math.pow(10, precision);
     return [
       Math.round(coordinates[0] * factor) / factor,
@@ -166,8 +166,16 @@ export default class TerminalEchoSvc {
     audioDuration?: number;
     waveformData?: number[];
   }) {
-    const { userId, fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } =
-      params;
+    const {
+      userId,
+      fileUrl,
+      fileName,
+      textMessage,
+      location,
+      airportName,
+      audioDuration,
+      waveformData,
+    } = params;
 
     // Server-authoritative airport resolution (§18.1)
     let canonicalAirportIata = "";
@@ -185,7 +193,10 @@ export default class TerminalEchoSvc {
             }
           }
         } catch (err) {
-          console.warn("[TerminalEchoSvc.createTerminalEcho] Error resolving nearest airport:", err);
+          console.warn(
+            "[TerminalEchoSvc.createTerminalEcho] Error resolving nearest airport:",
+            err
+          );
         }
       }
     }
@@ -227,16 +238,16 @@ export default class TerminalEchoSvc {
     };
   }
 
-  static async findByAirportName(
-    airportName?: string,
-    userId?: string
-  ): Promise<Document[]> {
+  static async findByAirportName(airportName?: string, userId?: string): Promise<Document[]> {
     const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName);
     if (!userId || !echoes.length) {
-      return echoes.map((e) => ({
-        ...e,
-        currentUserReactions: e.currentUserReactions ?? [],
-      } as Document));
+      return echoes.map(
+        (e) =>
+          ({
+            ...e,
+            currentUserReactions: e.currentUserReactions ?? [],
+          }) as Document
+      );
     }
     const echoIds = echoes.map((e) => e._id);
     const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
@@ -249,10 +260,13 @@ export default class TerminalEchoSvc {
       if (!byEchoId.has(id)) byEchoId.set(id, []);
       byEchoId.get(id)!.push(r.reaction);
     }
-    return echoes.map((e) => ({
-      ...e,
-      currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
-    } as Document));
+    return echoes.map(
+      (e) =>
+        ({
+          ...e,
+          currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+        }) as Document
+    );
   }
 
   /**
@@ -273,13 +287,8 @@ export default class TerminalEchoSvc {
     const echoes = await TerminalEchoRepo.findAllForMap(mapBounds);
     if (!echoes.length) return [];
 
-    const authUserObjectId = FlightTicketRepo.parseObjectId(
-      userId,
-      "Invalid user id."
-    );
-    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      authUserObjectId
-    );
+    const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(authUserObjectId);
 
     if (!authTicket) {
       return echoes.map((e) => ({
@@ -300,13 +309,10 @@ export default class TerminalEchoSvc {
       .filter((id) => id !== authUserObjectId.toString())
       .map((id) => new ObjectId(id));
 
-    const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds(
-      senderIds
-    );
+    const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds(senderIds);
 
     return echoes.map((e) => {
-      const senderIdStr =
-        (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
+      const senderIdStr = (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
 
       let type: TerminalEchoType = TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
       if (senderIdStr && senderIdStr !== authUserObjectId.toString()) {
@@ -323,10 +329,7 @@ export default class TerminalEchoSvc {
     });
   }
 
-  static async findAllWithTypeAsGeoJson(
-    userId: string,
-    mapBounds?: TerminalEchoMapBounds
-  ) {
+  static async findAllWithTypeAsGeoJson(userId: string, mapBounds?: TerminalEchoMapBounds) {
     const echoes = await this.findAllWithType(userId, mapBounds);
     return this.toFeatureCollection(echoes);
   }
@@ -336,23 +339,16 @@ export default class TerminalEchoSvc {
     const echo = await TerminalEchoRepo.findByIdWithFile(terminalEchoId);
     if (!echo) return null;
 
-    const authUserObjectId = FlightTicketRepo.parseObjectId(
-      userId,
-      "Invalid user id."
-    );
-    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      authUserObjectId
-    );
+    const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(authUserObjectId);
 
     let type: TerminalEchoType = TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
     if (authTicket) {
-      const senderIdStr =
-        (echo.senderId as ObjectId | undefined)?.toString?.() ?? "";
+      const senderIdStr = (echo.senderId as ObjectId | undefined)?.toString?.() ?? "";
       if (senderIdStr && senderIdStr !== authUserObjectId.toString()) {
-        const ticketsByUserId =
-          await FlightTicketRepo.findActiveOrLatestByUserIds([
-            new ObjectId(senderIdStr),
-          ]);
+        const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds([
+          new ObjectId(senderIdStr),
+        ]);
         const otherTicket = ticketsByUserId.get(senderIdStr) ?? null;
         type = this.computeType({ authTicket, otherTicket });
       }
@@ -364,10 +360,9 @@ export default class TerminalEchoSvc {
     // comes back with no currentUserReactions, so the user's own prior
     // reactions show as un-reacted even though they're still recorded.
     // Matches the same pattern findByAirportName uses for the feed.
-    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
-      userId,
-      [echo._id as ObjectId]
-    );
+    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(userId, [
+      echo._id as ObjectId,
+    ]);
     const currentUserReactions = reactions.map((r) => r.reaction);
 
     return { ...echo, type, currentUserReactions };
@@ -398,4 +393,3 @@ export default class TerminalEchoSvc {
     return { ...result, action };
   }
 }
-

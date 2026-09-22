@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { describe, it, afterEach } from "mocha";
 import { ObjectId } from "mongodb";
-import PsConversationSvc from "../src/services/ps.conversation.service";
+import ConversationSvc from "../src/services/conversation.service";
 import FlightTicketRepo from "../src/repositories/flight.ticket.repository";
-import PsConversationRepo from "../src/repositories/ps.conversation.repository";
+import ConversationRepo from "../src/repositories/conversation.repository";
 
-describe("PsConversationSvc (Parallel Soul Eligibility Characterization)", () => {
+describe("Parallel Soul Eligibility (via ConversationSvc)", () => {
   const originals: Array<() => void> = [];
   afterEach(() => {
     while (originals.length) originals.pop()!();
@@ -24,7 +24,8 @@ describe("PsConversationSvc (Parallel Soul Eligibility Characterization)", () =>
 
   it("rejects conversation with self", async () => {
     try {
-      await PsConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "parallel_soul",
         requesterId: userA,
         otherUserId: userA,
       });
@@ -43,7 +44,8 @@ describe("PsConversationSvc (Parallel Soul Eligibility Characterization)", () =>
     });
 
     try {
-      await PsConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "parallel_soul",
         requesterId: userA,
         otherUserId: userB,
       });
@@ -62,13 +64,16 @@ describe("PsConversationSvc (Parallel Soul Eligibility Characterization)", () =>
     });
 
     try {
-      await PsConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "parallel_soul",
         requesterId: userA,
         otherUserId: userB,
       });
       expect.fail("Should have thrown error");
     } catch (err: any) {
-      expect(err.message).to.equal("Users are not traveling the same route to be eligible for Parallel Soul.");
+      expect(err.message).to.equal(
+        "Users are not traveling the same route to be eligible for Parallel Soul."
+      );
     }
   });
 
@@ -79,19 +84,20 @@ describe("PsConversationSvc (Parallel Soul Eligibility Characterization)", () =>
       toAirport: "NRT",
     }));
 
-    stub(PsConversationRepo, "findByDmKey", async () => null);
+    stub(ConversationRepo, "findByDmKey", async () => null);
 
     let createdRecord: any = null;
-    stub(PsConversationRepo, "create", async (data: any) => {
+    stub(ConversationRepo, "create", async (data: any) => {
       createdRecord = data;
       return { insertedId: new ObjectId("650000000000000000000099") };
     });
 
-    stub(PsConversationRepo, "collection", () => ({
+    stub(ConversationRepo, "collection", () => ({
       findOne: async (query: any) => ({ _id: query._id, ...createdRecord }),
     }));
 
-    const result = await PsConversationSvc.createDm({
+    const result = await ConversationSvc.createDm({
+      type: "parallel_soul",
       requesterId: userA,
       otherUserId: userB,
     });

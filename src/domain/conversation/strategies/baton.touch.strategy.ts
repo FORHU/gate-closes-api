@@ -1,8 +1,4 @@
-import {
-  EligibilityContext,
-  EligibilityResult,
-  IEligibilityStrategy,
-} from "../conversation.types";
+import { EligibilityContext, EligibilityResult, IEligibilityStrategy } from "../conversation.types";
 
 export class BatonTouchStrategy implements IEligibilityStrategy {
   async checkEligibility(context: EligibilityContext): Promise<EligibilityResult> {
@@ -38,8 +34,7 @@ export class BatonTouchStrategy implements IEligibilityStrategy {
     const otherFrom = (otherTicket.fromAirport ?? "").trim().toUpperCase();
 
     const isCrossDirectionalMatch =
-      (myTo && otherFrom && myTo === otherFrom) ||
-      (myFrom && otherTo && myFrom === otherTo);
+      (myTo && otherFrom && myTo === otherFrom) || (myFrom && otherTo && myFrom === otherTo);
 
     if (!isCrossDirectionalMatch) {
       return {

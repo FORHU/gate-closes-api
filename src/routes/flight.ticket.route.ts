@@ -9,4 +9,3 @@ router.put("/", FlightTicketCtrl.update);
 router.delete("/", FlightTicketCtrl.deleteByUserId);
 
 export default router;
-

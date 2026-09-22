@@ -1,10 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import {
-  AWS_REGION,
-  AWS_S3_BUCKET,
-  CLOUD_FRONT_DOMAIN,
-} from "../config";
+import { AWS_REGION, AWS_S3_BUCKET, CLOUD_FRONT_DOMAIN } from "../config";
 
 // No explicit credentials: the SDK's default provider chain applies,
 // so this relies on an IAM role attached to the running instance/task
@@ -13,10 +9,7 @@ const s3Client = new S3Client({
   region: AWS_REGION,
 });
 
-export async function getPutObjectPresignedUrl(params: {
-  key: string;
-  contentType?: string;
-}) {
+export async function getPutObjectPresignedUrl(params: { key: string; contentType?: string }) {
   const { key, contentType } = params;
 
   const command = new PutObjectCommand({
@@ -30,9 +23,7 @@ export async function getPutObjectPresignedUrl(params: {
   return url;
 }
 
-export async function getGetObjectPresignedUrl(params: {
-  key: string;
-}) {
+export async function getGetObjectPresignedUrl(params: { key: string }) {
   const { key } = params;
 
   if (CLOUD_FRONT_DOMAIN) {
@@ -66,13 +57,13 @@ export async function uploadBufferToS3(params: {
   });
 
   await s3Client.send(command);
-  
+
   // Return the CloudFront URL directly if available, otherwise return S3 URL
   if (CLOUD_FRONT_DOMAIN) {
     const normalizedDomain = CLOUD_FRONT_DOMAIN.replace(/\/+$/, "");
     const normalizedKey = key.replace(/^\/+/, "");
     return `${normalizedDomain}/${normalizedKey}`;
   }
-  
+
   return `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 }

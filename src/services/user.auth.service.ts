@@ -11,7 +11,6 @@ import { GOOGLE_CLIENT_ID } from "../config";
 const googleClient = new OAuth2Client();
 
 export default class UserAuthSvc {
-
   static async registerEmailAndSendOtp(email: string) {
     const user = await UserRepo.findByEmail(email);
     let userId: string;
@@ -26,7 +25,10 @@ export default class UserAuthSvc {
         return { userId, signupStep: "set_password" as const };
       }
 
-      const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "email_verify");
+      const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(
+        userId,
+        "email_verify"
+      );
       if (existingCode) await VerificationCodeRepo.delete(existingCode._id!);
     } else {
       const userResult = await UserRepo.createForManualRegister(email);
@@ -130,7 +132,10 @@ export default class UserAuthSvc {
     }
     const userId = String(user._id);
 
-    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "reset_password");
+    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(
+      userId,
+      "reset_password"
+    );
     if (existingCode) await VerificationCodeRepo.delete(existingCode._id!);
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -157,7 +162,10 @@ export default class UserAuthSvc {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
-    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "reset_password");
+    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(
+      userId,
+      "reset_password"
+    );
     if (existingCode) {
       await VerificationCodeRepo.delete(existingCode._id!);
     }
@@ -214,7 +222,6 @@ export default class UserAuthSvc {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
-
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await UserAuthRepo.update({ userId, password: hashedPassword });
 
@@ -255,7 +262,7 @@ export default class UserAuthSvc {
     const userId = String(user._id);
     const accessToken = createAccessToken({ userId, email: user.email });
     const refreshToken = createRefreshToken({ userId, email: user.email });
-    
+
     return {
       user,
       accessToken,

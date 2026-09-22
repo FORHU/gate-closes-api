@@ -1,9 +1,8 @@
 import { Document, ObjectId } from "mongodb";
 import { ERROR_MESSAGE } from "../const";
+import { TFlightTicket } from "../models/flight.ticket.model";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
-import ConversationRepo, {
-  TConversationLatestEventUpdate,
-} from "../repositories/conversation.repository";
+import ConversationRepo from "../repositories/conversation.repository";
 import ConversationReadStateRepo from "../repositories/conversation.read.state.repository";
 import ConversationMessageRepo from "../repositories/conversation.message.repository";
 import ConversationMessageReactionRepo from "../repositories/conversation.message.reaction.repository";
@@ -99,9 +98,7 @@ export default class ConversationSvc {
   static shapeConversationForUser(convo: Document, requesterId: ObjectId) {
     const participants: Document[] = convo.participants ?? [];
     const participantsDetail: Document[] = convo.participantsDetail ?? [];
-    const participantById = new Map(
-      participantsDetail.map((p) => [String(p._id), p])
-    );
+    const participantById = new Map(participantsDetail.map((p) => [String(p._id), p]));
 
     const orderedParticipantsDetail = participants
       .map((id) => participantById.get(String(id)))
@@ -111,7 +108,7 @@ export default class ConversationSvc {
           ({
             ...p,
             name: p.username ?? null,
-          } as Document)
+          }) as Document
       );
 
     const normalizedParticipantsDetail =
@@ -122,13 +119,11 @@ export default class ConversationSvc {
               ({
                 ...p,
                 name: p.username ?? null,
-              } as Document)
+              }) as Document
           );
 
     const otherUser =
-      normalizedParticipantsDetail.find(
-        (p) => String(p._id) !== String(requesterId)
-      ) ?? null;
+      normalizedParticipantsDetail.find((p) => String(p._id) !== String(requesterId)) ?? null;
 
     const normalizedLatestEventPayload = convo.lastEventPayload ?? null;
     const normalizedLatestEventText =
@@ -190,14 +185,12 @@ export default class ConversationSvc {
     const eligibilityResult = await strategy.checkEligibility({
       requesterId,
       otherUserId,
-      myTicket: myTicket as any,
-      otherTicket: otherTicket as any,
+      myTicket: myTicket as unknown as TFlightTicket | null,
+      otherTicket: otherTicket as unknown as TFlightTicket | null,
     });
 
     if (!eligibilityResult.eligible) {
-      throw new Error(
-        eligibilityResult.message || "Users are not eligible for this conversation."
-      );
+      throw new Error(eligibilityResult.message || "Users are not eligible for this conversation.");
     }
 
     const dmKey = this.dmKeyForUsers(type, requesterId, otherUserId);
@@ -248,16 +241,8 @@ export default class ConversationSvc {
     return list.map((convo) => this.shapeConversationForUser(convo, userId));
   }
 
-  static async searchMyConversations(
-    userId: ObjectId,
-    q: string,
-    type?: ConversationType
-  ) {
-    const list = await ConversationRepo.searchByUserIdAndParticipantName(
-      userId,
-      q,
-      type
-    );
+  static async searchMyConversations(userId: ObjectId, q: string, type?: ConversationType) {
+    const list = await ConversationRepo.searchByUserIdAndParticipantName(userId, q, type);
     return list.map((convo) => this.shapeConversationForUser(convo, userId));
   }
 
@@ -270,10 +255,7 @@ export default class ConversationSvc {
     return this.shapeConversationForUser(convo, userId);
   }
 
-  static async markConversationRead(params: {
-    conversationId: ObjectId;
-    userId: ObjectId;
-  }) {
+  static async markConversationRead(params: { conversationId: ObjectId; userId: ObjectId }) {
     const { conversationId, userId } = params;
     const conversation = await ConversationRepo.collection().findOne(
       { _id: conversationId, participants: userId },
@@ -284,9 +266,7 @@ export default class ConversationSvc {
       throw new Error("Conversation not found");
     }
 
-    const lastEventAt = conversation.lastEventAt
-      ? new Date(conversation.lastEventAt)
-      : new Date();
+    const lastEventAt = conversation.lastEventAt ? new Date(conversation.lastEventAt) : new Date();
 
     await ConversationReadStateRepo.upsertLastReadAt({
       conversationId,
@@ -306,11 +286,7 @@ export default class ConversationSvc {
     userId: ObjectId;
     otherUserId: ObjectId;
   }) {
-    const dmKey = this.dmKeyForUsers(
-      params.type,
-      params.userId,
-      params.otherUserId
-    );
+    const dmKey = this.dmKeyForUsers(params.type, params.userId, params.otherUserId);
     const existing = await ConversationRepo.findByDmKey(dmKey);
     return Boolean(existing);
   }
@@ -374,9 +350,7 @@ export default class ConversationSvc {
       },
     });
 
-    const fullMessage = await ConversationMessageRepo.findByIdWithDetails(
-      insertResult.insertedId
-    );
+    const fullMessage = await ConversationMessageRepo.findByIdWithDetails(insertResult.insertedId);
 
     return {
       message: fullMessage,
@@ -399,17 +373,13 @@ export default class ConversationSvc {
       throw new Error("Not a participant or conversation does not exist.");
     }
 
-    const messages = await ConversationMessageRepo.listByConversationId(
-      conversationId,
-      limit
-    );
+    const messages = await ConversationMessageRepo.listByConversationId(conversationId, limit);
 
     const messageIds = messages.map((m) => m._id);
-    const userReactions =
-      await ConversationMessageReactionRepo.findByUserIdAndMessageIds(
-        userId,
-        messageIds
-      );
+    const userReactions = await ConversationMessageReactionRepo.findByUserIdAndMessageIds(
+      userId,
+      messageIds
+    );
 
     const reactionMap = new Map<string, string[]>();
     for (const r of userReactions) {

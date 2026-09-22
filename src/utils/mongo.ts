@@ -12,7 +12,11 @@ export const connectToMongo = async () => {
   // resolvers so the SRV lookup Atlas relies on always succeeds.
   dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
-  const client = new MongoClient(MONGO_URI, { maxPoolSize: 10, maxIdleTimeMS: 60000, connectTimeoutMS: 60000 });
+  const client = new MongoClient(MONGO_URI, {
+    maxPoolSize: 10,
+    maxIdleTimeMS: 60000,
+    connectTimeoutMS: 60000,
+  });
 
   await client.connect();
   db = client.db(MONGO_DB);

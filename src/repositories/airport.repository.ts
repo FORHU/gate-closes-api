@@ -112,11 +112,13 @@ export default class AirportRepo {
     if (airport.airport !== undefined) setFields.airport = airport.airport;
     if (airport.elevation !== undefined) setFields.elevation = airport.elevation;
     if (airport.type !== undefined) setFields.type = airport.type;
-    if (airport.scheduledService !== undefined) setFields.scheduledService = airport.scheduledService;
+    if (airport.scheduledService !== undefined)
+      setFields.scheduledService = airport.scheduledService;
     if (airport.wikipedia !== undefined) setFields.wikipedia = airport.wikipedia;
     if (airport.website !== undefined) setFields.website = airport.website;
     if (airport.runwayLength !== undefined) setFields.runwayLength = airport.runwayLength;
-    if (airport.flightradar24Url !== undefined) setFields.flightradar24Url = airport.flightradar24Url;
+    if (airport.flightradar24Url !== undefined)
+      setFields.flightradar24Url = airport.flightradar24Url;
     if (airport.radarboxUrl !== undefined) setFields.radarboxUrl = airport.radarboxUrl;
     if (airport.flightawareUrl !== undefined) setFields.flightawareUrl = airport.flightawareUrl;
     if (airport.location !== undefined) setFields.location = airport.location;
@@ -174,11 +176,7 @@ export default class AirportRepo {
     return results[0] ?? null;
   }
 
-  static async findNearestForAirport(params: {
-    lat: number;
-    lng: number;
-    airportName: string;
-  }) {
+  static async findNearestForAirport(params: { lat: number; lng: number; airportName: string }) {
     const { lat, lng, airportName } = params;
 
     const results = await this.collection()
@@ -249,10 +247,7 @@ export default class AirportRepo {
     _id: ObjectId,
     boundary: { type: "Polygon"; coordinates: number[][][] }
   ) {
-    return this.collection().updateOne(
-      { _id },
-      { $set: { boundary, updatedAt: new Date() } }
-    );
+    return this.collection().updateOne({ _id }, { $set: { boundary, updatedAt: new Date() } });
   }
 
   static async findAllWithBoundary() {
@@ -328,4 +323,3 @@ export default class AirportRepo {
     );
   }
 }
-

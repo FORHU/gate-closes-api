@@ -20,8 +20,7 @@ export default class TerminalEchoReactionRepo {
   static async findOne(query: TTerminalEchoReactionQuery) {
     const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
-    if (query.terminalEchoId)
-      filter.terminalEchoId = new ObjectId(query.terminalEchoId as string);
+    if (query.terminalEchoId) filter.terminalEchoId = new ObjectId(query.terminalEchoId as string);
     if (query.userId) filter.userId = new ObjectId(query.userId as string);
     if (query.reaction) filter.reaction = query.reaction;
 
@@ -31,8 +30,7 @@ export default class TerminalEchoReactionRepo {
   static async deleteOne(query: TTerminalEchoReactionQuery) {
     const filter: Record<string, unknown> = {};
     if (query._id) filter._id = new ObjectId(query._id as string);
-    if (query.terminalEchoId)
-      filter.terminalEchoId = new ObjectId(query.terminalEchoId as string);
+    if (query.terminalEchoId) filter.terminalEchoId = new ObjectId(query.terminalEchoId as string);
     if (query.userId) filter.userId = new ObjectId(query.userId as string);
     if (query.reaction) filter.reaction = query.reaction;
 

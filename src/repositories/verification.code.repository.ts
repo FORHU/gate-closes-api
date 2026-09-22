@@ -1,5 +1,9 @@
 import { ObjectId } from "mongodb";
-import { MVerificationCode, TVerificationCode, TVerificationCodeUpdateOptions} from "../models/verification.code.model";
+import {
+  MVerificationCode,
+  TVerificationCode,
+  TVerificationCodeUpdateOptions,
+} from "../models/verification.code.model";
 import { getDB } from "../utils/mongo";
 
 export default class VerificationCodeRepo {
@@ -49,10 +53,7 @@ export default class VerificationCodeRepo {
     if (data.attempts !== undefined) setFields.attempts = data.attempts;
     if (data.purpose !== undefined) setFields.purpose = data.purpose;
 
-    return this.collection().updateOne(
-      { _id: data._id },
-      { $set: setFields }
-    );
+    return this.collection().updateOne({ _id: data._id }, { $set: setFields });
   }
 
   static async delete(_id: string | ObjectId) {

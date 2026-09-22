@@ -41,22 +41,24 @@ export class MConversation implements Partial<TConversation> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({
-    _id = new ObjectId(),
-    type = "parallel_soul",
-    participants = [],
-    dmKey = "",
-    lastEventType = null,
-    lastEventAt = null,
-    lastEventActorId = null,
-    lastEventActorName = null,
-    lastEventPayload = null,
-    lastEventText = null,
-    lastReadAt = null,
-    hasUnread = false,
-    createdAt = new Date(),
-    updatedAt,
-  } = {} as TConversation) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      type = "parallel_soul",
+      participants = [],
+      dmKey = "",
+      lastEventType = null,
+      lastEventAt = null,
+      lastEventActorId = null,
+      lastEventActorName = null,
+      lastEventPayload = null,
+      lastEventText = null,
+      lastReadAt = null,
+      hasUnread = false,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TConversation
+  ) {
     this._id = _id;
     this.type = type;
     this.participants = participants;

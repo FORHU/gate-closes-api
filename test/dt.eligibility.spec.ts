@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { describe, it, afterEach } from "mocha";
 import { ObjectId } from "mongodb";
-import DtConversationSvc from "../src/services/dt.conversation.service";
+import ConversationSvc from "../src/services/conversation.service";
 import FlightTicketRepo from "../src/repositories/flight.ticket.repository";
-import DtConversationRepo from "../src/repositories/dt.conversation.repository";
+import ConversationRepo from "../src/repositories/conversation.repository";
 
-describe("DtConversationSvc (Destination Thread Eligibility)", () => {
+describe("DtConversationSvc (Destination Thread Eligibility via ConversationSvc)", () => {
   const originals: Array<() => void> = [];
   afterEach(() => {
     while (originals.length) originals.pop()!();
@@ -24,7 +24,8 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
 
   it("rejects conversation with self", async () => {
     try {
-      await DtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "destination_thread",
         requesterId: userA,
         otherUserId: userA,
       });
@@ -38,7 +39,8 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
     stub(FlightTicketRepo, "findActiveOrLatestByUserId", async () => null);
 
     try {
-      await DtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "destination_thread",
         requesterId: userA,
         otherUserId: userB,
       });
@@ -73,13 +75,16 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
     stub(FlightTicketRepo, "userHasSameDestination", async () => true);
 
     try {
-      await DtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "destination_thread",
         requesterId: userA,
         otherUserId: userB,
       });
       expect.fail("Should have thrown error");
     } catch (err: any) {
-      expect(err.message).to.equal("Users are from the same airport. Not eligible for destination threads.");
+      expect(err.message).to.equal(
+        "Users are from the same airport. Not eligible for destination threads."
+      );
     }
   });
 
@@ -98,7 +103,8 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
     stub(FlightTicketRepo, "userHasSameDestination", async () => true);
 
     try {
-      await DtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "destination_thread",
         requesterId: userA,
         otherUserId: userB,
       });
@@ -132,13 +138,16 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
     stub(FlightTicketRepo, "userHasSameDestination", async () => true);
 
     try {
-      await DtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "destination_thread",
         requesterId: userA,
         otherUserId: userB,
       });
       expect.fail("Should have thrown error");
     } catch (err: any) {
-      expect(err.message).to.equal("Users are not arriving within the destination thread window (24 hours).");
+      expect(err.message).to.equal(
+        "Users are not arriving within the destination thread window (24 hours)."
+      );
     }
   });
 
@@ -166,13 +175,16 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
     stub(FlightTicketRepo, "userHasSameDestination", async () => true);
 
     try {
-      await DtConversationSvc.createDm({
+      await ConversationSvc.createDm({
+        type: "destination_thread",
         requesterId: userA,
         otherUserId: userB,
       });
       expect.fail("Should have thrown error");
     } catch (err: any) {
-      expect(err.message).to.equal("Users are not arriving within the destination thread window (24 hours).");
+      expect(err.message).to.equal(
+        "Users are not arriving within the destination thread window (24 hours)."
+      );
     }
   });
 
@@ -198,18 +210,19 @@ describe("DtConversationSvc (Destination Thread Eligibility)", () => {
       };
     });
     stub(FlightTicketRepo, "userHasSameDestination", async () => true);
-    stub(DtConversationRepo, "findByDmKey", async () => null);
+    stub(ConversationRepo, "findByDmKey", async () => null);
 
     let insertedRecord: any = null;
-    stub(DtConversationRepo, "create", async (data: any) => {
+    stub(ConversationRepo, "create", async (data: any) => {
       insertedRecord = data;
       return { insertedId: new ObjectId("650000000000000000000050") };
     });
-    stub(DtConversationRepo, "collection", () => ({
+    stub(ConversationRepo, "collection", () => ({
       findOne: async (query: any) => ({ _id: query._id, ...insertedRecord }),
     }));
 
-    const result = await DtConversationSvc.createDm({
+    const result = await ConversationSvc.createDm({
+      type: "destination_thread",
       requesterId: userA,
       otherUserId: userB,
     });

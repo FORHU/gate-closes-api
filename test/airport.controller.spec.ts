@@ -97,7 +97,7 @@ describe("AirportCtrl", () => {
     });
 
     it("200s with the service result on success", async () => {
-      stub(AirportSvc, "checkInsideAirport", async () => ({ insideRadius: true } as any));
+      stub(AirportSvc, "checkInsideAirport", async () => ({ insideRadius: true }) as any);
       const res = mockRes();
 
       await AirportCtrl.checkInsideAirport({ query: { lat: "1", lng: "2" } } as any, res);
@@ -133,22 +133,20 @@ describe("AirportCtrl", () => {
       stub(AirportSvc, "checkInsideAirportByBoundary", async () => null);
       const res = mockRes();
 
-      await AirportCtrl.checkInsideAirportByBoundary(
-        { query: { lat: "1", lng: "2" } } as any,
-        res
-      );
+      await AirportCtrl.checkInsideAirportByBoundary({ query: { lat: "1", lng: "2" } } as any, res);
 
       expect(res.statusCode).to.equal(404);
     });
 
     it("200s with the matched airport", async () => {
-      stub(AirportSvc, "checkInsideAirportByBoundary", async () => ({ insideBoundary: true } as any));
+      stub(
+        AirportSvc,
+        "checkInsideAirportByBoundary",
+        async () => ({ insideBoundary: true }) as any
+      );
       const res = mockRes();
 
-      await AirportCtrl.checkInsideAirportByBoundary(
-        { query: { lat: "1", lng: "2" } } as any,
-        res
-      );
+      await AirportCtrl.checkInsideAirportByBoundary({ query: { lat: "1", lng: "2" } } as any, res);
 
       expect(res.statusCode).to.equal(200);
       expect(res.body).to.deep.equal({ data: { insideBoundary: true } });
@@ -158,10 +156,7 @@ describe("AirportCtrl", () => {
   describe("checkInsideSpecificAirport", () => {
     it("400s when airportName is missing", async () => {
       const res = mockRes();
-      await AirportCtrl.checkInsideSpecificAirport(
-        { query: { lat: "1", lng: "2" } } as any,
-        res
-      );
+      await AirportCtrl.checkInsideSpecificAirport({ query: { lat: "1", lng: "2" } } as any, res);
       expect(res.statusCode).to.equal(400);
     });
 
@@ -179,7 +174,9 @@ describe("AirportCtrl", () => {
       );
 
       expect(received).to.deep.equal({
-        airportName: "NAIA T1", lat: 14.5995, lng: 120.9842,
+        airportName: "NAIA T1",
+        lat: 14.5995,
+        lng: 120.9842,
       });
       expect(res.statusCode).to.equal(200);
     });
@@ -234,7 +231,14 @@ describe("AirportCtrl", () => {
 
   describe("crawl", () => {
     it("200s with the crawl summary on success", async () => {
-      const summary = { totalInSource: 1, eligible: 1, skippedOutOfScope: 0, skippedNoBoundary: 0, insertedCount: 1, skippedAlreadyStored: 0 };
+      const summary = {
+        totalInSource: 1,
+        eligible: 1,
+        skippedOutOfScope: 0,
+        skippedNoBoundary: 0,
+        insertedCount: 1,
+        skippedAlreadyStored: 0,
+      };
       stub(AirportSvc, "crawlFromAssetFile", async () => summary);
       const res = mockRes();
 

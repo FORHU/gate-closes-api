@@ -59,8 +59,12 @@ describe("ValidSessionMiddleware (Security Hardening)", () => {
     expect(jsonBody).to.deep.equal({ message: "Unauthorized" });
   });
 
-  it("should populate req.user and call next() when valid bearer token is provided", (done) => {
-    const token = createAccessToken({ userId: "650000000000000000000001", email: "test@example.com" });
+  it("should populate req.user and call next() when valid bearer token is provided", () => {
+    let nextCalled = false;
+    const token = createAccessToken({
+      userId: "650000000000000000000001",
+      email: "test@example.com",
+    });
 
     const req = {
       headers: {
@@ -71,11 +75,13 @@ describe("ValidSessionMiddleware (Security Hardening)", () => {
     const res = {} as unknown as Response;
 
     sessionMiddleware(req, res, () => {
-      expect((req as any).user).to.exist;
-      expect((req as any).user.userId).to.equal("650000000000000000000001");
-      expect((req as any).user.email).to.equal("test@example.com");
-      done();
+      nextCalled = true;
     });
+
+    expect(nextCalled).to.be.true;
+    expect((req as any).user).to.exist;
+    expect((req as any).user.userId).to.equal("650000000000000000000001");
+    expect((req as any).user.email).to.equal("test@example.com");
   });
 
   it("should return 401 when token is invalid or tampered", () => {
@@ -109,11 +115,9 @@ describe("ValidSessionMiddleware (Security Hardening)", () => {
     let status = 0;
     let jsonBody: any = null;
 
-    const expiredToken = jwt.sign(
-      { userId: "650000000000000000000001" },
-      ACCESS_TOKEN_SECRET,
-      { expiresIn: "-1s" }
-    );
+    const expiredToken = jwt.sign({ userId: "650000000000000000000001" }, ACCESS_TOKEN_SECRET, {
+      expiresIn: "-1s",
+    });
 
     const req = {
       headers: {

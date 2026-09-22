@@ -1,9 +1,6 @@
 import { ObjectId } from "mongodb";
 import { getDB } from "../utils/mongo";
-import {
-  MConversationMessage,
-  TConversationMessage,
-} from "../models/conversation.message.model";
+import { MConversationMessage, TConversationMessage } from "../models/conversation.message.model";
 
 export default class ConversationMessageRepo {
   static collection() {
@@ -122,26 +119,16 @@ export default class ConversationMessageRepo {
     return message ?? null;
   }
 
-  static async updateReaction(
-    messageId: ObjectId,
-    emoji: string,
-    delta: number
-  ) {
+  static async updateReaction(messageId: ObjectId, emoji: string, delta: number) {
     const field = `reactions.${emoji}`;
-    return this.collection().updateOne(
-      { _id: messageId },
-      [
-        {
-          $set: {
-            [field]: {
-              $max: [
-                0,
-                { $add: [{ $ifNull: [`$${field}`, 0] }, delta] },
-              ],
-            },
+    return this.collection().updateOne({ _id: messageId }, [
+      {
+        $set: {
+          [field]: {
+            $max: [0, { $add: [{ $ifNull: [`$${field}`, 0] }, delta] }],
           },
         },
-      ]
-    );
+      },
+    ]);
   }
 }

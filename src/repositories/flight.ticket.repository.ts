@@ -21,7 +21,10 @@ export default class FlightTicketRepo {
         departureDateTime: { $lte: now },
         $or: [
           { arrivalDateTime: { $gte: new Date(now.getTime() - 60 * 60 * 1000) } },
-          { arrivalDateTime: { $exists: false }, departureDateTime: { $gte: new Date(now.getTime() - 4 * 60 * 60 * 1000) } },
+          {
+            arrivalDateTime: { $exists: false },
+            departureDateTime: { $gte: new Date(now.getTime() - 4 * 60 * 60 * 1000) },
+          },
         ],
       },
       { sort: { departureDateTime: -1 } }
@@ -36,10 +39,7 @@ export default class FlightTicketRepo {
     if (upcoming) return upcoming;
 
     // 3. Historical fallback: latest past flight
-    const latest = await this.collection().findOne(
-      { userId },
-      { sort: { departureDateTime: -1 } }
-    );
+    const latest = await this.collection().findOne({ userId }, { sort: { departureDateTime: -1 } });
     return latest ?? null;
   }
 
@@ -62,7 +62,10 @@ export default class FlightTicketRepo {
             departureDateTime: { $lte: now },
             $or: [
               { arrivalDateTime: { $gte: new Date(now.getTime() - 60 * 60 * 1000) } },
-              { arrivalDateTime: { $exists: false }, departureDateTime: { $gte: new Date(now.getTime() - 4 * 60 * 60 * 1000) } },
+              {
+                arrivalDateTime: { $exists: false },
+                departureDateTime: { $gte: new Date(now.getTime() - 4 * 60 * 60 * 1000) },
+              },
             ],
           },
         },
@@ -120,7 +123,11 @@ export default class FlightTicketRepo {
     return map;
   }
 
-  static async findUserIdsByFlight(params: {flightNumber: string; departureDateTime: Date; excludeUserId?: ObjectId; }): Promise<ObjectId[]> {
+  static async findUserIdsByFlight(params: {
+    flightNumber: string;
+    departureDateTime: Date;
+    excludeUserId?: ObjectId;
+  }): Promise<ObjectId[]> {
     const { flightNumber, departureDateTime, excludeUserId } = params;
 
     const filter: Record<string, unknown> = { flightNumber, departureDateTime };
@@ -143,12 +150,12 @@ export default class FlightTicketRepo {
     return ids;
   }
 
-  static async userHasSameDestination(params: {userId: ObjectId; toAirport: string}): Promise<boolean> {
+  static async userHasSameDestination(params: {
+    userId: ObjectId;
+    toAirport: string;
+  }): Promise<boolean> {
     const { userId, toAirport } = params;
-    const doc = await this.collection().findOne(
-      { userId, toAirport },
-      { projection: { _id: 1 } }
-    );
+    const doc = await this.collection().findOne({ userId, toAirport }, { projection: { _id: 1 } });
     return !!doc;
   }
 
@@ -160,21 +167,20 @@ export default class FlightTicketRepo {
     }
   }
 
-static async updateByUserId(userId: ObjectId, updateData: Record<string, unknown>) {
+  static async updateByUserId(userId: ObjectId, updateData: Record<string, unknown>) {
+    const dataToUpdate = {
+      ...updateData,
+      updatedAt: new Date(),
+    };
 
-  const dataToUpdate = {
-    ...updateData,
-    updatedAt: new Date()
-  };
+    const result = await this.collection().findOneAndUpdate(
+      { userId },
+      { $set: dataToUpdate },
+      { returnDocument: "after" }
+    );
 
-  const result = await this.collection().findOneAndUpdate(
-    { userId },
-    { $set: dataToUpdate },
-    { returnDocument: "after" }
-  );
-
-  return result;
-}
+    return result;
+  }
 
   // Deletes ALL tickets for the user, not just the active/latest one —
   // findActiveOrLatestByUserId doesn't distinguish, so leaving older rows
@@ -183,6 +189,4 @@ static async updateByUserId(userId: ObjectId, updateData: Record<string, unknown
   static async deleteAllByUserId(userId: ObjectId) {
     return this.collection().deleteMany({ userId });
   }
-
 }
-

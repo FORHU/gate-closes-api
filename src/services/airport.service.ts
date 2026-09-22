@@ -1,11 +1,7 @@
-import {
-  getAirportByIata,
-  getAirportByIcao,
-  findNearbyAirports,
-} from "airport-data-js";
+import { getAirportByIata, getAirportByIcao, findNearbyAirports } from "airport-data-js";
 import * as turf from "@turf/turf";
 import { ObjectId } from "mongodb";
-import * as fs from "fs";
+import fs from "fs";
 import * as path from "path";
 import AirportRepo from "../repositories/airport.repository";
 import { TAirport } from "../models/airport.model";
@@ -34,12 +30,7 @@ type CrawlAirport = {
   radiusKm?: number;
 };
 
-const AIRPORT_CRAWL_FILE = path.join(
-  __dirname,
-  "..",
-  "assets",
-  "gate-closes.airport.json"
-);
+const AIRPORT_CRAWL_FILE = path.join(__dirname, "..", "assets", "gate-closes.airport.json");
 const AIRPORT_CRAWL_BATCH_SIZE = 500;
 const AIRPORT_CRAWL_ELIGIBLE_TYPES = ["large_airport", "medium_airport"];
 const AIRPORT_SEARCH_LIMIT = 5;
@@ -82,25 +73,13 @@ export default class AirportSvc {
   }
 
   // Fetch nearby airports from airport-data-js, persist them, and return mapped records
-  static async findNearbyAndStore(
-    lat: number,
-    lng: number,
-    radiusKm: number
-  ): Promise<TAirport[]> {
-    const rawAirports = (await findNearbyAirports(
-      lat,
-      lng,
-      radiusKm
-    )) as RawAirport[];
+  static async findNearbyAndStore(lat: number, lng: number, radiusKm: number): Promise<TAirport[]> {
+    const rawAirports = (await findNearbyAirports(lat, lng, radiusKm)) as RawAirport[];
 
-    const mappedAirports: TAirport[] = rawAirports.map((a) =>
-      this.mapRawAirport(a)
-    );
+    const mappedAirports: TAirport[] = rawAirports.map((a) => this.mapRawAirport(a));
 
     await Promise.all(
-      mappedAirports.map(async (airport) =>
-        AirportRepo.upsertByIataOrIcao(airport)
-      )
+      mappedAirports.map(async (airport) => AirportRepo.upsertByIataOrIcao(airport))
     );
 
     return mappedAirports;
@@ -138,10 +117,7 @@ export default class AirportSvc {
     return AirportRepo.findNearestWithDistance(params);
   }
 
-  static async checkInsideAirportByBoundary(params: {
-    lat: number;
-    lng: number;
-  }) {
+  static async checkInsideAirportByBoundary(params: { lat: number; lng: number }) {
     const { lat, lng } = params;
     const airport = await AirportRepo.findInsideBoundary({ lat, lng });
     if (!airport) return null;
@@ -155,7 +131,11 @@ export default class AirportSvc {
     };
   }
 
-  static async checkInsideSpecificAirport(params: {lat: number; lng: number; airportName: string;}) {
+  static async checkInsideSpecificAirport(params: {
+    lat: number;
+    lng: number;
+    airportName: string;
+  }) {
     return AirportRepo.findNearestForAirport(params);
   }
 
@@ -243,8 +223,7 @@ export default class AirportSvc {
 
     for (const airport of airports) {
       const hasBoundary =
-        airport?.boundary?.type === "Polygon" &&
-        Array.isArray(airport?.boundary?.coordinates);
+        airport?.boundary?.type === "Polygon" && Array.isArray(airport?.boundary?.coordinates);
 
       if (hasBoundary && !force) {
         skippedCount += 1;
@@ -294,8 +273,7 @@ export default class AirportSvc {
     const features = airports
       .filter(
         (airport) =>
-          airport?.boundary?.type === "Polygon" &&
-          Array.isArray(airport?.boundary?.coordinates)
+          airport?.boundary?.type === "Polygon" && Array.isArray(airport?.boundary?.coordinates)
       )
       .map((airport) => ({
         type: "Feature" as const,
@@ -311,22 +289,18 @@ export default class AirportSvc {
       type: "FeatureCollection" as const,
       features,
     };
-    
+
     await RedisUtil.setJson(cacheKey, geojson, { ttlSeconds: 60 * 10 });
     return geojson;
   }
 
-  private static toStringOrNull(
-    value?: string | number
-  ): string | null | undefined {
+  private static toStringOrNull(value?: string | number): string | null | undefined {
     if (value === undefined) return undefined;
     const trimmed = String(value).trim();
     return trimmed === "" ? null : trimmed;
   }
 
-  private static toNumberOrNull(
-    value?: string | number
-  ): number | null | undefined {
+  private static toNumberOrNull(value?: string | number): number | null | undefined {
     if (value === undefined) return undefined;
     const trimmed = String(value).trim();
     if (trimmed === "") return null;
@@ -342,10 +316,7 @@ export default class AirportSvc {
     const runwayLength = this.toNumberOrNull(a.runway_length);
 
     const location =
-      latitude !== undefined &&
-      latitude !== null &&
-      longitude !== undefined &&
-      longitude !== null
+      latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null
         ? {
             type: "Point" as const,
             coordinates: [longitude, latitude] as [number, number],
@@ -363,12 +334,8 @@ export default class AirportSvc {
         : undefined;
 
     const airport: TAirport = {
-      iata: a.iata
-        ? this.toStringOrNull(a.iata.toUpperCase()) ?? null
-        : undefined,
-      icao: a.icao
-        ? this.toStringOrNull(a.icao.toUpperCase()) ?? null
-        : undefined,
+      iata: a.iata ? (this.toStringOrNull(a.iata.toUpperCase()) ?? null) : undefined,
+      icao: a.icao ? (this.toStringOrNull(a.icao.toUpperCase()) ?? null) : undefined,
       time: this.toStringOrNull(a.time),
       countryCode: this.toStringOrNull(a.country_code),
       continent: this.toStringOrNull(a.continent),
@@ -390,10 +357,7 @@ export default class AirportSvc {
     return airport;
   }
 
-  private static inferRadiusKm(
-    type?: string,
-    runwayLength?: number
-  ): number | undefined {
+  private static inferRadiusKm(type?: string, runwayLength?: number): number | undefined {
     if (type === "large_airport") return 15;
     if (type === "medium_airport") return 8;
     if (type === "small_airport") return 4;
@@ -407,4 +371,3 @@ export default class AirportSvc {
     return undefined;
   }
 }
-

@@ -8,7 +8,7 @@ const IN_FLIGHT_LOCK_TTL_SECONDS = 30; // 30 seconds
 interface CachedResponse {
   statusCode: number;
   headers?: Record<string, string>;
-  body: any;
+  body: unknown;
 }
 
 /**
@@ -40,7 +40,8 @@ export function idempotencyMiddleware(req: Request, res: Response, next: NextFun
       if (cached) {
         if ("inFlight" in cached && cached.inFlight) {
           res.status(409).json({
-            message: "A request with this idempotency key is currently being processed. Please retry shortly.",
+            message:
+              "A request with this idempotency key is currently being processed. Please retry shortly.",
           });
           return;
         }
@@ -52,11 +53,15 @@ export function idempotencyMiddleware(req: Request, res: Response, next: NextFun
       }
 
       // Mark as in-flight
-      await RedisUtil.setJson(redisKey, { inFlight: true }, { ttlSeconds: IN_FLIGHT_LOCK_TTL_SECONDS });
+      await RedisUtil.setJson(
+        redisKey,
+        { inFlight: true },
+        { ttlSeconds: IN_FLIGHT_LOCK_TTL_SECONDS }
+      );
 
       // Intercept res.json to cache on success
       const originalJson = res.json.bind(res);
-      res.json = (body: any): Response => {
+      res.json = (body: unknown): Response => {
         // Only cache successful 2xx responses
         if (res.statusCode >= 200 && res.statusCode < 300) {
           void RedisUtil.setJson(

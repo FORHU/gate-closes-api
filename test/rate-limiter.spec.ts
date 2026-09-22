@@ -29,9 +29,7 @@ describe("Rate Limiting & Correlation Middleware", () => {
 
     it("should preserve incoming X-Request-Id header when provided", async () => {
       const customId = "client-trace-12345";
-      const res = await request(app)
-        .get("/test-request-id")
-        .set("X-Request-Id", customId);
+      const res = await request(app).get("/test-request-id").set("X-Request-Id", customId);
 
       expect(res.status).to.equal(200);
       expect(res.headers["x-request-id"]).to.equal(customId);

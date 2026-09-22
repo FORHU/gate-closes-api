@@ -1,4 +1,4 @@
-import { Document, ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 import { getDB } from "../utils/mongo";
 import { MConversation, TConversation } from "../models/conversation.model";
 import { ConversationType } from "../domain/conversation/conversation.types";
@@ -58,10 +58,7 @@ export default class ConversationRepo {
               { $ne: ["$lastEventAt", null] },
               { $ne: ["$lastEventActorId", userId] },
               {
-                $or: [
-                  { $eq: ["$lastReadAt", null] },
-                  { $gt: ["$lastEventAt", "$lastReadAt"] },
-                ],
+                $or: [{ $eq: ["$lastReadAt", null] }, { $gt: ["$lastEventAt", "$lastReadAt"] }],
               },
             ],
           },

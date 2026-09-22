@@ -19,7 +19,7 @@ export default class HealthController {
    * Readiness Probe: Deep check verifying critical dependencies (MongoDB, Redis, Sockets)
    */
   static async getReadiness(req: Request, res: Response): Promise<void> {
-    let mongoStatus: "up" | "down" = "down";
+    let mongoStatus: "up" | "down";
     try {
       const db = getDB();
       await db.command({ ping: 1 });
@@ -28,7 +28,7 @@ export default class HealthController {
       mongoStatus = "down";
     }
 
-    let redisStatus: "up" | "down" | "not_initialized" = "not_initialized";
+    let redisStatus: "up" | "down" | "not_initialized";
     try {
       const redisClient = RedisUtil.useConnection();
       if (redisClient?.isOpen) {

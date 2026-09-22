@@ -1,5 +1,9 @@
 import { ObjectId } from "mongodb";
-import { MTerminalEcho, TTerminalEcho, TTerminalEchoUpdateOptions } from "../models/terminal.echo.model";
+import {
+  MTerminalEcho,
+  TTerminalEcho,
+  TTerminalEchoUpdateOptions,
+} from "../models/terminal.echo.model";
 import type { TerminalEchoMapBounds } from "../const";
 import { getDB } from "../utils/mongo";
 

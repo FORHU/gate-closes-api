@@ -74,7 +74,8 @@ export default class TerminalEchoReplyCtrl {
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
-    const { terminalEchoId, fileUrl, fileName, textMessage, audioDuration, waveformData } = req.body;
+    const { terminalEchoId, fileUrl, fileName, textMessage, audioDuration, waveformData } =
+      req.body;
 
     const schema = Joi.object({
       terminalEchoId: Joi.string().hex().length(24).required(),
@@ -134,10 +135,12 @@ export default class TerminalEchoReplyCtrl {
 
       // Targeted broadcast: only clients currently viewing THIS exact
       // thread need the full reply content.
-      io.of("/terminal-echo").to(`thread:${value.terminalEchoId}`).emit("terminal_echo_reply:created", {
-        terminalEchoId: value.terminalEchoId,
-        reply: fullReply,
-      });
+      io.of("/terminal-echo")
+        .to(`thread:${value.terminalEchoId}`)
+        .emit("terminal_echo_reply:created", {
+          terminalEchoId: value.terminalEchoId,
+          reply: fullReply,
+        });
 
       // Broad broadcast: every connected client (feed, map, wherever)
       // needs to know this echo's reply count went up, even if they're
@@ -252,9 +255,7 @@ export default class TerminalEchoReplyCtrl {
 
     const schema = Joi.object({
       id: Joi.string().hex().length(24).required(),
-      reaction: Joi.string()
-        .valid("like", "love", "haha", "wow", "sad", "angry")
-        .required(),
+      reaction: Joi.string().valid("like", "love", "haha", "wow", "sad", "angry").required(),
     });
 
     const { error, value } = schema.validate({ id, reaction });
@@ -289,12 +290,14 @@ export default class TerminalEchoReplyCtrl {
           JSON.stringify(result)
         );
       } else {
-        io.of("/terminal-echo").to(`thread:${terminalEchoId}`).emit("terminal_echo_reply:reaction_updated", {
-          replyId: value.id,
-          reactionKey: value.reaction,
-          action: result?.action ?? "increment",
-          triggeredByUserId: userId,
-        });
+        io.of("/terminal-echo")
+          .to(`thread:${terminalEchoId}`)
+          .emit("terminal_echo_reply:reaction_updated", {
+            replyId: value.id,
+            reactionKey: value.reaction,
+            action: result?.action ?? "increment",
+            triggeredByUserId: userId,
+          });
       }
     } catch (broadcastErr) {
       console.warn(

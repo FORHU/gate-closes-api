@@ -2,9 +2,8 @@ import { Request, Response } from "express";
 import Joi from "joi";
 import AirportSvc from "../services/airport.service";
 import { getErrorMessage } from "../utils/error.util";
-    
-export default class AirportCtrl {
 
+export default class AirportCtrl {
   // GET /airport/search?q=ninoy
   static async searchByName(req: Request, res: Response) {
     const { q } = req.query;
@@ -159,10 +158,7 @@ export default class AirportCtrl {
       force: Joi.boolean().optional(),
     });
 
-    const { error, value } = schema.validate(
-      { force },
-      { convert: true }
-    );
+    const { error, value } = schema.validate({ force }, { convert: true });
 
     if (error) {
       return res.status(400).json({ message: error.message });

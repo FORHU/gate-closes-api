@@ -18,7 +18,14 @@ export class MFsConversation implements Partial<TFsConversation> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({ _id = new ObjectId(), sovereignFutureSignalId, createdAt = new Date(), updatedAt } = {} as TFsConversation) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      sovereignFutureSignalId,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TFsConversation
+  ) {
     this._id = _id;
     this.sovereignFutureSignalId = sovereignFutureSignalId;
     this.createdAt = createdAt;

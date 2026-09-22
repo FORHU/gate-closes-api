@@ -37,4 +37,3 @@ export default class FileRepo {
     return this.collection().updateOne({ _id: file._id }, { $set: setFields });
   }
 }
-

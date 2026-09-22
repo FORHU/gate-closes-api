@@ -24,7 +24,16 @@ export class MFsConversationMessage implements Partial<TFsConversationMessage> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({ _id = new ObjectId(), fsSenderId, fsConversationId, audioUrl = "", createdAt = new Date(), updatedAt } = {} as TFsConversationMessage) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      fsSenderId,
+      fsConversationId,
+      audioUrl = "",
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TFsConversationMessage
+  ) {
     this._id = _id;
     this.fsSenderId = fsSenderId;
     this.fsConversationId = fsConversationId;

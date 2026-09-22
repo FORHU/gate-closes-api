@@ -41,7 +41,12 @@ describe("AirportRepo", () => {
       expect(capturedFilter.airport.source).to.equal("a\\.b\\+c");
       expect(capturedFilter.airport.flags).to.equal("i");
       expect(capturedOptions.projection).to.deep.equal({
-        _id: 0, airport: 1, iata: 1, icao: 1, countryCode: 1, location: 1,
+        _id: 0,
+        airport: 1,
+        iata: 1,
+        icao: 1,
+        countryCode: 1,
+        location: 1,
       });
     });
 
@@ -295,7 +300,9 @@ describe("AirportRepo", () => {
       });
 
       await AirportRepo.findNearestForAirport({
-        lat: 14.5995, lng: 120.9842, airportName: "NAIA Terminal 1",
+        lat: 14.5995,
+        lng: 120.9842,
+        airportName: "NAIA Terminal 1",
       });
 
       const geoNear = capturedPipeline[0].$geoNear;

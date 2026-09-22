@@ -32,10 +32,7 @@ export default class AuthController {
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Server error.";
-      const status =
-        message === "Email already registered."
-          ? 400
-          : 500;
+      const status = message === "Email already registered." ? 400 : 500;
       return res.status(status).json({ message });
     }
   }
@@ -86,9 +83,7 @@ export default class AuthController {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Server error.";
       const status =
-        message.startsWith("Invalid step.") || message === "Email not verified."
-          ? 400
-          : 500;
+        message.startsWith("Invalid step.") || message === "Email not verified." ? 400 : 500;
       return res.status(status).json({ message });
     }
   }
@@ -214,7 +209,9 @@ export default class AuthController {
     const { userId, username, gender } = req.body;
     const schema = Joi.object({
       userId: Joi.string().required(),
-      username: Joi.string().pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/).required(),
+      username: Joi.string()
+        .pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/)
+        .required(),
       gender: Joi.string().valid("Male", "Female").required(),
     });
     const { error, value } = schema.validate({ userId, username, gender });
@@ -251,7 +248,7 @@ export default class AuthController {
     try {
       const { user, accessToken, refreshToken, requiresProfileCompletion } =
         await UserAuthSvc.loginWithEmailPassword(value.email, value.password);
-      
+
       let responseMessage = "Login successful.";
       if (!user.signupCompleted) {
         responseMessage = "Please complete signup to continue.";
@@ -274,8 +271,8 @@ export default class AuthController {
         message === "Signup not completed. Complete all steps to log in."
           ? 401
           : message === "This account uses Google sign-in. Please log in with Google."
-          ? 400
-          : 500;
+            ? 400
+            : 500;
       return res.status(status).json({ message });
     }
   }
@@ -302,7 +299,7 @@ export default class AuthController {
 
   static async loginOrRegisterGoogle(req: Request, res: Response) {
     const { idToken } = req.body;
-    const schema = Joi.object({ 
+    const schema = Joi.object({
       idToken: Joi.string().required(),
     });
     const { error, value } = schema.validate({ idToken });
@@ -313,7 +310,7 @@ export default class AuthController {
     try {
       const { user, accessToken, refreshToken, requiresProfileCompletion } =
         await UserAuthSvc.loginOrRegisterGoogle(value.idToken);
-      
+
       if (!user) {
         return res.status(500).json({ message: "Failed to retrieve user data." });
       }
@@ -380,7 +377,9 @@ export default class AuthController {
     const userId = req.user?.userId as string;
     const { username } = req.body;
     const schema = Joi.object({
-      username: Joi.string().pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/).required(),
+      username: Joi.string()
+        .pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/)
+        .required(),
     });
     const { error, value } = schema.validate({ username });
     if (error) {
@@ -434,7 +433,9 @@ export default class AuthController {
   static async editProfile(req: Request, res: Response) {
     const userId = req.user?.userId as string;
     const schema = Joi.object({
-      username: Joi.string().pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/).optional(),
+      username: Joi.string()
+        .pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/)
+        .optional(),
       gender: Joi.string().valid("Male", "Female").optional(),
     }).min(1);
     const { error, value } = schema.validate(req.body, { stripUnknown: true });

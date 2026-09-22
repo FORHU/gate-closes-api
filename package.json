@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "nodemon --watch *.ts --exec ts-node --files ./src/server.ts",
     "lint": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\" \"test/**/*.{ts,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"test/**/*.{ts,js,json}\"",
     "test": "NODE_ENV=development mocha --require ts-node/register 'test/**/*.spec.ts'",
+    "test:mocha": "mocha --require ts-node/register --exit 'test/**/*.spec.ts'",
+    "test:vitest": "vitest run",
     "build": "tsc && npm run copy-assets",
     "copy-assets": "node -e \"require('fs').cpSync('src/assets', 'dist/assets', { recursive: true })\"",
     "start": "node ./dist/server.js",
@@ -68,6 +72,7 @@
     "prettier": "^3.0.3",
     "supertest": "^6.3.3",
     "ts-node": "^10.9.1",
-    "typescript-eslint": "^8.65.0"
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^3.2.7"
   }
 }

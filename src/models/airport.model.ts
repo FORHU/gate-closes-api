@@ -69,29 +69,31 @@ export class MAirport implements Partial<TAirport> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({
-    _id = new ObjectId(),
-    iata,
-    icao,
-    time,
-    countryCode,
-    continent,
-    airport,
-    elevation,
-    type,
-    scheduledService,
-    wikipedia,
-    website,
-    runwayLength,
-    flightradar24Url,
-    radarboxUrl,
-    flightawareUrl,
-    location,
-    boundary,
-    radiusKm,
-    createdAt = new Date(),
-    updatedAt,
-  } = {} as TAirport) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      iata,
+      icao,
+      time,
+      countryCode,
+      continent,
+      airport,
+      elevation,
+      type,
+      scheduledService,
+      wikipedia,
+      website,
+      runwayLength,
+      flightradar24Url,
+      radarboxUrl,
+      flightawareUrl,
+      location,
+      boundary,
+      radiusKm,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TAirport
+  ) {
     this._id = _id;
     this.iata = iata;
     this.icao = icao;
@@ -115,4 +117,3 @@ export class MAirport implements Partial<TAirport> {
     this.updatedAt = updatedAt;
   }
 }
-

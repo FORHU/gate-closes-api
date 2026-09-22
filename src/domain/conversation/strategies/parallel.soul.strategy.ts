@@ -1,8 +1,4 @@
-import {
-  EligibilityContext,
-  EligibilityResult,
-  IEligibilityStrategy,
-} from "../conversation.types";
+import { EligibilityContext, EligibilityResult, IEligibilityStrategy } from "../conversation.types";
 
 export class ParallelSoulStrategy implements IEligibilityStrategy {
   async checkEligibility(context: EligibilityContext): Promise<EligibilityResult> {
@@ -33,17 +29,14 @@ export class ParallelSoulStrategy implements IEligibilityStrategy {
     }
 
     const sameRoute =
-      myTicket.fromAirport.trim().toUpperCase() ===
-        otherTicket.fromAirport.trim().toUpperCase() &&
-      myTicket.toAirport.trim().toUpperCase() ===
-        otherTicket.toAirport.trim().toUpperCase();
+      myTicket.fromAirport.trim().toUpperCase() === otherTicket.fromAirport.trim().toUpperCase() &&
+      myTicket.toAirport.trim().toUpperCase() === otherTicket.toAirport.trim().toUpperCase();
 
     if (!sameRoute) {
       return {
         eligible: false,
         reason: "DIFFERENT_ROUTE",
-        message:
-          "Users are not traveling the same route to be eligible for Parallel Soul.",
+        message: "Users are not traveling the same route to be eligible for Parallel Soul.",
       };
     }
 

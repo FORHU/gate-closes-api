@@ -13,9 +13,7 @@ export default class RedisUtil {
     });
 
     this.redisClient.on("ready", () => {
-      console.log(
-        `[RedisUtil] Connected to Redis at ${REDIS_HOST}:${REDIS_PORT}`
-      );
+      console.log(`[RedisUtil] Connected to Redis at ${REDIS_HOST}:${REDIS_PORT}`);
     });
 
     this.redisClient.on("error", (err) => {
@@ -39,11 +37,7 @@ export default class RedisUtil {
     }
   }
 
-  static async setJson(
-    key: string,
-    value: unknown,
-    opts?: { ttlSeconds?: number }
-  ) {
+  static async setJson(key: string, value: unknown, opts?: { ttlSeconds?: number }) {
     const ttlSeconds = opts?.ttlSeconds;
     const payload = JSON.stringify(value);
     if (ttlSeconds && ttlSeconds > 0) {

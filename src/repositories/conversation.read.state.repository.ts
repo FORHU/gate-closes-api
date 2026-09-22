@@ -33,10 +33,7 @@ export default class ConversationReadStateRepo {
     );
   }
 
-  static async findOneByConversationAndUser(
-    conversationId: ObjectId,
-    userId: ObjectId
-  ) {
+  static async findOneByConversationAndUser(conversationId: ObjectId, userId: ObjectId) {
     return this.collection().findOne({
       conversationId,
       userId,

@@ -44,7 +44,24 @@ export class MFlightTicket implements Partial<TFlightTicket> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), userId, flightNumber = "", fromAirport = "", toAirport = "", fromAirportName = null, toAirportName = null, fromCountry = null, toCountry = null, departureDateTime, arrivalDateTime, returnDateTime, createdAt = new Date(), updatedAt} = {} as TFlightTicket) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      userId,
+      flightNumber = "",
+      fromAirport = "",
+      toAirport = "",
+      fromAirportName = null,
+      toAirportName = null,
+      fromCountry = null,
+      toCountry = null,
+      departureDateTime,
+      arrivalDateTime,
+      returnDateTime,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TFlightTicket
+  ) {
     this._id = _id;
     this.userId = userId;
     this.flightNumber = flightNumber;

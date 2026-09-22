@@ -5,7 +5,7 @@ export type TTerminalEcho = {
   senderId: ObjectId;
   fileId?: ObjectId;
   textMessage?: string;
-  location?: { type: "Point", coordinates: [number, number]};
+  location?: { type: "Point"; coordinates: [number, number] };
   airportName?: string;
   airportIata?: string;
   countListens?: number;
@@ -24,7 +24,7 @@ export type TTerminalEchoUpdateOptions = {
   senderId: ObjectId | string;
   fileId?: ObjectId | string;
   textMessage?: string;
-  location?: { type: "Point", coordinates: [number, number]};
+  location?: { type: "Point"; coordinates: [number, number] };
   airportName?: string;
   airportIata?: string;
   countListens?: number;
@@ -41,7 +41,7 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
   senderId: ObjectId;
   fileId?: ObjectId;
   textMessage?: string;
-  location?: { type: "Point", coordinates: [number, number] };
+  location?: { type: "Point"; coordinates: [number, number] };
   airportName?: string;
   airportIata?: string;
   countListens?: number;
@@ -54,7 +54,26 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({_id = new ObjectId(), senderId, fileId, textMessage = "", location = { type: "Point", coordinates: [0, 0] }, airportName = "", airportIata = "", countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt} = {} as TTerminalEcho) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      senderId,
+      fileId,
+      textMessage = "",
+      location = { type: "Point", coordinates: [0, 0] },
+      airportName = "",
+      airportIata = "",
+      countListens = 0,
+      countReactLike = 0,
+      countReactLove = 0,
+      countReactHaha = 0,
+      countReactWow = 0,
+      countReactSad = 0,
+      countReactAngry = 0,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TTerminalEcho
+  ) {
     this._id = _id;
     this.senderId = senderId;
     this.fileId = fileId;

@@ -1,8 +1,4 @@
-import {
-  EligibilityContext,
-  EligibilityResult,
-  IEligibilityStrategy,
-} from "../conversation.types";
+import { EligibilityContext, EligibilityResult, IEligibilityStrategy } from "../conversation.types";
 
 export class DestinationThreadStrategy implements IEligibilityStrategy {
   private readonly windowMs: number;
@@ -56,8 +52,7 @@ export class DestinationThreadStrategy implements IEligibilityStrategy {
       return {
         eligible: false,
         reason: "SAME_ORIGIN",
-        message:
-          "Users are from the same airport. Not eligible for destination threads.",
+        message: "Users are from the same airport. Not eligible for destination threads.",
       };
     }
 
@@ -81,13 +76,13 @@ export class DestinationThreadStrategy implements IEligibilityStrategy {
     const authArrival = myTicket.arrivalDateTime
       ? new Date(myTicket.arrivalDateTime)
       : myTicket.departureDateTime
-      ? new Date(myTicket.departureDateTime)
-      : null;
+        ? new Date(myTicket.departureDateTime)
+        : null;
     const otherArrival = otherTicket.arrivalDateTime
       ? new Date(otherTicket.arrivalDateTime)
       : otherTicket.departureDateTime
-      ? new Date(otherTicket.departureDateTime)
-      : null;
+        ? new Date(otherTicket.departureDateTime)
+        : null;
 
     if (
       !authArrival ||
@@ -106,8 +101,7 @@ export class DestinationThreadStrategy implements IEligibilityStrategy {
       return {
         eligible: false,
         reason: "OUTSIDE_TIME_WINDOW",
-        message:
-          "Users are not arriving within the destination thread window (24 hours).",
+        message: "Users are not arriving within the destination thread window (24 hours).",
       };
     }
 

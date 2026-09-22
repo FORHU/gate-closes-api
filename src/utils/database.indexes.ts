@@ -68,7 +68,9 @@ export const TARGET_DATABASE_INDEXES: IndexDefinition[] = [
  * Ensures all target database indexes exist in MongoDB.
  * Idempotent: safe to run on every startup or as an explicit CLI task.
  */
-export async function ensureDatabaseIndexes(db: Db): Promise<{ created: string[]; errors: string[] }> {
+export async function ensureDatabaseIndexes(
+  db: Db
+): Promise<{ created: string[]; errors: string[] }> {
   const created: string[] = [];
   const errors: string[] = [];
 
