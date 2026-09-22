@@ -8,6 +8,7 @@ import setup from "./setup";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use(
   })
 );
 
+app.use(cookieParser());
 app.use(express.json());
 
 // Set up security headers

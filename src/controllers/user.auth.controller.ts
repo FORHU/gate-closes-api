@@ -5,6 +5,12 @@ import UserAuthSvc from "../services/user.auth.service";
 import UserRepo from "../repositories/user.repository";
 import { verifyRefreshToken, createAccessToken, createRefreshToken } from "../utils/jwt";
 import { passwordSchema } from "../utils/password.validator";
+import { getSessionCookieOptions, getRefreshCookieOptions, getClearCookieOptions } from "../config";
+
+function isWebClient(req: Request): boolean {
+  const client = (req.headers?.["x-client-type"] || req.query?.client || "") as string;
+  return typeof client === "string" && client.trim().toLowerCase() === "web";
+}
 
 export default class AuthController {
   /** SignupStep1: Send OTP to email (and verify email ownership request). */
@@ -256,6 +262,17 @@ export default class AuthController {
         responseMessage = "Login successful. Please complete your profile.";
       }
 
+      const isWeb = isWebClient(req);
+      if (isWeb) {
+        res.cookie("session_token", accessToken, getSessionCookieOptions());
+        res.cookie("refresh_token", refreshToken, getRefreshCookieOptions());
+        return res.status(200).json({
+          message: responseMessage,
+          user,
+          requiresProfileCompletion,
+        });
+      }
+
       return res.status(200).json({
         message: responseMessage,
         user,
@@ -278,19 +295,27 @@ export default class AuthController {
   }
 
   static async refresh(req: Request, res: Response) {
-    const { refreshToken } = req.body;
-    const schema = Joi.object({
-      refreshToken: Joi.string().required(),
-    });
-    const { error, value } = schema.validate({ refreshToken });
-    if (error) {
-      return res.status(400).json({ message: error.message });
+    const isWeb = isWebClient(req);
+    const cookieRefreshToken = req.cookies?.refresh_token;
+    const bodyRefreshToken = req.body?.refreshToken;
+
+    const tokenToRefresh = isWeb ? cookieRefreshToken || bodyRefreshToken : bodyRefreshToken;
+
+    if (!tokenToRefresh || typeof tokenToRefresh !== "string") {
+      return res.status(400).json({ message: "Refresh token is required." });
     }
 
     try {
-      const payload = verifyRefreshToken(value.refreshToken);
+      const payload = verifyRefreshToken(tokenToRefresh);
       const accessToken = createAccessToken({ userId: payload.userId, email: payload.email });
       const newRefreshToken = createRefreshToken({ userId: payload.userId, email: payload.email });
+
+      if (isWeb) {
+        res.cookie("session_token", accessToken, getSessionCookieOptions());
+        res.cookie("refresh_token", newRefreshToken, getRefreshCookieOptions());
+        return res.status(200).json({ message: "Session refreshed." });
+      }
+
       return res.status(200).json({ accessToken, refreshToken: newRefreshToken });
     } catch {
       return res.status(401).json({ message: "Invalid or expired refresh token." });
@@ -318,6 +343,17 @@ export default class AuthController {
       let responseMessage = "Google login successful.";
       if (!user.isCompleteProfile) {
         responseMessage = "Google login successful. Please complete your profile.";
+      }
+
+      const isWeb = isWebClient(req);
+      if (isWeb) {
+        res.cookie("session_token", accessToken, getSessionCookieOptions());
+        res.cookie("refresh_token", refreshToken, getRefreshCookieOptions());
+        return res.status(200).json({
+          message: responseMessage,
+          user,
+          requiresProfileCompletion,
+        });
       }
 
       return res.status(200).json({
@@ -472,5 +508,12 @@ export default class AuthController {
     } catch {
       return res.status(500).json({ message: "Server error." });
     }
+  }
+
+  /** Logout: Clears session and refresh cookies. */
+  static async logout(req: Request, res: Response) {
+    res.clearCookie("session_token", getClearCookieOptions());
+    res.clearCookie("refresh_token", getClearCookieOptions());
+    return res.status(200).json({ message: "Logged out successfully." });
   }
 }

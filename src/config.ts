@@ -39,6 +39,36 @@ export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
       "http://localhost:3001",
     ];
 
+export const COOKIE_SAME_SITE = (process.env.COOKIE_SAME_SITE || "lax").toLowerCase() as
+  | "lax"
+  | "strict"
+  | "none";
+export const COOKIE_SECURE =
+  process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
+
+export const getSessionCookieOptions = () => ({
+  httpOnly: true,
+  secure: COOKIE_SECURE,
+  sameSite: COOKIE_SAME_SITE,
+  path: "/",
+  maxAge: 15 * 60 * 1000, // 15 minutes
+});
+
+export const getRefreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: COOKIE_SECURE,
+  sameSite: COOKIE_SAME_SITE,
+  path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (matches REFRESH_TOKEN_EXPIRY)
+});
+
+export const getClearCookieOptions = () => ({
+  httpOnly: true,
+  secure: COOKIE_SECURE,
+  sameSite: COOKIE_SAME_SITE,
+  path: "/",
+});
+
 if (!isDev) {
   const insecureSecrets: string[] = [];
   if (!ACCESS_TOKEN_SECRET || ACCESS_TOKEN_SECRET === "dev-access-secret")

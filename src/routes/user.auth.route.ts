@@ -21,6 +21,7 @@ router.post("/reset-password", authRateLimiter, AuthController.resetPassword);
 // Login flow
 router.post("/login", authRateLimiter, AuthController.login);
 router.post("/refresh", authRateLimiter, AuthController.refresh);
+router.post("/logout", AuthController.logout);
 router.post("/login-or-register-google", authRateLimiter, AuthController.loginOrRegisterGoogle);
 
 // Session (protected)
