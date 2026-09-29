@@ -4,6 +4,23 @@ import { TAirport } from "../models/airport.model";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import AirportRepo from "../repositories/airport.repository";
 
+/**
+ * True when `err` is a MongoDB duplicate-key error (E11000) raised by the
+ * unique partial index on (userId, idempotencyKey) (see database.indexes.ts)
+ * — as opposed to some other error, or some other unique index that might
+ * exist on this collection in the future. Checked structurally (code +
+ * keyPattern/message) rather than via `instanceof MongoServerError` so a
+ * plain stubbed error object works in tests without depending on the
+ * mongodb driver's error classes.
+ */
+function isIdempotencyKeyDuplicateError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as { code?: number; keyPattern?: Record<string, unknown>; message?: string };
+  if (e.code !== 11000) return false;
+  if (e.keyPattern) return "idempotencyKey" in e.keyPattern;
+  return typeof e.message === "string" && e.message.includes("idempotencyKey");
+}
+
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -100,6 +117,39 @@ export default class FlightTicketSvc {
   static async create(ticket: TFlightTicket) {
     const doc: TFlightTicket = { ...ticket };
 
+    // 1. Idempotency Check: if identical idempotencyKey exists for user, return existing record
+    if (doc.idempotencyKey && doc.userId) {
+      const existingByIdempotency = await FlightTicketRepo.findByIdempotencyKey(
+        doc.userId,
+        doc.idempotencyKey
+      );
+      if (existingByIdempotency) {
+        return {
+          acknowledged: true,
+          insertedId: existingByIdempotency._id,
+          idempotentDuplicate: true,
+        };
+      }
+    }
+
+    // 2. Duplicate Flight Check: same user, flight number, route, and departure date
+    if (doc.userId && doc.flightNumber && doc.fromAirport && doc.toAirport && doc.departureDateTime) {
+      const existingTicket = await FlightTicketRepo.findExistingTicket({
+        userId: doc.userId,
+        flightNumber: doc.flightNumber,
+        fromAirport: doc.fromAirport,
+        toAirport: doc.toAirport,
+        departureDateTime: new Date(doc.departureDateTime),
+      });
+      if (existingTicket) {
+        return {
+          acknowledged: true,
+          insertedId: existingTicket._id,
+          idempotentDuplicate: true,
+        };
+      }
+    }
+
     let fromAirportRecord: TAirport | null = null;
     let toAirportRecord: TAirport | null = null;
 
@@ -126,7 +176,25 @@ export default class FlightTicketSvc {
       );
     }
 
-    return FlightTicketRepo.create(doc);
+    try {
+      return await FlightTicketRepo.create(doc);
+    } catch (err) {
+      // The idempotency check above (step 1) and this insert are not atomic:
+      // two concurrent retries of the same request can both pass the check
+      // and then race to insert. The unique partial index on
+      // (userId, idempotencyKey) (see database.indexes.ts) is what actually
+      // closes that race — the loser hits a duplicate-key error here, which
+      // we resolve the same way the pre-insert check does, by returning the
+      // winner's ticket as an idempotent duplicate rather than surfacing a
+      // 500 to a client that did nothing wrong.
+      if (isIdempotencyKeyDuplicateError(err) && doc.idempotencyKey && doc.userId) {
+        const winner = await FlightTicketRepo.findByIdempotencyKey(doc.userId, doc.idempotencyKey);
+        if (winner) {
+          return { acknowledged: true, insertedId: winner._id, idempotentDuplicate: true };
+        }
+      }
+      throw err;
+    }
   }
 
   static async getByUserId(userId: ObjectId) {

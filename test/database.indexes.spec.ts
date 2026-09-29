@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { describe, it } from "mocha";
 import { ensureDatabaseIndexes, TARGET_DATABASE_INDEXES } from "../src/utils/database.indexes";
 import { Db } from "mongodb";
 
@@ -9,7 +10,12 @@ describe("Database Indexes Configuration (§27)", () => {
     expect(collections).to.include("terminal.echo");
     expect(collections).to.include("conversations");
     expect(collections).to.include("conversation.messages");
-    expect(collections).to.include("flight.ticket");
+    // "flightTicket" (camelCase, no dot) — matches FlightTicketRepo.collection()
+    // and scripts/seed.ts. A prior version of this index list said
+    // "flight.ticket" (dotted), which is not the real collection name, so
+    // that index was silently never created against any real data.
+    expect(collections).to.include("flightTicket");
+    expect(collections).to.not.include("flight.ticket");
 
     // Verify unique dmKey index on unified conversations
     const convoDmIndex = TARGET_DATABASE_INDEXES.find(
@@ -35,6 +41,29 @@ describe("Database Indexes Configuration (§27)", () => {
       (idx) => idx.collection === "terminal.echo" && (idx.spec as any).location === "2dsphere"
     );
     expect(echoGeo).to.exist;
+
+    // Verify the unique partial idempotencyKey index (STEP 16a / B-3): this
+    // is what actually enforces unique(userId, idempotencyKey) — the
+    // pre-insert lookup in FlightTicketSvc.create is a check, not a lock,
+    // and can't close a race between two concurrent identical requests on
+    // its own.
+    const idempotencyIndex = TARGET_DATABASE_INDEXES.find(
+      (idx) =>
+        idx.collection === "flightTicket" &&
+        (idx.spec as any).userId === 1 &&
+        (idx.spec as any).idempotencyKey === 1
+    );
+    expect(idempotencyIndex).to.exist;
+    expect(idempotencyIndex?.options?.unique).to.be.true;
+    // Must be a partial filter, not `sparse: true` — MFlightTicket always
+    // writes an explicit `idempotencyKey: null` when none is supplied, and
+    // a sparse index only excludes documents missing the field entirely, so
+    // it would NOT exclude these and would wrongly enforce uniqueness across
+    // every ticket that never set a key.
+    expect((idempotencyIndex?.options as any)?.partialFilterExpression).to.deep.equal({
+      idempotencyKey: { $type: "string" },
+    });
+    expect(idempotencyIndex?.options?.sparse).to.not.be.true;
   });
 
   it("should execute createIndex on the MongoDB Db instance idempotently", async () => {
@@ -57,5 +86,7 @@ describe("Database Indexes Configuration (§27)", () => {
     expect(createdIndices["conversations"]).to.have.lengthOf(2);
     expect(createdIndices["airport"]).to.have.lengthOf(2);
     expect(createdIndices["terminal.echo"]).to.have.lengthOf(3);
+    expect(createdIndices["flightTicket"]).to.have.lengthOf(2);
+    expect(createdIndices["flight.ticket"]).to.be.undefined;
   });
 });

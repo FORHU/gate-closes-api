@@ -20,6 +20,12 @@ export type TFlightTicket = {
   departureDateTime?: Date;
   arrivalDateTime?: Date;
   returnDateTime?: Date;
+  boardingDateTime?: Date;
+  terminal?: string | null;
+  gate?: string | null;
+  seat?: string | null;
+  idempotencyKey?: string | null;
+  source?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -41,6 +47,12 @@ export class MFlightTicket implements Partial<TFlightTicket> {
   departureDateTime?: Date;
   arrivalDateTime?: Date;
   returnDateTime?: Date;
+  boardingDateTime?: Date;
+  terminal?: string | null;
+  gate?: string | null;
+  seat?: string | null;
+  idempotencyKey?: string | null;
+  source?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -58,6 +70,12 @@ export class MFlightTicket implements Partial<TFlightTicket> {
       departureDateTime,
       arrivalDateTime,
       returnDateTime,
+      boardingDateTime,
+      terminal = null,
+      gate = null,
+      seat = null,
+      idempotencyKey = null,
+      source = null,
       createdAt = new Date(),
       updatedAt,
     } = {} as TFlightTicket
@@ -74,6 +92,12 @@ export class MFlightTicket implements Partial<TFlightTicket> {
     this.departureDateTime = departureDateTime;
     this.arrivalDateTime = arrivalDateTime;
     this.returnDateTime = returnDateTime;
+    this.boardingDateTime = boardingDateTime;
+    this.terminal = terminal;
+    this.gate = gate;
+    this.seat = seat;
+    this.idempotencyKey = idempotencyKey;
+    this.source = source;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

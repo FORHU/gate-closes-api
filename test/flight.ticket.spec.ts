@@ -19,7 +19,13 @@ describe("FlightTicketSvc & Arrival Time Resolution", () => {
     });
   };
 
+  const setupRepoStubs = () => {
+    stub(FlightTicketRepo, "findByIdempotencyKey", async () => null);
+    stub(FlightTicketRepo, "findExistingTicket", async () => null);
+  };
+
   it("preserves explicitly provided arrivalDateTime", async () => {
+    setupRepoStubs();
     stub(AirportRepo, "findByIataOrIcao", async (code: string) => ({
       iata: code,
       airport: `${code} Airport`,
@@ -51,6 +57,7 @@ describe("FlightTicketSvc & Arrival Time Resolution", () => {
   });
 
   it("estimates arrivalDateTime from airport coordinates when omitted", async () => {
+    setupRepoStubs();
     stub(AirportRepo, "findByIataOrIcao", async (code: string) => {
       if (code === "SIN") {
         return {

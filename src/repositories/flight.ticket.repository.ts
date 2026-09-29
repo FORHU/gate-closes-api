@@ -11,6 +11,34 @@ export default class FlightTicketRepo {
     return this.collection().insertOne(new MFlightTicket(ticket));
   }
 
+  static async findByIdempotencyKey(userId: ObjectId, idempotencyKey: string) {
+    return this.collection().findOne({ userId, idempotencyKey });
+  }
+
+  static async findExistingTicket(params: {
+    userId: ObjectId;
+    flightNumber?: string;
+    fromAirport?: string;
+    toAirport?: string;
+    departureDateTime?: Date;
+  }) {
+    const { userId, flightNumber, fromAirport, toAirport, departureDateTime } = params;
+    if (!flightNumber || !fromAirport || !toAirport || !departureDateTime) return null;
+
+    const startOfDay = new Date(departureDateTime);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(departureDateTime);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    return this.collection().findOne({
+      userId,
+      flightNumber,
+      fromAirport,
+      toAirport,
+      departureDateTime: { $gte: startOfDay, $lte: endOfDay },
+    });
+  }
+
   static async findActiveOrLatestByUserId(userId: ObjectId) {
     const now = new Date();
 

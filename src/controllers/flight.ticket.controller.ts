@@ -9,6 +9,7 @@ export default class FlightTicketCtrl {
   // POST /flight-ticket
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
+    const headerIdempotencyKey = req.header("Idempotency-Key") || req.header("idempotency-key");
 
     const {
       flightNumber,
@@ -17,6 +18,12 @@ export default class FlightTicketCtrl {
       departureDateTime,
       arrivalDateTime,
       returnDateTime,
+      boardingDateTime,
+      terminal,
+      gate,
+      seat,
+      source,
+      idempotencyKey,
     } = req.body;
 
     const schema = Joi.object({
@@ -25,7 +32,13 @@ export default class FlightTicketCtrl {
       toAirport: Joi.string().trim().required(),
       departureDateTime: Joi.date().required(),
       arrivalDateTime: Joi.date().optional(),
-      returnDateTime: Joi.date().required(),
+      returnDateTime: Joi.date().optional(),
+      boardingDateTime: Joi.date().optional(),
+      terminal: Joi.string().trim().allow(null, "").optional(),
+      gate: Joi.string().trim().allow(null, "").optional(),
+      seat: Joi.string().trim().allow(null, "").optional(),
+      source: Joi.string().trim().allow(null, "").optional(),
+      idempotencyKey: Joi.string().trim().allow(null, "").optional(),
     });
 
     const { error, value } = schema.validate(
@@ -36,6 +49,12 @@ export default class FlightTicketCtrl {
         departureDateTime,
         arrivalDateTime,
         returnDateTime,
+        boardingDateTime,
+        terminal,
+        gate,
+        seat,
+        source,
+        idempotencyKey: idempotencyKey || headerIdempotencyKey,
       },
       { convert: true }
     );
@@ -55,6 +74,12 @@ export default class FlightTicketCtrl {
         departureDateTime: value.departureDateTime,
         arrivalDateTime: value.arrivalDateTime,
         returnDateTime: value.returnDateTime,
+        boardingDateTime: value.boardingDateTime,
+        terminal: value.terminal,
+        gate: value.gate,
+        seat: value.seat,
+        source: value.source,
+        idempotencyKey: value.idempotencyKey,
       });
 
       return res.json({ message: result });
@@ -102,6 +127,10 @@ export default class FlightTicketCtrl {
       departureDateTime,
       arrivalDateTime,
       returnDateTime,
+      boardingDateTime,
+      terminal,
+      gate,
+      seat,
     } = req.body;
 
     // Fields are marked .optional() because an edit might only change one thing
@@ -112,10 +141,25 @@ export default class FlightTicketCtrl {
       departureDateTime: Joi.date().optional(),
       arrivalDateTime: Joi.date().optional(),
       returnDateTime: Joi.date().optional(),
+      boardingDateTime: Joi.date().optional(),
+      terminal: Joi.string().trim().allow(null, "").optional(),
+      gate: Joi.string().trim().allow(null, "").optional(),
+      seat: Joi.string().trim().allow(null, "").optional(),
     });
 
     const { error, value } = schema.validate(
-      { flightNumber, fromAirport, toAirport, departureDateTime, arrivalDateTime, returnDateTime },
+      {
+        flightNumber,
+        fromAirport,
+        toAirport,
+        departureDateTime,
+        arrivalDateTime,
+        returnDateTime,
+        boardingDateTime,
+        terminal,
+        gate,
+        seat,
+      },
       { convert: true, stripUnknown: true }
     );
 

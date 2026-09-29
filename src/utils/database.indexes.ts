@@ -57,10 +57,32 @@ export const TARGET_DATABASE_INDEXES: IndexDefinition[] = [
   },
 
   // Flight Tickets
+  // NOTE: the real collection is "flightTicket" (see FlightTicketRepo.collection()
+  // and scripts/seed.ts) — this entry previously said "flight.ticket" (dotted),
+  // which doesn't exist, so this index was silently never applied to any real
+  // data in any environment. Fixed alongside the idempotencyKey index below.
   {
-    collection: "flight.ticket",
+    collection: "flightTicket",
     spec: { userId: 1, status: 1, departureDateTime: 1 },
     options: { name: "idx_userId_status_departure" },
+  },
+  // Enforces the idempotency guarantee §4.2 of BOARDING_PASS_INTELLIGENCE_PLAN.md
+  // describes: unique(userId, idempotencyKey). Partial (not sparse) because
+  // MFlightTicket always writes an explicit `idempotencyKey: null` when one
+  // isn't supplied (the constructor defaults to null, it's never actually
+  // omitted from the document) — a sparse index only excludes documents where
+  // the field is *missing*, so it would NOT exclude these explicit-null
+  // documents and would incorrectly enforce uniqueness across every ticket
+  // that never set an idempotencyKey. $type: "string" excludes both missing
+  // and null, matching only tickets that actually have a key.
+  {
+    collection: "flightTicket",
+    spec: { userId: 1, idempotencyKey: 1 },
+    options: {
+      unique: true,
+      partialFilterExpression: { idempotencyKey: { $type: "string" } },
+      name: "idx_userId_idempotencyKey_unique",
+    },
   },
 ];
 
