@@ -217,7 +217,7 @@ export default class AuthController {
     const schema = Joi.object({
       userId: Joi.string().required(),
       username: Joi.string()
-        .pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/)
+        .pattern(/^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{3,30}$/)
         .required(),
       gender: Joi.string().valid("Male", "Female").required(),
     });
@@ -463,7 +463,7 @@ export default class AuthController {
     const { username } = req.body;
     const schema = Joi.object({
       username: Joi.string()
-        .pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/)
+        .pattern(/^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{3,30}$/)
         .required(),
     });
     const { error, value } = schema.validate({ username });
@@ -519,7 +519,7 @@ export default class AuthController {
     const userId = req.user?.userId as string;
     const schema = Joi.object({
       username: Joi.string()
-        .pattern(/^[A-Za-z]+\d{1,3}\.\d{2}$/)
+        .pattern(/^(?!.*\.\.)(?!.*\.$)[a-zA-Z0-9._]{3,30}$/)
         .optional(),
       gender: Joi.string().valid("Male", "Female").optional(),
     }).min(1);
