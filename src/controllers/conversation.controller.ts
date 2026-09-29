@@ -7,6 +7,22 @@ import { getErrorMessage } from "../utils/error.util";
 import { ConversationType } from "../domain/conversation/conversation.types";
 import { io } from "../app";
 
+/**
+ * Tells every participant's personal `user:<id>` room (joined on connect in
+ * conversation.events.ts) that a conversation's latest event changed, so
+ * connection lists refresh without the user having that thread open.
+ */
+function notifyParticipants(
+  conversation: { _id?: unknown; participants?: unknown[] } | null | undefined
+): void {
+  if (!conversation?.participants?.length) return;
+  const nsp = io.of("/conversations");
+  const payload = { conversationId: String(conversation._id) };
+  for (const participantId of conversation.participants) {
+    nsp.to(`user:${String(participantId)}`).emit("conversation:updated", payload);
+  }
+}
+
 export default class ConversationCtrl {
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
@@ -193,6 +209,7 @@ export default class ConversationCtrl {
 
       try {
         io.of("/conversations").to(conversationId).emit("message:received", result.message);
+        notifyParticipants(result.conversation);
       } catch (err) {
         console.warn("[ConversationCtrl.sendMessage] Broadcast warning:", err);
       }
@@ -259,6 +276,7 @@ export default class ConversationCtrl {
 
       try {
         io.of("/conversations").to(conversationId).emit("reaction:updated", result);
+        notifyParticipants(result.conversation);
       } catch (err) {
         console.warn("[ConversationCtrl.updateReaction] Broadcast warning:", err);
       }
