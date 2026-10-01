@@ -1,6 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcrypt";
 import { Db, ObjectId } from "mongodb";
+import { MONGO_DB } from "../config";
 import { connectToMongo, getDB, useMongoClient } from "../utils/mongo";
 import { MUser } from "../models/user.model";
 import { MUserAuth } from "../models/user.auth.model";
@@ -151,9 +152,25 @@ const AIRPORTS: Array<{
     country: "United States",
     coordinates: [-87.9048, 41.9742],
   },
+  {
+    code: "MNL",
+    name: "Ninoy Aquino International Airport",
+    country: "Philippines",
+    coordinates: [121.0198, 14.5086],
+  },
 ];
 
+// Most local testing happens at NAIA, so it gets a busy feed and map of its
+// own on top of the echoes spread across the other airports.
+const HOME_AIRPORT_CODE = "MNL";
+const HOME_AIRPORT_ECHOES = 12;
+const OTHER_AIRPORT_ECHOES = 8;
+
 const FLIGHT_LEGS = [
+  { flightNumber: "PR102", from: "MNL", to: "LAX" },
+  { flightNumber: "PR501", from: "MNL", to: "SIN" },
+  { flightNumber: "SQ916", from: "SIN", to: "MNL" },
+  { flightNumber: "PR720", from: "MNL", to: "LHR" },
   { flightNumber: "DL202", from: "JFK", to: "LHR" },
   { flightNumber: "UA837", from: "LAX", to: "NRT" },
   { flightNumber: "EK412", from: "DXB", to: "SIN" },
@@ -304,18 +321,33 @@ const seedTerminalEcho = async (db: Db, users: SeededUser[], files: ObjectId[]) 
   let replyCount = 0;
   let replyReactionCount = 0;
 
-  for (let i = 0; i < 8; i += 1) {
+  const home = AIRPORTS.find((a) => a.code === HOME_AIRPORT_CODE)!;
+  const others = AIRPORTS.filter((a) => a.code !== HOME_AIRPORT_CODE);
+  const placements = [
+    ...Array.from({ length: HOME_AIRPORT_ECHOES }, () => home),
+    ...Array.from({ length: OTHER_AIRPORT_ECHOES }, () => randomItem(others)),
+  ];
+
+  for (const [i, airport] of placements.entries()) {
     const sender = randomItem(users);
-    const airport = randomItem(AIRPORTS);
     const hasFile = Math.random() < 0.7;
+    // Spread pins ~400 m around the terminal so clusters split on zoom-in.
+    const jitter = () => (Math.random() - 0.5) * 0.008;
+    const [lng, lat] = airport.coordinates;
+    // The first few home echoes are minutes old, so the map shows "new" pins.
+    const createdAt =
+      airport === home && i < 4
+        ? new Date(Date.now() - randomInt(1, 15) * 60 * 1000)
+        : dateOffsetDays(-randomInt(0, 14));
     const echo = new MTerminalEcho({
       senderId: sender._id,
       fileId: hasFile ? randomItem(files) : undefined,
       textMessage: randomItem(ECHO_TEXTS),
-      location: { type: "Point", coordinates: airport.coordinates },
+      location: { type: "Point", coordinates: [lng + jitter(), lat + jitter()] },
       airportName: airport.name,
+      airportIata: airport.code,
       countListens: randomInt(0, 40),
-      createdAt: dateOffsetDays(-randomInt(0, 14)),
+      createdAt,
     });
     await echoCollection.insertOne(echo);
     echoCount += 1;
@@ -558,6 +590,16 @@ const seedVerificationCodes = async (db: Db, users: SeededUser[]) => {
 // ---------------------------------------------------------------------------
 
 const main = async () => {
+  // The seed wipes users, echoes and conversations first. Refuse unless the
+  // caller names the database being wiped, so a .env pointing somewhere real
+  // can't be emptied by accident.
+  if (!MONGO_DB || process.env.SEED_CONFIRM_DB !== MONGO_DB) {
+    throw new Error(
+      `refusing to wipe database "${MONGO_DB}". Re-run with SEED_CONFIRM_DB=${MONGO_DB} ` +
+        "if this database holds nothing you need."
+    );
+  }
+
   await connectToMongo();
   const db = getDB();
 
