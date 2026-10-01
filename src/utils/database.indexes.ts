@@ -66,7 +66,7 @@ export const TARGET_DATABASE_INDEXES: IndexDefinition[] = [
     spec: { userId: 1, status: 1, departureDateTime: 1 },
     options: { name: "idx_userId_status_departure" },
   },
-  // Enforces the idempotency guarantee §4.2 of BOARDING_PASS_INTELLIGENCE_PLAN.md
+  // Enforces the idempotency guarantee §4.2 of gate-closes-app-v2/docs/BOARDING_PASS_INTELLIGENCE_PLAN.md
   // describes: unique(userId, idempotencyKey). Partial (not sparse) because
   // MFlightTicket always writes an explicit `idempotencyKey: null` when one
   // isn't supplied (the constructor defaults to null, it's never actually
