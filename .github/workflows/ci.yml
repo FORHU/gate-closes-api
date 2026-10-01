@@ -36,6 +36,8 @@ jobs:
       - name: Run Automated Test Suite
         run: NODE_ENV=development npx mocha --require ts-node/register "test/**/*.spec.ts" --exit
         env:
-          JWT_SECRET: ci-test-jwt-secret-very-secure-32chars
-          REFRESH_SECRET: ci-test-refresh-secret-very-secure-32chars
+          # Names must match src/config.ts (JWT_SECRET / REFRESH_SECRET were
+          # never read, so every token-signing test failed in CI).
+          ACCESS_TOKEN_SECRET: ci-test-access-secret-very-secure-32chars
+          REFRESH_TOKEN_SECRET: ci-test-refresh-secret-very-secure-32chars
           SECRET_KEY: ci-test-secret-key-very-secure-32chars
