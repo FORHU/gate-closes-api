@@ -3,7 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import { connectToMongo } from "./utils/mongo";
 import router from "./routes";
-import { isDev, ALLOWED_ORIGINS } from "./config";
+import { allowAnyOrigin, ALLOWED_ORIGINS } from "./config";
 import setup from "./setup";
 import cors from "cors";
 import { createServer } from "http";
@@ -20,7 +20,7 @@ const corsOriginHandler = (
 ) => {
   // Allow mobile apps, curl, server-to-server requests with no origin
   if (!origin) return callback(null, true);
-  if (isDev) return callback(null, true);
+  if (allowAnyOrigin) return callback(null, true);
   if (ALLOWED_ORIGINS.includes(origin)) {
     return callback(null, true);
   }
@@ -57,7 +57,7 @@ const server = createServer(app);
 
 export const io = new Server(server, {
   cors: {
-    origin: isDev ? "*" : ALLOWED_ORIGINS,
+    origin: allowAnyOrigin ? "*" : ALLOWED_ORIGINS,
     methods: ["GET", "POST"],
     credentials: true,
   },

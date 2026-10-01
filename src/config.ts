@@ -7,6 +7,14 @@ export const MONGO_DB_DEV = process.env.MONGO_DB_DEV as string;
 export const PORT = Number(process.env.PORT);
 export const SECRET_KEY = process.env.SECRET_KEY as string;
 export const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Accept requests from any browser origin. Only on an explicit local
+ * environment: a deployment that forgets NODE_ENV must fall back to the
+ * ALLOWED_ORIGINS allowlist rather than open, credentialed CORS.
+ */
+export const allowAnyOrigin =
+  process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 export const MAILER_TRANSPORT_HOST = process.env.MAILER_TRANSPORT_HOST as string;
 export const MAILER_TRANSPORT_PORT = Number(process.env.MAILER_TRANSPORT_PORT);
 export const MAILER_TRANSPORT_SECURE = process.env.MAILER_TRANSPORT_SECURE === "true";
