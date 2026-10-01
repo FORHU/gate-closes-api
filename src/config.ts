@@ -35,6 +35,14 @@ export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 export const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET as string;
 export const AWS_REGION = process.env.AWS_REGION as string;
 export const CLOUD_FRONT_DOMAIN = process.env.CLOUD_FRONT_DOMAIN as string | undefined;
+// Static S3 keys for local development only. Deployed hosts leave them unset
+// and get S3 from the instance role (see utils/s3.ts).
+export const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY as string | undefined;
+export const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY as string | undefined;
+// Set to point the S3 client at an S3-compatible service (e.g. local MinIO)
+// instead of real AWS. MinIO needs path-style URLs.
+export const S3_ENDPOINT = process.env.S3_ENDPOINT as string | undefined;
+export const S3_FORCE_PATH_STYLE = process.env.S3_FORCE_PATH_STYLE === "true";
 
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")

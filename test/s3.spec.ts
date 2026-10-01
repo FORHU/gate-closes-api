@@ -4,6 +4,7 @@ import request from "supertest";
 import s3Routes from "../src/routes/s3.route";
 import S3Svc from "../src/services/s3.service";
 import { createAccessToken } from "../src/utils/jwt";
+import { s3ClientConfig } from "../src/utils/s3";
 
 describe("Media Authorization & S3 URL Security (§29)", () => {
   let app: express.Express;
@@ -53,5 +54,40 @@ describe("Media Authorization & S3 URL Security (§29)", () => {
       .query({ key: unauthorizedKey });
 
     expect(res.status).to.equal(400);
+  });
+});
+
+describe("S3 client credentials", () => {
+  it("uses static keys only when both are set (local development)", () => {
+    const config = s3ClientConfig({
+      region: "ap-southeast-1",
+      accessKeyId: "key-id",
+      secretAccessKey: "secret",
+    });
+    expect(config.credentials).to.deep.equal({
+      accessKeyId: "key-id",
+      secretAccessKey: "secret",
+    });
+  });
+
+  it("passes no credentials without keys, so the instance role applies", () => {
+    const config = s3ClientConfig({ region: "ap-southeast-1" });
+    expect(config).to.not.have.property("credentials");
+  });
+
+  it("never passes a partial credentials object", () => {
+    expect(s3ClientConfig({ accessKeyId: "key-id" })).to.not.have.property("credentials");
+    expect(s3ClientConfig({ secretAccessKey: "secret" })).to.not.have.property("credentials");
+    expect(s3ClientConfig({ accessKeyId: "", secretAccessKey: "" })).to.not.have.property(
+      "credentials"
+    );
+  });
+
+  it("targets an S3-compatible endpoint when configured (MinIO)", () => {
+    const config = s3ClientConfig({ endpoint: "http://localhost:9000", forcePathStyle: true });
+    expect(config.endpoint).to.equal("http://localhost:9000");
+    expect(config.forcePathStyle).to.equal(true);
+    expect(s3ClientConfig({})).to.not.have.property("endpoint");
+    expect(s3ClientConfig({})).to.not.have.property("forcePathStyle");
   });
 });

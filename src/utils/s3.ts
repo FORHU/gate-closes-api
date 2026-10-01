@@ -1,13 +1,52 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, S3ClientConfig, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { AWS_REGION, AWS_S3_BUCKET, CLOUD_FRONT_DOMAIN } from "../config";
+import {
+  AWS_ACCESS_KEY,
+  AWS_REGION,
+  AWS_S3_BUCKET,
+  AWS_SECRET_ACCESS_KEY,
+  CLOUD_FRONT_DOMAIN,
+  S3_ENDPOINT,
+  S3_FORCE_PATH_STYLE,
+} from "../config";
 
-// No explicit credentials: the SDK's default provider chain applies,
-// so this relies on an IAM role attached to the running instance/task
-// instead of static keys.
-const s3Client = new S3Client({
-  region: AWS_REGION,
-});
+/**
+ * Static keys only when both are set (local development). Otherwise no
+ * `credentials` at all, so the SDK's provider chain resolves the instance
+ * role on the deployed host. A partial or empty credentials object would
+ * make the SDK skip that chain and fail with "Resolved credential object is
+ * not valid", so it is never passed.
+ */
+export function s3ClientConfig(env: {
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  endpoint?: string;
+  forcePathStyle?: boolean;
+}): S3ClientConfig {
+  return {
+    region: env.region,
+    ...(env.accessKeyId &&
+      env.secretAccessKey && {
+        credentials: {
+          accessKeyId: env.accessKeyId,
+          secretAccessKey: env.secretAccessKey,
+        },
+      }),
+    ...(env.endpoint && { endpoint: env.endpoint }),
+    ...(env.forcePathStyle && { forcePathStyle: true }),
+  };
+}
+
+const s3Client = new S3Client(
+  s3ClientConfig({
+    region: AWS_REGION,
+    accessKeyId: AWS_ACCESS_KEY,
+    secretAccessKey: AWS_SECRET_ACCESS_KEY,
+    endpoint: S3_ENDPOINT,
+    forcePathStyle: S3_FORCE_PATH_STYLE,
+  })
+);
 
 export async function getPutObjectPresignedUrl(params: { key: string; contentType?: string }) {
   const { key, contentType } = params;
