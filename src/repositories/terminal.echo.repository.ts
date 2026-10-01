@@ -45,7 +45,9 @@ export default class TerminalEchoRepo {
         { $limit: 100 },
       ];
     } else {
-      pipeline = [{ $sort: { createdAt: -1, _id: -1 } }];
+      // Unbounded requests still get a cap: returning every echo ever posted
+      // grows without limit and is what runs mobile map bridges out of memory.
+      pipeline = [{ $sort: { createdAt: -1, _id: -1 } }, { $limit: 200 }];
     }
 
     return this.collection().aggregate(pipeline).toArray();

@@ -11,7 +11,26 @@ type TerminalEchoMapFeatureSource = {
   senderId: ObjectId;
   type: TerminalEchoType;
   location: { type: "Point"; coordinates: [number, number] };
+  createdAt?: Date;
+  listenCount: number;
+  reactionCount: number;
 };
+
+const REACTION_COUNT_FIELDS = [
+  "countReactLike",
+  "countReactLove",
+  "countReactHaha",
+  "countReactWow",
+  "countReactSad",
+  "countReactAngry",
+] as const;
+
+/** Map-pin activity: listens and total reactions (drives the app heatmap). */
+const pinActivity = (echo: Document) => ({
+  createdAt: echo.createdAt as Date | undefined,
+  listenCount: Number(echo.countListens ?? 0),
+  reactionCount: REACTION_COUNT_FIELDS.reduce((sum, field) => sum + Number(echo[field] ?? 0), 0),
+});
 
 export default class TerminalEchoSvc {
   private static isPointGeometry(location: unknown): location is {
@@ -33,13 +52,17 @@ export default class TerminalEchoSvc {
     const features = (echoes ?? [])
       .filter((echo) => this.isPointGeometry(echo?.location))
       .map((echo) => {
-        const { location, _id, type } = echo;
+        const { location, _id, type, createdAt, listenCount, reactionCount } = echo;
         return {
           type: "Feature" as const,
           id: _id?.toString?.() ?? String(_id),
           geometry: location,
+          // No senderId: the map never reveals who posted a pin.
           properties: {
             type: type ?? null,
+            createdAt: createdAt ? new Date(createdAt).toISOString() : null,
+            listenCount,
+            reactionCount,
           },
         };
       });
@@ -263,20 +286,13 @@ export default class TerminalEchoSvc {
   }
 
   /**
-   * Lean list for map: `_id`, `senderId`, computed `type`, and `location` (GeoJSON for features).
-   * No file join, no reactions.
+   * Lean list for map: `_id`, `senderId`, computed `type`, `location`, plus
+   * `createdAt` and listen/reaction counts. No file join.
    */
   static async findAllWithType(
     userId: string,
     mapBounds?: TerminalEchoMapBounds
-  ): Promise<
-    Array<{
-      _id: ObjectId;
-      senderId: ObjectId;
-      type: TerminalEchoType;
-      location: { type: "Point"; coordinates: [number, number] };
-    }>
-  > {
+  ): Promise<TerminalEchoMapFeatureSource[]> {
     const echoes = await TerminalEchoRepo.findAllForMap(mapBounds);
     if (!echoes.length) return [];
 
@@ -289,6 +305,7 @@ export default class TerminalEchoSvc {
         senderId: e.senderId as ObjectId,
         type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
         location: e.location,
+        ...pinActivity(e),
       }));
     }
 
@@ -318,6 +335,7 @@ export default class TerminalEchoSvc {
         senderId: e.senderId as ObjectId,
         type,
         location: e.location,
+        ...pinActivity(e),
       };
     });
   }
