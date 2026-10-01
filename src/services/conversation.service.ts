@@ -288,7 +288,12 @@ export default class ConversationSvc {
   }) {
     const dmKey = this.dmKeyForUsers(params.type, params.userId, params.otherUserId);
     const existing = await ConversationRepo.findByDmKey(dmKey);
-    return Boolean(existing);
+    // The dmKey includes the requester, so the id is only ever the caller's
+    // own conversation.
+    return {
+      exists: Boolean(existing),
+      conversationId: existing?._id ? String(existing._id) : null,
+    };
   }
 
   static async sendMessage(params: {

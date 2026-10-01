@@ -156,13 +156,13 @@ export default class ConversationCtrl {
         ERROR_MESSAGE.INVALID_OTHER_USER_ID
       );
 
-      const exists = await ConversationSvc.checkDmExists({
+      const { exists, conversationId } = await ConversationSvc.checkDmExists({
         type: value.type as ConversationType,
         userId: userObjectId,
         otherUserId: otherUserObjectId,
       });
 
-      return res.json({ exists });
+      return res.json({ exists, conversationId });
     } catch (err) {
       return res.status(500).json({ message: getErrorMessage(err) });
     }
