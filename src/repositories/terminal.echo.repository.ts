@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import { Document, ObjectId } from "mongodb";
 import {
   MTerminalEcho,
   TTerminalEcho,
@@ -152,10 +152,22 @@ export default class TerminalEchoRepo {
    * filter to one terminal; omit it to fetch every echo (Feed tab's
    * unfiltered default) — latest first either way.
    */
+  /**
+   * Feed filter for one airport. Clients send either an IATA code (Flutter:
+   * `MNL`) or an airport name (Expo), so match the stored `airportIata`
+   * exactly or the name as literal text. The input is escaped: it is user
+   * text, never a pattern.
+   */
+  static feedAirportFilter(airport: string): Document {
+    const text = airport.trim();
+    const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return {
+      $or: [{ airportIata: text.toUpperCase() }, { airportName: new RegExp(escaped, "i") }],
+    };
+  }
+
   static async findByAirportNameWithFile(airportName?: string) {
-    const matchStage = airportName
-      ? [{ $match: { airportName: new RegExp(airportName, "i") } }]
-      : [];
+    const matchStage = airportName?.trim() ? [{ $match: this.feedAirportFilter(airportName) }] : [];
     return this.collection()
       .aggregate([
         ...matchStage,
