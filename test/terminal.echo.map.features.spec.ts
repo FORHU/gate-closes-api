@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import TerminalEchoSvc from "../src/services/terminal.echo.service";
 import ConversationSvc from "../src/services/conversation.service";
 import ConversationRepo from "../src/repositories/conversation.repository";
+import TerminalEchoRepo from "../src/repositories/terminal.echo.repository";
 import { TERMINAL_ECHO_TYPE } from "../src/const";
 
 describe("Map pins & DM existence contract", () => {
@@ -70,5 +71,49 @@ describe("Map pins & DM existence contract", () => {
     });
 
     expect(result).to.deep.equal({ exists: false, conversationId: null });
+  });
+});
+
+describe("Map view bounds filter", () => {
+  const lng = "location.coordinates.0";
+  const lat = "location.coordinates.1";
+
+  it("matches a plain lng/lat range for a normal view", () => {
+    expect(
+      TerminalEchoRepo.mapBoundsMatch([
+        [116, 4],
+        [127, 21],
+      ])
+    ).to.deep.equal({
+      "location.type": "Point",
+      [lat]: { $gte: 4, $lte: 21 },
+      [lng]: { $gte: 116, $lte: 127 },
+    });
+  });
+
+  it("splits a view crossing the antimeridian into two lng ranges", () => {
+    expect(
+      TerminalEchoRepo.mapBoundsMatch([
+        [100, -60],
+        [-100, 60],
+      ])
+    ).to.deep.equal({
+      "location.type": "Point",
+      [lat]: { $gte: -60, $lte: 60 },
+      $or: [{ [lng]: { $gte: 100 } }, { [lng]: { $lte: -100 } }],
+    });
+  });
+
+  it("drops the lng filter for a whole-world view", () => {
+    // A >180°-wide $geoWithin polygon matched nothing here.
+    expect(
+      TerminalEchoRepo.mapBoundsMatch([
+        [-180, -85],
+        [180, 85],
+      ])
+    ).to.deep.equal({
+      "location.type": "Point",
+      [lat]: { $gte: -85, $lte: 85 },
+    });
   });
 });

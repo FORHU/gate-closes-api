@@ -13,34 +13,39 @@ export default class TerminalEchoRepo {
   }
 
   /**
+   * `$match` for echoes inside a map view, as a plain lng/lat range on the
+   * point's coordinates, the same flat rectangle the map shows.
+   *
+   * Not `$geoWithin` with a Polygon: Mongo reads polygon edges as geodesics
+   * and a ring wider than 180° as the smaller complementary region, so a
+   * zoomed-out view (where pins cluster) matched the wrong pins or none.
+   * `west > east` is a view crossing the antimeridian.
+   */
+  static mapBoundsMatch(mapBounds: TerminalEchoMapBounds): Record<string, unknown> {
+    const [[west, south], [east, north]] = mapBounds;
+    const lng = "location.coordinates.0";
+    const lat = "location.coordinates.1";
+    const match: Record<string, unknown> = {
+      "location.type": "Point",
+      [lat]: { $gte: south, $lte: north },
+    };
+    if (west > east) {
+      match.$or = [{ [lng]: { $gte: west } }, { [lng]: { $lte: east } }];
+    } else if (west > -180 || east < 180) {
+      match[lng] = { $gte: west, $lte: east };
+    }
+    return match;
+  }
+
+  /**
    * Terminal echoes for map: no file/user/reply joins.
-   * With bounds: geo filter, latest first, max 100. Without bounds: all, sorted latest first.
+   * With bounds: view filter, latest first, max 100. Without bounds: all, sorted latest first.
    */
   static async findAllForMap(mapBounds?: TerminalEchoMapBounds) {
     let pipeline: Record<string, unknown>[];
     if (mapBounds) {
-      const [[west, south], [east, north]] = mapBounds;
       pipeline = [
-        {
-          $match: {
-            location: {
-              $geoWithin: {
-                $geometry: {
-                  type: "Polygon",
-                  coordinates: [
-                    [
-                      [west, south],
-                      [east, south],
-                      [east, north],
-                      [west, north],
-                      [west, south],
-                    ],
-                  ],
-                },
-              },
-            },
-          },
-        },
+        { $match: this.mapBoundsMatch(mapBounds) },
         { $sort: { createdAt: -1, _id: -1 } },
         { $limit: 100 },
       ];

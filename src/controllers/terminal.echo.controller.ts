@@ -133,9 +133,7 @@ export default class TerminalEchoCtrl {
         east: Joi.number().min(-180).max(180).required(),
         north: Joi.number().min(-90).max(90).required(),
       }).custom((v, helpers) => {
-        if (v.west > v.east) {
-          return helpers.error("any.invalid");
-        }
+        // west > east is allowed: the view crosses the antimeridian.
         if (v.south > v.north) {
           return helpers.error("any.invalid");
         }
@@ -155,9 +153,7 @@ export default class TerminalEchoCtrl {
       if (error) {
         const msg = error.details[0]?.message ?? error.message;
         return res.status(400).json({
-          message: msg.includes("invalid")
-            ? "Bounds must satisfy west ≤ east and south ≤ north."
-            : msg,
+          message: msg.includes("invalid") ? "Bounds must satisfy south ≤ north." : msg,
         });
       }
 
