@@ -4,6 +4,8 @@
 > **Target Audience:** Principal / Senior Engineers, Engineering Leadership, Solution Architects  
 > **Evaluation Scope:** Full End-to-End System Purpose, Technical Architecture, Code Construction, Data Flows, Bottlenecks, and Modernization Blueprint  
 
+> **Read this first (status as of 2026-10-02):** §1–§8 are the **original audit findings**, kept as a historical record. Most §6 smells are fixed in the code today: one `conversations` domain with PS/DT/BT eligibility strategies (`src/domain/conversation/strategies/`), the Redis Socket.IO adapter, no `scoped-auth` bypass, an origin allow-list for CORS, a 15-minute access-token default (`src/config.ts`), and 193 Vitest tests across 29 files. For current status read §35 (phase checklists) and §39. Still open from §6: the orphaned `fs.conversation*`, `sovereign.future.signal` and `todo.*` files. This document covers the Expo app (`gate-closes-app`); the Flutter client is documented in `gate-closes-app-v2/docs/`.
+
 ---
 
 ## Table of Contents
@@ -2665,6 +2667,8 @@ The objective is to prove that the implemented architecture is correct, secure, 
 
 The existing Express + MongoDB + Redis + Socket.IO + S3 + Expo architecture remains the target architecture.
 
+> **Note (2026-10-02):** `MERGE_HARDENING_PLAN.md` was never committed to this repository and is not available; the references to it below and in §39.10 cannot be followed.
+>
 > **2026-09-22 update:** The verification this section calls for has since been executed. `MERGE_HARDENING_PLAN.md` (repo root) is now the authoritative execution and evidence record for the items below — it names the three concrete gaps this section's checklist surfaced (Terminal Echo broadcast isolation, refresh-token reuse protection, mobile server-state ownership), the fixes applied, and the actual test runs that verify them. `IMPLEMENTATION_PLAN.md`, the original hand-off document this section was responding to, has been removed — its claims were superseded by the verified findings now recorded in `MERGE_HARDENING_PLAN.md`. Sections below are left as originally written (the historical record of what this phase set out to check); §39.10's checklist has been annotated with what's since been closed.
 
 ---
