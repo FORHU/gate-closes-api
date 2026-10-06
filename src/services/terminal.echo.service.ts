@@ -4,7 +4,15 @@ import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.rep
 import AirportRepo from "../repositories/airport.repository";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
-import { TERMINAL_ECHO_TYPE, type TerminalEchoMapBounds, type TerminalEchoType } from "../const";
+import { TERMINAL_ECHO_TYPE, type TerminalEchoMapQuery, type TerminalEchoType } from "../const";
+
+/** Thrown when an echo is posted outside every airport's radius. */
+export class EchoOutsideAirportError extends Error {
+  constructor() {
+    super("Echoes can only be posted inside an airport.");
+    this.name = "EchoOutsideAirportError";
+  }
+}
 
 type TerminalEchoMapFeatureSource = {
   _id: ObjectId;
@@ -193,29 +201,20 @@ export default class TerminalEchoSvc {
       waveformData,
     } = params;
 
-    // Server-authoritative airport resolution (§18.1)
-    let canonicalAirportIata = "";
-    let resolvedAirportName = airportName || "";
-
-    if (location && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
-      const [lng, lat] = location.coordinates;
-      if (typeof lng === "number" && typeof lat === "number") {
-        try {
-          const nearest = await AirportRepo.findNearestWithDistance({ lat, lng });
-          if (nearest) {
-            canonicalAirportIata = (nearest.iata || nearest.icao || "").toUpperCase();
-            if (nearest.airport) {
-              resolvedAirportName = nearest.airport;
-            }
-          }
-        } catch (err) {
-          console.warn(
-            "[TerminalEchoSvc.createTerminalEcho] Error resolving nearest airport:",
-            err
-          );
-        }
-      }
+    // Server-authoritative airport resolution (§18.1). Echoes exist only
+    // inside an airport's radius: the map loads pins per airport, so an
+    // echo outside every radius would never be shown. The app checks this
+    // too; the server enforces it.
+    const [lng, lat] = location?.coordinates ?? [];
+    if (typeof lng !== "number" || typeof lat !== "number") {
+      throw new EchoOutsideAirportError();
     }
+    const nearest = await AirportRepo.findNearestWithDistance({ lat, lng });
+    const canonicalAirportIata = (nearest?.iata || nearest?.icao || "").toUpperCase();
+    if (!nearest?.insideRadius || !canonicalAirportIata) {
+      throw new EchoOutsideAirportError();
+    }
+    const resolvedAirportName = nearest.airport || airportName || "";
 
     const fileCreateResult = await FileSvc.create({
       fileUrl,
@@ -291,9 +290,9 @@ export default class TerminalEchoSvc {
    */
   static async findAllWithType(
     userId: string,
-    mapBounds?: TerminalEchoMapBounds
+    query: TerminalEchoMapQuery = {}
   ): Promise<TerminalEchoMapFeatureSource[]> {
-    const echoes = await TerminalEchoRepo.findAllForMap(mapBounds);
+    const echoes = await TerminalEchoRepo.findAllForMap(query);
     if (!echoes.length) return [];
 
     const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
@@ -340,9 +339,33 @@ export default class TerminalEchoSvc {
     });
   }
 
-  static async findAllWithTypeAsGeoJson(userId: string, mapBounds?: TerminalEchoMapBounds) {
-    const echoes = await this.findAllWithType(userId, mapBounds);
+  static async findAllWithTypeAsGeoJson(userId: string, query: TerminalEchoMapQuery = {}) {
+    const echoes = await this.findAllWithType(userId, query);
     return this.toFeatureCollection(echoes);
+  }
+
+  /**
+   * Zoomed-out map: one point per airport with its echo count, so the app
+   * draws a bubble per airport without downloading every pin.
+   */
+  static async airportCountsAsGeoJson() {
+    const rows = await TerminalEchoRepo.countByAirport();
+    return {
+      type: "FeatureCollection" as const,
+      features: rows
+        .filter((r) => this.isPointGeometry(r.location))
+        .map((r) => ({
+          type: "Feature" as const,
+          id: r.airportIata,
+          geometry: r.location as { type: "Point"; coordinates: [number, number] },
+          properties: {
+            airportIata: r.airportIata,
+            airportName: r.airportName,
+            count: r.count,
+            latestAt: r.latestAt ? new Date(r.latestAt).toISOString() : null,
+          },
+        })),
+    };
   }
 
   /** Full echo + file/user/replyCount + computed `type` (GET by id). */

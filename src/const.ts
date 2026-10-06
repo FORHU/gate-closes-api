@@ -9,6 +9,12 @@ export type TerminalEchoType = (typeof TERMINAL_ECHO_TYPE)[keyof typeof TERMINAL
 
 export type TerminalEchoMapBounds = [[number, number], [number, number]];
 
+/** Map pins for a view (`bounds`) or for one airport (`airportIata`). */
+export type TerminalEchoMapQuery = {
+  bounds?: TerminalEchoMapBounds;
+  airportIata?: string;
+};
+
 export const ERROR_MESSAGE = {
   INVALID_USER_ID: "Invalid user id.",
   INVALID_CONVERSATION_ID: "Invalid conversation id.",

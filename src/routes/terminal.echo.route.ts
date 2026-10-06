@@ -8,6 +8,7 @@ import { idempotencyMiddleware } from "../middleware/idempotency.middleware";
 
 router.get("/", sessionMiddleware, TerminalEchoCtrl.search);
 router.get("/map", sessionMiddleware, TerminalEchoCtrl.getMap);
+router.get("/map/counts", sessionMiddleware, TerminalEchoCtrl.getMapCounts);
 router.get("/:id", sessionMiddleware, TerminalEchoCtrl.getById);
 router.post(
   "/",

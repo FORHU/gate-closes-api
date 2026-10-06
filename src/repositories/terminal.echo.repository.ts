@@ -4,7 +4,15 @@ import {
   TTerminalEcho,
   TTerminalEchoUpdateOptions,
 } from "../models/terminal.echo.model";
-import type { TerminalEchoMapBounds } from "../const";
+import type { TerminalEchoMapBounds, TerminalEchoMapQuery } from "../const";
+
+export type TerminalEchoAirportCount = {
+  airportIata: string;
+  airportName: string | null;
+  count: number;
+  latestAt: Date | null;
+  location: { type: string; coordinates: [number, number] } | null | undefined;
+};
 import { getDB } from "../utils/mongo";
 
 export default class TerminalEchoRepo {
@@ -38,14 +46,21 @@ export default class TerminalEchoRepo {
   }
 
   /**
-   * Terminal echoes for map: no file/user/reply joins.
-   * With bounds: view filter, latest first, max 100. Without bounds: all, sorted latest first.
+   * Terminal echoes for map: no file/user/reply joins, latest first.
+   * One airport (uses idx_airportIata_createdAt) or a view: max 100.
+   * Neither: all, max 200.
    */
-  static async findAllForMap(mapBounds?: TerminalEchoMapBounds) {
+  static async findAllForMap(query: TerminalEchoMapQuery = {}) {
     let pipeline: Record<string, unknown>[];
-    if (mapBounds) {
+    if (query.airportIata) {
       pipeline = [
-        { $match: this.mapBoundsMatch(mapBounds) },
+        { $match: { airportIata: query.airportIata.toUpperCase() } },
+        { $sort: { createdAt: -1, _id: -1 } },
+        { $limit: 100 },
+      ];
+    } else if (query.bounds) {
+      pipeline = [
+        { $match: this.mapBoundsMatch(query.bounds) },
         { $sort: { createdAt: -1, _id: -1 } },
         { $limit: 100 },
       ];
@@ -56,6 +71,49 @@ export default class TerminalEchoRepo {
     }
 
     return this.collection().aggregate(pipeline).toArray();
+  }
+
+  /**
+   * Echo count per airport for the zoomed-out map: one row per airport
+   * with its name and location from the `airport` collection. An airport
+   * code the collection doesn't know falls back to one of its echoes'
+   * location, so its echoes are still counted on the map.
+   */
+  static async countByAirport(): Promise<TerminalEchoAirportCount[]> {
+    const rows = await this.collection()
+      .aggregate([
+        { $match: { airportIata: { $nin: [null, ""] } } },
+        {
+          $group: {
+            _id: "$airportIata",
+            count: { $sum: 1 },
+            latestAt: { $max: "$createdAt" },
+            echoLocation: { $first: "$location" },
+          },
+        },
+        {
+          $lookup: {
+            from: "airport",
+            localField: "_id",
+            foreignField: "iata",
+            pipeline: [{ $project: { _id: 0, airport: 1, location: 1 } }],
+            as: "airport",
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
+
+    return rows.map((r) => {
+      const airport = (r.airport as { airport?: string; location?: unknown }[])[0];
+      return {
+        airportIata: r._id as string,
+        airportName: airport?.airport ?? null,
+        count: r.count as number,
+        latestAt: (r.latestAt as Date | undefined) ?? null,
+        location: (airport?.location ?? r.echoLocation) as TerminalEchoAirportCount["location"],
+      };
+    });
   }
 
   /** Single echo with file, user, and replyCount (detail view). */

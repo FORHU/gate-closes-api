@@ -14,7 +14,7 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import type { TerminalEchoMapBounds } from "../const";
-import TerminalEchoSvc from "../services/terminal.echo.service";
+import TerminalEchoSvc, { EchoOutsideAirportError } from "../services/terminal.echo.service";
 import { io } from "../app";
 import { broadcastToAirportRoom } from "../events/terminal.echo.broadcast";
 
@@ -66,6 +66,9 @@ export default class TerminalEchoCtrl {
         waveformData: value.waveformData,
       });
     } catch (error) {
+      if (error instanceof EchoOutsideAirportError) {
+        return res.status(422).json({ message: error.message });
+      }
       const message = error instanceof Error ? error.message : "Server error.";
       return res.status(500).json({ message });
     }
@@ -124,6 +127,30 @@ export default class TerminalEchoCtrl {
     const q = req.query;
     const boundsKeys = ["west", "south", "east", "north"] as const;
     const anyBoundsParam = boundsKeys.some((k) => q[k] !== undefined && String(q[k]).length > 0);
+    const airportParam = q.airport !== undefined && String(q.airport).length > 0;
+
+    if (airportParam) {
+      if (anyBoundsParam) {
+        return res.status(400).json({ message: "Pass either airport or bounds, not both." });
+      }
+      const { error, value } = Joi.string()
+        .trim()
+        .uppercase()
+        .pattern(/^[A-Z0-9]{3,4}$/)
+        .validate(q.airport);
+      if (error) {
+        return res.status(400).json({ message: "airport must be an IATA or ICAO code." });
+      }
+      try {
+        const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, {
+          airportIata: value,
+        });
+        return res.json({ data: geojson });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Server error.";
+        return res.status(500).json({ message });
+      }
+    }
 
     let mapBounds: TerminalEchoMapBounds | undefined;
     if (anyBoundsParam) {
@@ -164,7 +191,20 @@ export default class TerminalEchoCtrl {
     }
 
     try {
-      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, mapBounds);
+      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, {
+        bounds: mapBounds,
+      });
+      return res.json({ data: geojson });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
+    }
+  }
+
+  /** Echo count per airport, one point each, for the zoomed-out map. */
+  static async getMapCounts(_req: Request, res: Response) {
+    try {
+      const geojson = await TerminalEchoSvc.airportCountsAsGeoJson();
       return res.json({ data: geojson });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Server error.";
