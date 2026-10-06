@@ -16,7 +16,7 @@
     "start": "node ./dist/server.js",
     "backfill:ps-latest-events": "ts-node --files ./src/scripts/backfill-ps-latest-events.ts",
     "seed": "ts-node --files ./src/scripts/seed.ts",
-    "seed:roles": "ts-node --files ./src/scripts/seed-roles.ts",
+    "seed:base": "ts-node --files ./src/scripts/seed-base.ts",
     "db:init-indexes": "ts-node --files ./src/scripts/init-indexes.ts",
     "db:schemas": "ts-node --files ./src/scripts/apply-schemas.ts",
     "role:set": "ts-node --files ./src/scripts/set-role.ts"
