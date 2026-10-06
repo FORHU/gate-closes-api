@@ -19,6 +19,7 @@
     "seed:base": "ts-node --files ./src/scripts/seed-base.ts",
     "db:init-indexes": "ts-node --files ./src/scripts/init-indexes.ts",
     "db:schemas": "ts-node --files ./src/scripts/apply-schemas.ts",
+    "airports:clean": "ts-node --files ./src/scripts/clean-airports.ts",
     "role:set": "ts-node --files ./src/scripts/set-role.ts"
   },
   "dependencies": {

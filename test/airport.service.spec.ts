@@ -39,22 +39,22 @@ describe("AirportSvc", () => {
     const inferRadiusKm = (type?: string, runwayLength?: number) =>
       (AirportSvc as any).inferRadiusKm(type, runwayLength);
 
-    it("returns 15 for large_airport regardless of runway length", () => {
-      expect(inferRadiusKm("large_airport", 0)).to.equal(15);
+    it("returns 4 for large_airport regardless of runway length", () => {
+      expect(inferRadiusKm("large_airport", 0)).to.equal(4);
     });
 
-    it("returns 8 for medium_airport", () => {
-      expect(inferRadiusKm("medium_airport")).to.equal(8);
+    it("returns 2.5 for medium_airport", () => {
+      expect(inferRadiusKm("medium_airport")).to.equal(2.5);
     });
 
-    it("returns 4 for small_airport", () => {
-      expect(inferRadiusKm("small_airport")).to.equal(4);
+    it("returns 1.5 for small_airport", () => {
+      expect(inferRadiusKm("small_airport")).to.equal(1.5);
     });
 
     it("falls back to runway length when type is unrecognized", () => {
-      expect(inferRadiusKm("heliport", 10500)).to.equal(15);
-      expect(inferRadiusKm("heliport", 6000)).to.equal(8);
-      expect(inferRadiusKm("heliport", 500)).to.equal(4);
+      expect(inferRadiusKm("heliport", 10500)).to.equal(4);
+      expect(inferRadiusKm("heliport", 6000)).to.equal(2.5);
+      expect(inferRadiusKm("heliport", 500)).to.equal(1.5);
     });
 
     it("returns undefined when neither a known type nor a usable runway length is given", () => {
@@ -88,7 +88,7 @@ describe("AirportSvc", () => {
       expect(result?.iata).to.equal("SIN");
       expect(result?.icao).to.equal("WSSS");
       expect(result?.location).to.deep.equal({ type: "Point", coordinates: [103.9915, 1.3644] });
-      expect(result?.radiusKm).to.equal(15);
+      expect(result?.radiusKm).to.equal(4);
       expect(result?.boundary?.type).to.equal("Polygon");
       expect(result?.elevation).to.equal(22);
       expect(result?.scheduledService).to.equal(true);
@@ -145,10 +145,19 @@ describe("AirportSvc", () => {
   });
 
   describe("findNearbyAndStore", () => {
-    it("maps and persists every airport returned by the external lookup", async () => {
+    it("maps and persists only airline airports from the external lookup", async () => {
       stub(airportDataJsModule, "findNearbyAirports", async () => [
         { iata: "lhr", latitude: "51.47", longitude: "-0.4543", type: "large_airport" },
+        // Out of scope like in the crawl: small airport, heliport, no IATA code.
         { iata: "lcy", latitude: "51.5053", longitude: "0.0553", type: "small_airport" },
+        {
+          iata: "jre",
+          airport: "East 60th Street Heliport",
+          latitude: "40.7542",
+          longitude: "-73.9708",
+          type: "medium_airport",
+        },
+        { icao: "egll", latitude: "51.4", longitude: "-0.4", type: "medium_airport" },
       ]);
       const stored: any[] = [];
       stub(AirportRepo, "upsertByIataOrIcao", async (airport: any) => {
@@ -158,11 +167,10 @@ describe("AirportSvc", () => {
 
       const result = await AirportSvc.findNearbyAndStore(51.5, -0.1, 50);
 
-      expect(result).to.have.length(2);
-      expect(stored).to.have.length(2);
+      expect(result).to.have.length(1);
+      expect(stored).to.have.length(1);
       expect(result[0].iata).to.equal("LHR");
-      expect(result[0].radiusKm).to.equal(15);
-      expect(result[1].radiusKm).to.equal(4);
+      expect(result[0].radiusKm).to.equal(4);
     });
   });
 
@@ -260,7 +268,7 @@ describe("AirportSvc", () => {
       },
       // eligible but no location -> no boundary
       { iata: "ccc", type: "large_airport", scheduledService: "TRUE", radiusKm: 15 },
-      // eligible but radiusKm is 0 -> no boundary
+      // eligible; the source's radiusKm (0) is ignored: sized by type instead
       {
         iata: "ddd",
         type: "medium_airport",
@@ -286,9 +294,24 @@ describe("AirportSvc", () => {
       },
       // out of scope: no type at all
       { iata: "ggg", scheduledService: "TRUE", location: { type: "Point", coordinates: [11, 12] } },
+      // out of scope: a heliport, whatever its type says
+      {
+        iata: "hhh",
+        airport: "East 34th Street Heliport",
+        type: "medium_airport",
+        scheduledService: "TRUE",
+        location: { type: "Point", coordinates: [13, 14] },
+      },
+      // out of scope: no airline (IATA) code
+      {
+        icao: "kiii",
+        type: "medium_airport",
+        scheduledService: "TRUE",
+        location: { type: "Point", coordinates: [15, 16] },
+      },
     ];
 
-    it("scopes to scheduled large/medium airports with a computable boundary, and never overwrites existing rows", async () => {
+    it("scopes to scheduled large/medium airline airports, sizes them by type, and never overwrites existing rows", async () => {
       stub(fsModule, "readFileSync", (() => JSON.stringify(fixtureRecords)) as any);
       const batches: any[][] = [];
       stub(AirportRepo, "bulkInsertMissing", async (airports: any[]) => {
@@ -299,15 +322,20 @@ describe("AirportSvc", () => {
       const result = await AirportSvc.crawlFromAssetFile();
 
       expect(result).to.deep.equal({
-        totalInSource: 7,
+        totalInSource: 9,
         eligible: 4,
-        skippedOutOfScope: 3,
-        skippedNoBoundary: 2,
-        insertedCount: 2,
+        skippedOutOfScope: 5,
+        skippedNoBoundary: 1,
+        insertedCount: 3,
         skippedAlreadyStored: 0,
       });
       expect(batches).to.have.length(1);
-      expect(batches[0]).to.have.length(2);
+      expect(batches[0]).to.have.length(3);
+      expect(batches[0].map((a: any) => [a.iata, a.radiusKm])).to.deep.equal([
+        ["AAA", 4],
+        ["BBB", 2.5],
+        ["DDD", 2.5],
+      ]);
       for (const airport of batches[0]) {
         expect(airport.boundary?.type).to.equal("Polygon");
         expect(airport.scheduledService).to.equal(true);
@@ -324,7 +352,7 @@ describe("AirportSvc", () => {
       const result = await AirportSvc.crawlFromAssetFile();
 
       expect(result.insertedCount).to.equal(0);
-      expect(result.skippedAlreadyStored).to.equal(2);
+      expect(result.skippedAlreadyStored).to.equal(3);
     });
   });
 

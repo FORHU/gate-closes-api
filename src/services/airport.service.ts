@@ -1,5 +1,6 @@
 import { getAirportByIata, getAirportByIcao, findNearbyAirports } from "airport-data-js";
 import * as turf from "@turf/turf";
+import { airportRadiusKm, isAirlineAirport } from "../domain/airport/airport-scope";
 import { ObjectId } from "mongodb";
 import fs from "fs";
 import * as path from "path";
@@ -56,7 +57,8 @@ type RawAirport = {
 };
 
 export default class AirportSvc {
-  private static buildBoundaryFromLocationAndRadius(params: {
+  /** The 32-sided circle drawn and checked as the airport's area. */
+  static buildBoundaryFromLocationAndRadius(params: {
     location: { type: "Point"; coordinates: [number, number] };
     radiusKm: number;
   }) {
@@ -76,7 +78,12 @@ export default class AirportSvc {
   static async findNearbyAndStore(lat: number, lng: number, radiusKm: number): Promise<TAirport[]> {
     const rawAirports = (await findNearbyAirports(lat, lng, radiusKm)) as RawAirport[];
 
-    const mappedAirports: TAirport[] = rawAirports.map((a) => this.mapRawAirport(a));
+    // Same scope as the crawl: airline airports only, never heliports etc.
+    const mappedAirports: TAirport[] = rawAirports
+      .map((a) => this.mapRawAirport(a))
+      .filter(
+        (a) => !!a.type && AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(a.type) && isAirlineAirport(a)
+      );
 
     await Promise.all(
       mappedAirports.map(async (airport) => AirportRepo.upsertByIataOrIcao(airport))
@@ -156,7 +163,8 @@ export default class AirportSvc {
       (record) =>
         record.scheduledService === "TRUE" &&
         !!record.type &&
-        AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(record.type)
+        AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(record.type) &&
+        isAirlineAirport(record)
     );
 
     const airports = eligible
@@ -185,7 +193,8 @@ export default class AirportSvc {
 
   private static mapCrawlAirport(a: CrawlAirport): TAirport {
     const location = a.location;
-    const radiusKm = a.radiusKm;
+    // From our own sizing (airport-scope), not the source file's radius.
+    const radiusKm = airportRadiusKm(a.type, a.runwayLength);
 
     const boundary =
       location && radiusKm && radiusKm > 0
@@ -358,16 +367,6 @@ export default class AirportSvc {
   }
 
   private static inferRadiusKm(type?: string, runwayLength?: number): number | undefined {
-    if (type === "large_airport") return 15;
-    if (type === "medium_airport") return 8;
-    if (type === "small_airport") return 4;
-
-    if (runwayLength !== undefined) {
-      if (runwayLength >= 10000) return 15;
-      if (runwayLength >= 6000) return 8;
-      if (runwayLength > 0) return 4;
-    }
-
-    return undefined;
+    return airportRadiusKm(type, runwayLength);
   }
 }
