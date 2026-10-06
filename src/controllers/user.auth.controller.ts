@@ -284,7 +284,7 @@ export default class AuthController {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Server error.";
       const status =
-        message === "No account found with this email. Please sign up first." ||
+        message === "No account found with this email." ||
         message === "Incorrect password." ||
         message === "Signup not completed. Complete all steps to log in."
           ? 401
