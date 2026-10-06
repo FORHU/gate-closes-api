@@ -37,6 +37,18 @@ export const TARGET_DATABASE_INDEXES: IndexDefinition[] = [
     options: { name: "idx_senderId_createdAt" },
   },
 
+  // Roles: users point at a role by its unique name.
+  {
+    collection: "role",
+    spec: { name: 1 },
+    options: { unique: true, name: "idx_name_unique" },
+  },
+  {
+    collection: "user",
+    spec: { role: 1 },
+    options: { sparse: true, name: "idx_role" },
+  },
+
   // Unified Conversation collection
   {
     collection: "conversations",

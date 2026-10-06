@@ -4,6 +4,7 @@ import request from "supertest";
 import app from "../src/app";
 import UserAuthSvc from "../src/services/user.auth.service";
 import UserRepo from "../src/repositories/user.repository";
+import RoleSvc from "../src/services/role.service";
 import { createAccessToken, createRefreshToken } from "../src/utils/jwt";
 
 describe("AUTH-WEB-01: Web Session & CSRF Origin Defense", () => {
@@ -97,6 +98,7 @@ describe("AUTH-WEB-01: Web Session & CSRF Origin Defense", () => {
   describe("Protected Endpoint Authentication (/api/auth/me)", () => {
     it("should authenticate via session_token cookie", async () => {
       stub(UserRepo, "findById", async () => mockUser);
+      stub(RoleSvc, "permissionsFor", async () => []);
       const token = createAccessToken({ userId: mockUser._id, email: mockUser.email });
 
       const res = await request(app)
@@ -109,6 +111,7 @@ describe("AUTH-WEB-01: Web Session & CSRF Origin Defense", () => {
 
     it("should authenticate via Authorization: Bearer header", async () => {
       stub(UserRepo, "findById", async () => mockUser);
+      stub(RoleSvc, "permissionsFor", async () => []);
       const token = createAccessToken({ userId: mockUser._id, email: mockUser.email });
 
       const res = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
@@ -192,6 +195,7 @@ describe("AUTH-WEB-01: Web Session & CSRF Origin Defense", () => {
 
     it("should allow cookie-authenticated non-mutating request without Origin header", async () => {
       stub(UserRepo, "findById", async () => mockUser);
+      stub(RoleSvc, "permissionsFor", async () => []);
       const token = createAccessToken({ userId: mockUser._id, email: mockUser.email });
 
       const res = await request(app)

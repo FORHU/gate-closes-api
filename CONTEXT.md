@@ -39,7 +39,18 @@ The signup-completing step where a user picks their username and gender together
 Authenticated, one-field-at-a-time edits to an existing profile's username or gender, independent of the signup flow. Each is its own endpoint — there is no combined "update profile" endpoint.
 _Avoid_: "update profile" (removed; was a redundant duplicate of Change Username, plus an unused picture field).
 
+### Access
+
+**Role**:
+A named set of permissions in the `role` collection, edited by super admins in the admin web app (`/admin/roles`). A user has one, stored by name on `user.role`; no field means `user`. Five **system roles** are seeded by `npm run seed:roles` (once per environment) when missing (`user`, `user_premium`, `developer`, `admin`, `super_admin`) and never overwritten, so admin edits stick; they can't be deleted. A custom role can be deleted only when no user has it. `super_admin` always has every permission, whatever its stored list says. A user whose role no longer exists gets what `user` has.
+
+**Permission**:
+One thing a role may do (`premium`, `offers:read`, `offers:write`, `users:read`, `users:role`, `roles:manage`, `airports:manage`). Fixed in code (`src/domain/access/permissions.ts`), because each one is checked by a route; a new permission always comes with code. Routes check permissions, never role names. Role permissions are cached 30 s per API instance and cleared on every role change. Nobody can change their own role. The first super admin is set with `npm run seed:roles -- --super-admin <email>`.
+_Avoid_: "admin" for staff in general (developer and admin are different roles).
+
 ## Flagged ambiguities
 
 - **"Boundary" sounds authoritative but is derived, not measured.** Any feature reasoning about boundary accuracy should be reminded it's a circle, not a surveyed airport perimeter.
 - **Signup Completion vs Profile Completion look interchangeable but aren't.** A Google-authenticated user can be Signup Completed with Profile Completion still false. Any gate on "is this user fully set up" needs to check the specific one it means, not assume either implies the other.
+- **Roles are dynamic, permissions are not (decided 2026-10-06).** Super admins can create roles from the fixed permission list, but a new kind of access (a new permission) still needs code. One role per user; several roles per user was left out on purpose.
+- **"Premium" has no payment behind it yet.** `user_premium` is set by a super admin by hand; no feature checks `premium` so far.

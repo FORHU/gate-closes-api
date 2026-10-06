@@ -16,7 +16,10 @@
     "start": "node ./dist/server.js",
     "backfill:ps-latest-events": "ts-node --files ./src/scripts/backfill-ps-latest-events.ts",
     "seed": "ts-node --files ./src/scripts/seed.ts",
-    "db:init-indexes": "ts-node --files ./src/scripts/init-indexes.ts"
+    "seed:roles": "ts-node --files ./src/scripts/seed-roles.ts",
+    "db:init-indexes": "ts-node --files ./src/scripts/init-indexes.ts",
+    "db:schemas": "ts-node --files ./src/scripts/apply-schemas.ts",
+    "role:set": "ts-node --files ./src/scripts/set-role.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.998.0",

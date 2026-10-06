@@ -11,6 +11,8 @@ export type TUser = {
   signupCompleted?: boolean;
   isCompleteProfile?: boolean;
   picture?: string;
+  /** A `role` collection name; absent means "user". Changed only through `users:role` or `npm run role:set`. */
+  role?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -35,6 +37,8 @@ export class MUser implements Partial<TUser> {
   signupCompleted?: boolean;
   isCompleteProfile?: boolean;
   picture?: string;
+  /** A `role` collection name; absent means "user". Changed only through `users:role` or `npm run role:set`. */
+  role?: string;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -48,6 +52,7 @@ export class MUser implements Partial<TUser> {
       signupCompleted = false,
       isCompleteProfile = false,
       picture,
+      role,
       createdAt = new Date(),
       updatedAt,
     } = {} as TUser
@@ -60,6 +65,7 @@ export class MUser implements Partial<TUser> {
     this.signupCompleted = signupCompleted;
     this.isCompleteProfile = isCompleteProfile;
     this.picture = picture;
+    if (role) this.role = role;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

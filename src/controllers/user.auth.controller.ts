@@ -7,6 +7,8 @@ import { verifyRefreshToken, createAccessToken, createRefreshToken } from "../ut
 import RefreshSessionStore from "../utils/refresh.session.store";
 import { passwordSchema } from "../utils/password.validator";
 import { getSessionCookieOptions, getRefreshCookieOptions, getClearCookieOptions } from "../config";
+import { roleNameOf } from "../domain/access/permissions";
+import RoleSvc from "../services/role.service";
 
 function isWebClient(req: Request): boolean {
   const client = (req.headers?.["x-client-type"] || req.query?.client || "") as string;
@@ -550,8 +552,10 @@ export default class AuthController {
       if (!user) {
         return res.status(404).json({ message: "User not found." });
       }
+      const role = roleNameOf(user);
       return res.status(200).json({
-        user,
+        user: { ...user, role },
+        permissions: await RoleSvc.permissionsFor(role),
         requiresProfileCompletion: !user.isCompleteProfile,
       });
     } catch {

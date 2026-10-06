@@ -6,6 +6,10 @@ import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
 import flightTicketRoutes from "./flight.ticket.route";
 import conversationRoutes from "./conversation.route";
+import adminUserRoutes from "./admin.user.route";
+import adminRoleRoutes from "./admin.role.route";
+import AdminRoleCtrl from "../controllers/admin.role.controller";
+import requirePermission from "../middleware/permission.middleware";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
 const router = express.Router();
@@ -23,5 +27,13 @@ router.use("/terminal-echo-reply", terminalEchoReplyRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
 router.use("/conversations", sessionMiddleware, conversationRoutes);
+router.use("/admin/users", sessionMiddleware, adminUserRoutes);
+router.use("/admin/roles", sessionMiddleware, adminRoleRoutes);
+router.get(
+  "/admin/permissions",
+  sessionMiddleware,
+  requirePermission("users:read"),
+  AdminRoleCtrl.listPermissions
+);
 
 export default router;

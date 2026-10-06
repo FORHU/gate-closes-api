@@ -10,6 +10,7 @@ import { MFile } from "../models/file.model";
 import { MTerminalEcho } from "../models/terminal.echo.model";
 import { MTerminalEchoReply } from "../models/terminal.echo.reply.model";
 import { MVerificationCode } from "../models/verification.code.model";
+import RoleSvc from "../services/role.service";
 
 // Scope: every collection actually read/written by live code (REST routes or
 // socket events). Deliberately excludes:
@@ -604,6 +605,10 @@ const main = async () => {
   const db = getDB();
 
   await wipeCollections(db);
+
+  // Roles are never wiped (admin edits stay); only missing ones are added.
+  const roles = await RoleSvc.seedSystemRoles();
+  console.log(`[seed] role: ${roles.length ? roles.join(", ") : "already there"}`);
 
   const users = await seedUsersAndAuth(db);
   console.log(`[seed] user: ${users.length}`);
