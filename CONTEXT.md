@@ -39,6 +39,18 @@ The signup-completing step where a user picks their username and gender together
 Authenticated, one-field-at-a-time edits to an existing profile's username or gender, independent of the signup flow. Each is its own endpoint — there is no combined "update profile" endpoint.
 _Avoid_: "update profile" (removed; was a redundant duplicate of Change Username, plus an unused picture field).
 
+### Offers
+
+**Offer**:
+Anything promoted to people at an airport: an ad, a voucher, a lounge pass. `kind` is free text set by the admin, so a new kind needs no deploy; per-kind fields go in `data` (shown to everyone) and `reward` (shown only on claim, e.g. a voucher code). Targets airports by IATA code, or `"*"` for all. Live while `status` is `active` and now is within `startsAt`–`endsAt`.
+_Avoid_: "ad" for the general concept (an ad is one kind of offer), "promo".
+
+**Offer Pin** / **Offer Card**:
+The two placements. A pin sits at a random spot inside 80% of the Airport Radius, fixed per user and offer for the day (seeded), so it doesn't jump while panning. The card is one offer per request, picked at random in proportion to `weight`.
+
+**Claim**:
+Taking an offer's `reward`. Refused (409) when the offer isn't live, `limits.maxClaims` is used up (checked and counted in one atomic update), or the user hit `limits.maxClaimsPerUser`. Views and clicks are tracked too; totals live on the offer (`stats`), raw events in `offer.event` expire after 180 days.
+
 ### Access
 
 **Role**:

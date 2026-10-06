@@ -49,6 +49,29 @@ export const TARGET_DATABASE_INDEXES: IndexDefinition[] = [
     options: { sparse: true, name: "idx_role" },
   },
 
+  // Offers (ads, vouchers...): live offers per airport; per-user claim
+  // counts; raw events expire after 180 days (totals live on the offer).
+  {
+    collection: "offer",
+    spec: { airports: 1, status: 1, endsAt: 1 },
+    options: { name: "idx_airports_status_endsAt" },
+  },
+  {
+    collection: "offer.event",
+    spec: { offerId: 1, userId: 1, type: 1 },
+    options: { name: "idx_offerId_userId_type" },
+  },
+  {
+    collection: "offer.event",
+    spec: { offerId: 1, createdAt: 1 },
+    options: { name: "idx_offerId_createdAt" },
+  },
+  {
+    collection: "offer.event",
+    spec: { createdAt: 1 },
+    options: { name: "ttl_createdAt_180d", expireAfterSeconds: 180 * 24 * 60 * 60 },
+  },
+
   // Unified Conversation collection
   {
     collection: "conversations",

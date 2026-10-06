@@ -6,6 +6,8 @@ import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
 import flightTicketRoutes from "./flight.ticket.route";
 import conversationRoutes from "./conversation.route";
+import offerRoutes from "./offer.route";
+import adminOfferRoutes from "./admin.offer.route";
 import adminUserRoutes from "./admin.user.route";
 import adminRoleRoutes from "./admin.role.route";
 import AdminRoleCtrl from "../controllers/admin.role.controller";
@@ -27,6 +29,8 @@ router.use("/terminal-echo-reply", terminalEchoReplyRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
 router.use("/conversations", sessionMiddleware, conversationRoutes);
+router.use("/offers", sessionMiddleware, offerRoutes);
+router.use("/admin/offers", sessionMiddleware, adminOfferRoutes);
 router.use("/admin/users", sessionMiddleware, adminUserRoutes);
 router.use("/admin/roles", sessionMiddleware, adminRoleRoutes);
 router.get(
