@@ -10,6 +10,7 @@ import offerRoutes from "./offer.route";
 import adminOfferRoutes from "./admin.offer.route";
 import adminUserRoutes from "./admin.user.route";
 import adminRoleRoutes from "./admin.role.route";
+import adminAirportRoutes from "./admin.airport.route";
 import AdminRoleCtrl from "../controllers/admin.role.controller";
 import requirePermission from "../middleware/permission.middleware";
 import sessionMiddleware from "../middleware/valid-session.middleware";
@@ -33,6 +34,7 @@ router.use("/offers", sessionMiddleware, offerRoutes);
 router.use("/admin/offers", sessionMiddleware, adminOfferRoutes);
 router.use("/admin/users", sessionMiddleware, adminUserRoutes);
 router.use("/admin/roles", sessionMiddleware, adminRoleRoutes);
+router.use("/admin/airports", sessionMiddleware, adminAirportRoutes);
 router.get(
   "/admin/permissions",
   sessionMiddleware,

@@ -20,6 +20,8 @@ export type TAirport = {
   location?: { type: "Point"; coordinates: [number, number] };
   boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
+  /** Radius set by an admin: imports and `airports:clean` leave it alone. */
+  radiusManual?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -44,6 +46,8 @@ export type TAirportUpdateOptions = {
   location?: { type: "Point"; coordinates: [number, number] };
   boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
+  /** Radius set by an admin: imports and `airports:clean` leave it alone. */
+  radiusManual?: boolean;
 };
 
 export class MAirport implements Partial<TAirport> {
@@ -66,6 +70,8 @@ export class MAirport implements Partial<TAirport> {
   location?: { type: "Point"; coordinates: [number, number] };
   boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
+  /** Radius set by an admin: imports and `airports:clean` leave it alone. */
+  radiusManual?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -90,6 +96,7 @@ export class MAirport implements Partial<TAirport> {
       location,
       boundary,
       radiusKm,
+      radiusManual,
       createdAt = new Date(),
       updatedAt,
     } = {} as TAirport
@@ -113,6 +120,7 @@ export class MAirport implements Partial<TAirport> {
     this.location = location;
     this.boundary = boundary;
     this.radiusKm = radiusKm;
+    if (radiusManual) this.radiusManual = radiusManual;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

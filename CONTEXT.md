@@ -10,7 +10,7 @@ Backend for detecting whether a user's device is physically located inside an ai
 The single GeoJSON `Point` marking an airport's reference coordinate. Sourced from crawled airport data.
 
 **Airport Radius**:
-A distance in kilometers (`radiusKm`) approximating an airport's own extent, not its neighborhood: `large_airport` → 4 km, `medium_airport` → 2.5 km, `small_airport` → 1.5 km, or by runway length when the type is unknown (`src/domain/airport/airport-scope.ts`). Allows for the reference point being up to ~1 km off. This is the basis for the primary inside-airport check. (Was 15 / 8 / 4 km until 2026-10-06; `npm run airports:clean` resized every stored airport.)
+A distance in kilometers (`radiusKm`) approximating an airport's own extent, not its neighborhood: `large_airport` → 4 km, `medium_airport` → 2.5 km, `small_airport` → 1.5 km, or by runway length when the type is unknown (`src/domain/airport/airport-scope.ts`). Allows for the reference point being up to ~1 km off. This is the basis for the primary inside-airport check. (Was 15 / 8 / 4 km until 2026-10-06; `npm run airports:clean` resized every stored airport.) An admin with `airports:manage` can set one airport's radius in the admin web app (`/admin/airports`, 0.5-30 km) or reset it to the default; a radius set that way is marked `radiusManual` and kept by imports and `airports:clean`. The map's airport GeoJSON (cached 10 min) is cleared on every change.
 
 **Airport Boundary**:
 A synthetic circular polygon (32-sided, via Turf) generated from Airport Location + Airport Radius. It is *not* a real-world airport perimeter/fence line — no such data is ingested anywhere in this system.

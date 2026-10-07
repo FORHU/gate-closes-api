@@ -11,6 +11,49 @@ export default class AirportRepo {
     return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
+  /**
+   * Admin list. With a query: an exact code match ("BAG") first, then names
+   * containing it. Without: airports with a radius set by hand first.
+   */
+  static async searchForAdmin(q: string, limit: number) {
+    const projection = {
+      airport: 1,
+      iata: 1,
+      icao: 1,
+      countryCode: 1,
+      type: 1,
+      runwayLength: 1,
+      radiusKm: 1,
+      radiusManual: 1,
+      location: 1,
+    };
+    const trimmed = q.trim();
+    if (!trimmed) {
+      return this.collection()
+        .find({}, { projection })
+        .sort({ radiusManual: -1, type: 1, iata: 1 })
+        .limit(limit)
+        .toArray();
+    }
+    const code = trimmed.toUpperCase();
+    const exact = await this.collection()
+      .find({ $or: [{ iata: code }, { icao: code }] }, { projection })
+      .limit(limit)
+      .toArray();
+    const byName = await this.collection()
+      .find(
+        {
+          airport: new RegExp(this.escapeRegex(trimmed), "i"),
+          _id: { $nin: exact.map((a) => a._id) },
+        },
+        { projection }
+      )
+      .sort({ radiusManual: -1, type: 1, iata: 1 })
+      .limit(Math.max(0, limit - exact.length))
+      .toArray();
+    return [...exact, ...byName];
+  }
+
   static async searchByName(q: string, limit: number) {
     const trimmed = q.trim();
     const rx = new RegExp(this.escapeRegex(trimmed), "i");
@@ -51,8 +94,20 @@ export default class AirportRepo {
     const updatedAt = new Date();
     const doc: Record<string, unknown> = { ...new MAirport({ ...airport, updatedAt }) };
     delete doc._id;
+    // Size and creation date only for a new airport: never overwrite a
+    // radius an admin set, nor when the airport was first stored.
+    const onInsert: Record<string, unknown> = {};
+    for (const key of ["radiusKm", "boundary", "createdAt"]) {
+      if (doc[key] !== undefined) onInsert[key] = doc[key];
+      delete doc[key];
+    }
+    delete doc.radiusManual;
 
-    return this.collection().updateOne(filter, { $set: doc }, { upsert: true });
+    return this.collection().updateOne(
+      filter,
+      { $set: doc, $setOnInsert: onInsert },
+      { upsert: true }
+    );
   }
 
   static async findById(_id: string | ObjectId) {
@@ -124,6 +179,7 @@ export default class AirportRepo {
     if (airport.location !== undefined) setFields.location = airport.location;
     if (airport.boundary !== undefined) setFields.boundary = airport.boundary;
     if (airport.radiusKm !== undefined) setFields.radiusKm = airport.radiusKm;
+    if (airport.radiusManual !== undefined) setFields.radiusManual = airport.radiusManual;
 
     return this.collection().updateOne({ _id: airport._id }, { $set: setFields });
   }

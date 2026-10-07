@@ -3,6 +3,7 @@ import * as turf from "@turf/turf";
 import { ObjectId } from "mongodb";
 import { connectToMongo, getDB, useMongoClient } from "../utils/mongo";
 import AirportSvc from "../services/airport.service";
+import RedisUtil from "../utils/redis.util";
 import { airportRadiusKm, isAirlineAirport } from "../domain/airport/airport-scope";
 import { printDbTarget } from "./check-db-target";
 
@@ -28,6 +29,7 @@ type AirportRow = {
   airport?: string | null;
   type?: string | null;
   radiusKm?: number;
+  radiusManual?: boolean;
   runwayLength?: number | null;
   location?: { type: "Point"; coordinates: [number, number] };
 };
@@ -64,6 +66,7 @@ const main = async () => {
           airport: 1,
           type: 1,
           radiusKm: 1,
+          radiusManual: 1,
           runwayLength: 1,
           location: 1,
         },
@@ -76,7 +79,9 @@ const main = async () => {
   const remove = all.filter((a) => !inScope(a) && !used.has((a.iata ?? "").toUpperCase()));
   const removeIds = new Set(remove.map((a) => a._id.toHexString()));
   const keep = all.filter((a) => !removeIds.has(a._id.toHexString()));
+  // Radii an admin set are kept.
   const resize = keep.filter((a) => {
+    if (a.radiusManual) return false;
     const radius = airportRadiusKm(a.type, a.runwayLength);
     return radius !== undefined && a.location && a.radiusKm !== radius;
   });
@@ -86,6 +91,7 @@ const main = async () => {
   console.log(`  kept (in use, out of scope): ${keep.filter((a) => !inScope(a)).length}`);
   console.log(`  airports after:      ${keep.length}`);
   console.log(`  circles to resize:   ${resize.length}`);
+  console.log(`  set by an admin (kept): ${keep.filter((a) => a.radiusManual).length}`);
   const sizes = new Map<string, number>();
   for (const a of resize) {
     const key = `${a.type}: ${a.radiusKm} km -> ${airportRadiusKm(a.type, a.runwayLength)} km`;
@@ -162,6 +168,14 @@ const main = async () => {
       await airports.bulkWrite(ops.slice(i, i + 500));
     }
     console.log(`[airports:clean] resized ${resize.length} circles`);
+  }
+  // The map's airport GeoJSON is cached; drop it so the change shows now.
+  try {
+    await RedisUtil.initialize();
+    await AirportSvc.clearGeoJsonCache();
+    await RedisUtil.redisClient.quit();
+  } catch {
+    console.log("[airports:clean] Redis not reachable: the map updates within 10 minutes.");
   }
   console.log("[airports:clean] done.");
 };

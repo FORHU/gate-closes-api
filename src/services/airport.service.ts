@@ -35,6 +35,14 @@ const AIRPORT_CRAWL_FILE = path.join(__dirname, "..", "assets", "gate-closes.air
 const AIRPORT_CRAWL_BATCH_SIZE = 500;
 const AIRPORT_CRAWL_ELIGIBLE_TYPES = ["large_airport", "medium_airport"];
 const AIRPORT_SEARCH_LIMIT = 5;
+const GEOJSON_CACHE_KEY = "airport:geojson:v1";
+
+export class AirportNotFoundError extends Error {
+  constructor() {
+    super("Airport not found.");
+    this.name = "AirportNotFoundError";
+  }
+}
 
 type RawAirport = {
   iata?: string;
@@ -272,8 +280,48 @@ export default class AirportSvc {
     };
   }
 
+  /** Admin: airports by code or name, with their radius and default size. */
+  static async searchForAdmin(q: string, limit = 50) {
+    const airports = await AirportRepo.searchForAdmin(q, limit);
+    return airports.map((a) => ({
+      ...a,
+      radiusManual: a.radiusManual === true,
+      defaultRadiusKm: airportRadiusKm(a.type, a.runwayLength) ?? null,
+    }));
+  }
+
+  /**
+   * Admin: sets one airport's radius (km) and redraws its circle, or with
+   * `null` goes back to the default size for its type. A set radius is kept
+   * by imports and `airports:clean`. Clears the map cache so it shows now.
+   */
+  static async setRadius(id: string, radiusKm: number | null) {
+    const airport = await AirportRepo.findById(id);
+    if (!airport) throw new AirportNotFoundError();
+    if (!airport.location) throw new Error("This airport has no location to draw a circle around.");
+    const radius = radiusKm ?? airportRadiusKm(airport.type, airport.runwayLength);
+    if (!radius) throw new Error("No default size for this airport's type; set a radius.");
+    const boundary = this.buildBoundaryFromLocationAndRadius({
+      location: airport.location as { type: "Point"; coordinates: [number, number] },
+      radiusKm: radius,
+    });
+    await AirportRepo.update({
+      _id: airport._id,
+      radiusKm: radius,
+      radiusManual: radiusKm !== null,
+      boundary,
+    });
+    await this.clearGeoJsonCache();
+    return { ...airport, radiusKm: radius, radiusManual: radiusKm !== null };
+  }
+
+  /** The map's airport GeoJSON is cached 10 min; drop it after any change. */
+  static async clearGeoJsonCache() {
+    await RedisUtil.del(GEOJSON_CACHE_KEY).catch(() => undefined);
+  }
+
   static async getAllAsGeoJson() {
-    const cacheKey = "airport:geojson:v1";
+    const cacheKey = GEOJSON_CACHE_KEY;
     const cached = await RedisUtil.getJson<unknown>(cacheKey);
     if (cached) return cached;
 
