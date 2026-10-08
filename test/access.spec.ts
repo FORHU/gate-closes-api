@@ -234,13 +234,14 @@ describe("Roles and permissions", () => {
       stub(UserRepo, "listForAdmin", async () => {
         throw new Error("should not query");
       });
-      for (const query of [
+      const invalid: Record<string, string>[] = [
         { page: "0" },
         { page: "abc" },
         { limit: "500" },
         { limit: "0" },
         { sort: "email" },
-      ]) {
+      ];
+      for (const query of invalid) {
         const res = mockRes();
         await AdminUserCtrl.list(req(query), res);
         expect(res.statusCode, JSON.stringify(query)).to.equal(400);
