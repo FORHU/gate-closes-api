@@ -1,24 +1,41 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import { ObjectId } from "mongodb";
-import UserRepo from "../repositories/user.repository";
+import UserRepo, { ADMIN_USER_SORTS } from "../repositories/user.repository";
 import RoleSvc from "../services/role.service";
 import { ROLE_NAME_PATTERN, roleNameOf } from "../domain/access/permissions";
 
 const roleName = Joi.string().pattern(ROLE_NAME_PATTERN).message("Invalid role name.");
 
 export default class AdminUserCtrl {
-  /** `GET /admin/users?q=&role=`: newest 50, by email/username prefix. */
+  /**
+   * `GET /admin/users?q=&role=&page=&limit=&sort=`: one page of users by
+   * email/username prefix. `sort` is newest (default), oldest, username_asc
+   * or username_desc. Returns the page plus totals so the client can render
+   * page controls without fetching everything.
+   */
   static async list(req: Request, res: Response) {
     const { error, value } = Joi.object({
       q: Joi.string().trim().max(100).allow(""),
       role: roleName,
-      limit: Joi.number().integer().min(1).max(200).default(50),
+      page: Joi.number().integer().min(1).max(10_000).default(1),
+      limit: Joi.number().integer().min(1).max(100).default(10),
+      sort: Joi.string()
+        .valid(...Object.keys(ADMIN_USER_SORTS))
+        .default("newest"),
     }).validate(req.query);
     if (error) return res.status(400).json({ message: error.message });
     try {
-      const users = await UserRepo.listForAdmin(value);
-      return res.json({ data: users.map((u) => ({ ...u, role: roleNameOf(u) })) });
+      const { users, total } = await UserRepo.listForAdmin(value);
+      return res.json({
+        data: users.map((u) => ({ ...u, role: roleNameOf(u) })),
+        pagination: {
+          page: value.page,
+          limit: value.limit,
+          total,
+          totalPages: Math.ceil(total / value.limit),
+        },
+      });
     } catch {
       return res.status(500).json({ message: "Server error." });
     }
