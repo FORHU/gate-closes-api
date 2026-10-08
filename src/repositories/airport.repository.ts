@@ -317,6 +317,7 @@ export default class AirportRepo {
             _id: 1,
             boundary: 1,
             airport: 1,
+            iata: 1,
             countryCode: 1,
           },
         }
