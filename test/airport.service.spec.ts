@@ -445,6 +445,7 @@ describe("AirportSvc", () => {
             {
               _id: airportId,
               airport: "Changi Airport",
+              iata: "SIN",
               countryCode: "SG",
               boundary: { type: "Polygon", coordinates: [[[0, 0]]] },
             },
@@ -461,7 +462,7 @@ describe("AirportSvc", () => {
         type: "Feature",
         id: airportId.toString(),
         geometry: { type: "Polygon", coordinates: [[[0, 0]]] },
-        properties: { airport: "Changi Airport", country_code: "SG" },
+        properties: { airport: "Changi Airport", iata: "SIN", country_code: "SG" },
       });
       expect(cachedPayload).to.deep.equal(result);
     });

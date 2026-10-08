@@ -3,8 +3,9 @@ import { MOffer, type TOffer } from "../models/offer.model";
 import { log } from "./helpers";
 
 /**
- * Sample offers to see the feature work: an ad and a voucher at Baguio
- * (BAG, where most testing happens) and Manila (MNL). Active, no end date.
+ * Sample offers to see the feature work: an ad, a voucher and a gift at
+ * Baguio (BAG, where most testing happens) and Manila (MNL), so every offer
+ * group (voucher, gift, ad) can be found on the map. Active, no end date.
  * Matched by title + kind, so a re-run updates them instead of duplicating.
  */
 export const SAMPLE_OFFERS: Omit<TOffer, "status" | "weight">[] = [
@@ -36,6 +37,36 @@ export const SAMPLE_OFFERS: Omit<TOffer, "status" | "weight">[] = [
     data: { discount: "20%" },
     reward: { code: "GATE-MNL-20" },
     limits: { maxClaims: 100, maxClaimsPerUser: 1 },
+  },
+  {
+    kind: "gift",
+    title: "Welcome gift: a NAIA travel pouch",
+    body: "Pick it up at the Terminal 3 information desk.",
+    airports: ["MNL"],
+    placements: ["pin"],
+    data: { item: "travel pouch" },
+    reward: { code: "GATE-MNL-POUCH" },
+    limits: { maxClaims: 30, maxClaimsPerUser: 1 },
+  },
+  {
+    kind: "ad",
+    title: "Lounge day pass at Terminal 3",
+    body: "Showers, Wi-Fi and a quiet corner before your flight.",
+    ctaLabel: "See the lounge",
+    ctaUrl: "https://example.com/lounge",
+    airports: ["MNL"],
+    placements: ["pin"],
+    data: { hours: "open 24 hours" },
+  },
+  {
+    kind: "gift",
+    title: "Ube jam for the road",
+    body: "A small jar from the Good Shepherd stall, on us.",
+    airports: ["BAG"],
+    placements: ["pin"],
+    data: { item: "ube jam" },
+    reward: { code: "GATE-BAG-UBE" },
+    limits: { maxClaims: 30, maxClaimsPerUser: 1 },
   },
 ];
 

@@ -35,7 +35,7 @@ const AIRPORT_CRAWL_FILE = path.join(__dirname, "..", "assets", "gate-closes.air
 const AIRPORT_CRAWL_BATCH_SIZE = 500;
 const AIRPORT_CRAWL_ELIGIBLE_TYPES = ["large_airport", "medium_airport"];
 const AIRPORT_SEARCH_LIMIT = 5;
-const GEOJSON_CACHE_KEY = "airport:geojson:v1";
+const GEOJSON_CACHE_KEY = "airport:geojson:v2";
 
 export class AirportNotFoundError extends Error {
   constructor() {
@@ -338,6 +338,7 @@ export default class AirportSvc {
         geometry: airport.boundary,
         properties: {
           airport: airport.airport ?? null,
+          iata: airport.iata ?? null,
           country_code: airport.countryCode ?? null,
         },
       }));
