@@ -226,6 +226,61 @@ describe("Roles and permissions", () => {
     });
   });
 
+  describe("admin users list (server-side pagination)", () => {
+    const req = (query: Record<string, string>) => ({ query }) as unknown as Request;
+    type Body = { data: unknown[]; pagination: Record<string, number> };
+
+    it("rejects invalid or oversized page and limit", async () => {
+      stub(UserRepo, "listForAdmin", async () => {
+        throw new Error("should not query");
+      });
+      for (const query of [
+        { page: "0" },
+        { page: "abc" },
+        { limit: "500" },
+        { limit: "0" },
+        { sort: "email" },
+      ]) {
+        const res = mockRes();
+        await AdminUserCtrl.list(req(query), res);
+        expect(res.statusCode, JSON.stringify(query)).to.equal(400);
+      }
+    });
+
+    it("asks the database for one page and returns the totals", async () => {
+      let asked: Record<string, unknown> = {};
+      stub(UserRepo, "listForAdmin", async (filter: Record<string, unknown>) => {
+        asked = filter;
+        return { users: [{ email: "a@x.com" }, { email: "b@x.com", role: "admin" }], total: 45 };
+      });
+      const res = mockRes();
+      await AdminUserCtrl.list(req({ page: "2", limit: "20", q: "a", sort: "username_desc" }), res);
+      const body = res.body as unknown as Body;
+      expect(res.statusCode).to.equal(200);
+      expect(asked).to.include({ page: 2, limit: 20, q: "a", sort: "username_desc" });
+      expect(body.pagination).to.deep.equal({ page: 2, limit: 20, total: 45, totalPages: 3 });
+      expect(body.data).to.have.length(2);
+      expect((body.data[0] as { role: string }).role).to.equal("user");
+    });
+
+    it("defaults to page 1 of 10, newest first", async () => {
+      let asked: Record<string, unknown> = {};
+      stub(UserRepo, "listForAdmin", async (filter: Record<string, unknown>) => {
+        asked = filter;
+        return { users: [], total: 0 };
+      });
+      const res = mockRes();
+      await AdminUserCtrl.list(req({}), res);
+      expect(asked).to.include({ page: 1, limit: 10, sort: "newest" });
+      expect((res.body as unknown as Body).pagination).to.deep.equal({
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      });
+    });
+  });
+
   describe("changing a user's role", () => {
     const req = (id: string, role: unknown) =>
       ({ user: { userId }, params: { id }, body: { role } }) as unknown as Request;

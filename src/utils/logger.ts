@@ -1,3 +1,4 @@
+import * as dns from "dns";
 import winston from "winston";
 import "winston-mongodb";
 import { MONGO_DB, MONGO_URI } from "../config";
@@ -19,10 +20,14 @@ const transportsRecord = winston.transports as unknown as Record<
 >;
 if (!isTest && MONGO_URI && transportsRecord.MongoDB) {
   try {
+    // The transport connects at import time, before connectToMongo() runs,
+    // so it needs the same SRV-lookup workaround (see utils/mongo.ts).
+    dns.setServers(["8.8.8.8", "1.1.1.1"]);
     const MongoTransport = transportsRecord.MongoDB;
     transports.push(
       new MongoTransport({
-        db: `${MONGO_URI}/${MONGO_DB}`,
+        db: MONGO_URI,
+        dbName: MONGO_DB,
         options: { useUnifiedTopology: true },
         collection: "logs",
         capped: true,
