@@ -246,10 +246,16 @@ export default class TerminalEchoSvc {
       airportIata: canonicalAirportIata,
     });
 
+    // The feed row as GET /terminal-echo returns it, so socket listeners can
+    // prepend it directly. A new echo has no reactions yet.
+    const created = await TerminalEchoRepo.findByIdWithFile(inserted.insertedId);
+    const echo = created ? { ...created, currentUserReactions: [] as string[] } : null;
+
     return {
       ...inserted,
       airportIata: canonicalAirportIata,
       airportName: resolvedAirportName,
+      echo,
     };
   }
 

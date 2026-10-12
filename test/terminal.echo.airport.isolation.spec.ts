@@ -85,6 +85,7 @@ describe("Terminal Echo airport isolation — controller wiring (§Blocker 1)", 
         acknowledged: true,
         airportIata: params.airportName === "LHR-hint" ? "LHR" : "SIN",
         airportName: "Test Airport",
+        echo: { _id: new ObjectId(), airportIata: params.airportName === "LHR-hint" ? "LHR" : "SIN" },
       }));
 
       const baseBody = {
@@ -118,6 +119,11 @@ describe("Terminal Echo airport isolation — controller wiring (§Blocker 1)", 
       expect(calls[0].room).to.equal("airport:SIN");
       expect(calls[1].room).to.equal("airport:LHR");
       expect(calls[0].room).to.not.equal(calls[1].room);
+      // Payload is the reloaded feed row, not the raw insert result.
+      const payload = calls[0].payload as { type: string; data: Record<string, unknown> };
+      expect(payload.type).to.equal("create");
+      expect(payload.data.airportIata).to.equal("SIN");
+      expect(payload.data).to.not.have.property("insertedId");
     });
 
     it("never falls back to a namespace-wide broadcast when airport resolution fails", async () => {
@@ -128,6 +134,7 @@ describe("Terminal Echo airport isolation — controller wiring (§Blocker 1)", 
         acknowledged: true,
         airportIata: "", // resolution failed
         airportName: "",
+        echo: { _id: new ObjectId(), airportIata: "" },
       }));
 
       const { res } = fakeRes();

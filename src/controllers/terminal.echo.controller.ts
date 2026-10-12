@@ -76,10 +76,16 @@ export default class TerminalEchoCtrl {
     const airportIata = (result as { airportIata?: string })?.airportIata;
 
     try {
-      broadcastToAirportRoom(io, airportIata, "terminal_echo:changed", {
-        type: "create",
-        data: result,
-      });
+      // Send the full feed row, never the raw insert result: the app parses
+      // `data` as an echo and prepends it to the feed.
+      if (result.echo) {
+        broadcastToAirportRoom(io, airportIata, "terminal_echo:changed", {
+          type: "create",
+          data: result.echo,
+        });
+      } else {
+        console.warn("[TerminalEchoCtrl.create] Echo saved but could not be reloaded to broadcast.");
+      }
     } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoCtrl.create] Echo saved successfully, but broadcast failed:",
