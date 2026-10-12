@@ -13,6 +13,9 @@ export const PERMISSIONS = [
   "users:role",
   "roles:manage",
   "airports:manage",
+  // Checked by the app (read from /auth/me), not by a route: it only shows
+  // the dev-build simulated-airport toggle.
+  "airports:simulate",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -25,6 +28,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   "users:role": "Change a user's role.",
   "roles:manage": "Create, edit and delete roles.",
   "airports:manage": "Airport data maintenance: crawl, boundary sync.",
+  "airports:simulate": "Use a simulated airport location in dev builds of the app.",
 };
 
 export const DEFAULT_ROLE = "user";
@@ -62,13 +66,13 @@ export const SYSTEM_ROLES: readonly SystemRoleSeed[] = [
     name: "developer",
     label: "Developer",
     description: "Engineers: airport data maintenance, read-only admin.",
-    permissions: ["premium", "users:read", "offers:read", "airports:manage"],
+    permissions: ["premium", "users:read", "offers:read", "airports:manage", "airports:simulate"],
   },
   {
     name: "admin",
     label: "Admin",
     description: "Runs offers (ads, vouchers) and sees users.",
-    permissions: ["premium", "users:read", "offers:read", "offers:write"],
+    permissions: ["premium", "users:read", "offers:read", "offers:write", "airports:simulate"],
   },
   {
     name: SUPER_ADMIN_ROLE,

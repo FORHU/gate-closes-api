@@ -8,6 +8,8 @@ export type TTerminalEcho = {
   location?: { type: "Point"; coordinates: [number, number] };
   airportName?: string;
   airportIata?: string;
+  /** Set when posted in its sender's test airport: only they can see it. */
+  testOwnerId?: ObjectId;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -27,6 +29,8 @@ export type TTerminalEchoUpdateOptions = {
   location?: { type: "Point"; coordinates: [number, number] };
   airportName?: string;
   airportIata?: string;
+  /** Set when posted in its sender's test airport: only they can see it. */
+  testOwnerId?: ObjectId;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -44,6 +48,8 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
   location?: { type: "Point"; coordinates: [number, number] };
   airportName?: string;
   airportIata?: string;
+  /** Set when posted in its sender's test airport: only they can see it. */
+  testOwnerId?: ObjectId;
   countListens?: number;
   countReactLike?: number;
   countReactLove?: number;
@@ -63,6 +69,7 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
       location = { type: "Point", coordinates: [0, 0] },
       airportName = "",
       airportIata = "",
+      testOwnerId,
       countListens = 0,
       countReactLike = 0,
       countReactLove = 0,
@@ -81,6 +88,7 @@ export class MTerminalEcho implements Partial<TTerminalEcho> {
     this.location = location;
     this.airportName = airportName;
     this.airportIata = airportIata;
+    if (testOwnerId) this.testOwnerId = testOwnerId;
     this.countListens = countListens;
     this.countReactLike = countReactLike;
     this.countReactLove = countReactLove;

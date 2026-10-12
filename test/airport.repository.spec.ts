@@ -25,7 +25,7 @@ describe("AirportRepo", () => {
   };
 
   describe("searchByName", () => {
-    it("escapes regex metacharacters in the query and searches case-insensitively", async () => {
+    it("escapes regex metacharacters and searches name, IATA and ICAO case-insensitively", async () => {
       let capturedFilter: any = null;
       let capturedOptions: any = null;
       useFakeCollection({
@@ -38,8 +38,12 @@ describe("AirportRepo", () => {
 
       await AirportRepo.searchByName(" a.b+c ", 5);
 
-      expect(capturedFilter.airport.source).to.equal("a\\.b\\+c");
-      expect(capturedFilter.airport.flags).to.equal("i");
+      // Matches the name or either airport code.
+      const [byName, byIata, byIcao] = capturedFilter.$or;
+      for (const rx of [byName.airport, byIata.iata, byIcao.icao]) {
+        expect(rx.source).to.equal("a\\.b\\+c");
+        expect(rx.flags).to.equal("i");
+      }
       expect(capturedOptions.projection).to.deep.equal({
         _id: 0,
         airport: 1,

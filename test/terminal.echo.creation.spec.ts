@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import TerminalEchoSvc from "../src/services/terminal.echo.service";
 import TerminalEchoRepo from "../src/repositories/terminal.echo.repository";
 import AirportRepo from "../src/repositories/airport.repository";
+import AirportTestRepo from "../src/repositories/airport.test.repository";
 import FileSvc from "../src/services/file.service";
 
 describe("TerminalEchoSvc (Server-Side Airport Resolution)", () => {
@@ -27,6 +28,7 @@ describe("TerminalEchoSvc (Server-Side Airport Resolution)", () => {
     }));
 
     // Stub AirportRepo.findNearestWithDistance
+    stub(AirportTestRepo, "findNearestForOwner", async () => null);
     stub(AirportRepo, "findNearestWithDistance", async (params: { lat: number; lng: number }) => {
       expect(params.lat).to.equal(1.3644);
       expect(params.lng).to.equal(103.9915);
