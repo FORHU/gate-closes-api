@@ -6,15 +6,29 @@ import AirportSvc, { AirportNotFoundError } from "../services/airport.service";
 export const RADIUS_LIMITS_KM = { min: 0.5, max: 30 } as const;
 
 export default class AdminAirportCtrl {
-  /** `GET /admin/airports?q=MNL`: by code or name; manual radii first. */
+  /**
+   * `GET /admin/airports?q=MNL&page=1&limit=10`: one page of airports by code
+   * or name (exact code first; manual radii first), plus totals so the client
+   * can render page controls without fetching everything.
+   */
   static async list(req: Request, res: Response) {
     const { error, value } = Joi.object({
       q: Joi.string().trim().max(100).allow("").default(""),
-      limit: Joi.number().integer().min(1).max(200).default(50),
+      page: Joi.number().integer().min(1).max(10_000).default(1),
+      limit: Joi.number().integer().min(1).max(100).default(10),
     }).validate(req.query);
     if (error) return res.status(400).json({ message: error.message });
     try {
-      return res.json({ data: await AirportSvc.searchForAdmin(value.q, value.limit) });
+      const { airports, total } = await AirportSvc.listForAdmin(value);
+      return res.json({
+        data: airports,
+        pagination: {
+          page: value.page,
+          limit: value.limit,
+          total,
+          totalPages: Math.ceil(total / value.limit),
+        },
+      });
     } catch {
       return res.status(500).json({ message: "Server error." });
     }

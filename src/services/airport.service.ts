@@ -301,14 +301,15 @@ export default class AirportSvc {
     };
   }
 
-  /** Admin: airports by code or name, with their radius and default size. */
-  static async searchForAdmin(q: string, limit = 50) {
-    const airports = await AirportRepo.searchForAdmin(q, limit);
-    return airports.map((a) => ({
+  /** Admin: one page of airports by code or name, with their radius and default size. */
+  static async listForAdmin(filter: { q?: string; page?: number; limit?: number }) {
+    const { airports, total } = await AirportRepo.listForAdmin(filter);
+    const rows = airports.map((a) => ({
       ...a,
       radiusManual: a.radiusManual === true,
       defaultRadiusKm: airportRadiusKm(a.type, a.runwayLength) ?? null,
     }));
+    return { airports: rows, total };
   }
 
   /**

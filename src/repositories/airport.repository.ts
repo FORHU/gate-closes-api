@@ -12,46 +12,60 @@ export default class AirportRepo {
   }
 
   /**
-   * Admin list. With a query: an exact code match ("BAG") first, then names
-   * containing it. Without: airports with a radius set by hand first.
+   * Admin list, one page at a time. With a query: airports whose IATA/ICAO
+   * code equals it or whose name contains it, exact code matches first.
+   * Without: every airport, radii set by hand first. The database filters,
+   * sorts, counts and skips, so only the requested page leaves it; `_id`
+   * breaks ties so rows never repeat or go missing between pages.
    */
-  static async searchForAdmin(q: string, limit: number) {
-    const projection = {
-      airport: 1,
-      iata: 1,
-      icao: 1,
-      countryCode: 1,
-      type: 1,
-      runwayLength: 1,
-      radiusKm: 1,
-      radiusManual: 1,
-      location: 1,
-    };
-    const trimmed = q.trim();
-    if (!trimmed) {
-      return this.collection()
-        .find({}, { projection })
-        .sort({ radiusManual: -1, type: 1, iata: 1 })
-        .limit(limit)
-        .toArray();
-    }
-    const code = trimmed.toUpperCase();
-    const exact = await this.collection()
-      .find({ $or: [{ iata: code }, { icao: code }] }, { projection })
-      .limit(limit)
-      .toArray();
-    const byName = await this.collection()
-      .find(
-        {
-          airport: new RegExp(this.escapeRegex(trimmed), "i"),
-          _id: { $nin: exact.map((a) => a._id) },
-        },
-        { projection }
-      )
-      .sort({ radiusManual: -1, type: 1, iata: 1 })
-      .limit(Math.max(0, limit - exact.length))
-      .toArray();
-    return [...exact, ...byName];
+  static async listForAdmin(filter: { q?: string; page?: number; limit?: number } = {}) {
+    const page = filter.page ?? 1;
+    const limit = filter.limit ?? 10;
+    const q = filter.q?.trim() ?? "";
+    const code = q.toUpperCase();
+    const match = q
+      ? {
+          $or: [{ iata: code }, { icao: code }, { airport: new RegExp(this.escapeRegex(q), "i") }],
+        }
+      : {};
+    // ponytail: skip-based paging scans past skipped rows; fine for a few
+    // thousand airports, switch to a cursor if this ever gets slow.
+    const [airports, total] = await Promise.all([
+      this.collection()
+        .aggregate([
+          { $match: match },
+          ...(q
+            ? [
+                {
+                  $addFields: {
+                    _exact: {
+                      $cond: [{ $or: [{ $eq: ["$iata", code] }, { $eq: ["$icao", code] }] }, 0, 1],
+                    },
+                  },
+                },
+              ]
+            : []),
+          { $sort: { ...(q ? { _exact: 1 } : {}), radiusManual: -1, type: 1, iata: 1, _id: 1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+          {
+            $project: {
+              airport: 1,
+              iata: 1,
+              icao: 1,
+              countryCode: 1,
+              type: 1,
+              runwayLength: 1,
+              radiusKm: 1,
+              radiusManual: 1,
+              location: 1,
+            },
+          },
+        ])
+        .toArray(),
+      this.collection().countDocuments(match),
+    ]);
+    return { airports, total };
   }
 
   static async searchByName(q: string, limit: number) {

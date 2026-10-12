@@ -128,3 +128,113 @@ describe("Admin airport radius", () => {
     expect(res.statusCode).to.equal(404);
   });
 });
+
+// One page at a time: the database filters, orders, skips, limits and
+// counts; the API validates the page and returns the totals.
+describe("Admin airport list (server-side pagination)", () => {
+  const originals: Array<() => void> = [];
+  afterEach(() => {
+    while (originals.length) originals.pop()!();
+  });
+  const stub = <T extends object, K extends keyof T>(obj: T, key: K, fn: unknown) => {
+    const original = obj[key];
+    (obj as Record<K, unknown>)[key] = fn;
+    originals.push(() => {
+      obj[key] = original;
+    });
+  };
+
+  type MockRes = Response & {
+    statusCode: number;
+    body: { message?: string; data?: unknown; pagination?: unknown };
+  };
+  const mockRes = () => {
+    const res = { statusCode: 200, body: {} } as MockRes;
+    res.status = ((code: number) => {
+      res.statusCode = code;
+      return res;
+    }) as MockRes["status"];
+    res.json = ((body: MockRes["body"]) => {
+      res.body = body;
+      return res;
+    }) as MockRes["json"];
+    return res;
+  };
+
+  it("asks the database for one page, exact codes first, and counts the same match", async () => {
+    let pipeline: Record<string, unknown>[] = [];
+    let counted: unknown = null;
+    stub(AirportRepo, "collection", () => ({
+      aggregate: (p: Record<string, unknown>[]) => {
+        pipeline = p;
+        return { toArray: async () => [] };
+      },
+      countDocuments: async (m: unknown) => {
+        counted = m;
+        return 23;
+      },
+    }));
+
+    const result = await AirportRepo.listForAdmin({ q: " mnl ", page: 2, limit: 10 });
+
+    const match = (pipeline[0] as { $match: { $or: Record<string, unknown>[] } }).$match;
+    expect(match.$or[0]).to.deep.equal({ iata: "MNL" });
+    expect(match.$or[1]).to.deep.equal({ icao: "MNL" });
+    expect((match.$or[2].airport as RegExp).source).to.equal("mnl");
+    expect(counted).to.equal(match);
+    expect(pipeline[1]).to.have.property("$addFields");
+    expect(pipeline[2]).to.deep.equal({
+      $sort: { _exact: 1, radiusManual: -1, type: 1, iata: 1, _id: 1 },
+    });
+    expect(pipeline[3]).to.deep.equal({ $skip: 10 });
+    expect(pipeline[4]).to.deep.equal({ $limit: 10 });
+    expect(result.total).to.equal(23);
+  });
+
+  it("without a search: everything, hand-set radii first", async () => {
+    let pipeline: Record<string, unknown>[] = [];
+    stub(AirportRepo, "collection", () => ({
+      aggregate: (p: Record<string, unknown>[]) => {
+        pipeline = p;
+        return { toArray: async () => [] };
+      },
+      countDocuments: async () => 0,
+    }));
+
+    await AirportRepo.listForAdmin({});
+
+    expect(pipeline[0]).to.deep.equal({ $match: {} });
+    expect(pipeline[1]).to.deep.equal({ $sort: { radiusManual: -1, type: 1, iata: 1, _id: 1 } });
+    expect(pipeline[2]).to.deep.equal({ $skip: 0 });
+  });
+
+  it("returns the page with its totals and default size", async () => {
+    stub(AirportRepo, "listForAdmin", async () => ({
+      airports: [
+        {
+          _id: new ObjectId(),
+          iata: "MNL",
+          type: "large_airport",
+          radiusKm: 1,
+          radiusManual: true,
+        },
+      ],
+      total: 23,
+    }));
+    const res = mockRes();
+
+    await AdminAirportCtrl.list({ query: { q: "MNL", page: "3" } } as unknown as Request, res);
+
+    expect(res.statusCode).to.equal(200);
+    expect(res.body.pagination).to.deep.equal({ page: 3, limit: 10, total: 23, totalPages: 3 });
+    expect((res.body.data as { defaultRadiusKm: number }[])[0].defaultRadiusKm).to.equal(4);
+  });
+
+  it("rejects an invalid page or an oversized limit", async () => {
+    for (const query of [{ page: "0" }, { limit: "500" }, { page: "abc" }]) {
+      const res = mockRes();
+      await AdminAirportCtrl.list({ query } as unknown as Request, res);
+      expect(res.statusCode).to.equal(400);
+    }
+  });
+});
