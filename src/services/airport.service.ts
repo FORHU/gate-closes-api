@@ -363,9 +363,7 @@ export default class AirportSvc {
 
   private static async getSharedGeoJson() {
     const cacheKey = GEOJSON_CACHE_KEY;
-    const cached = await RedisUtil.getJson<{ type: "FeatureCollection"; features: unknown[] }>(
-      cacheKey
-    );
+    const cached = await RedisUtil.getJson<{ type: string; features: unknown[] }>(cacheKey);
     if (cached) return cached;
 
     const airports = await AirportRepo.findAllWithBoundary();
