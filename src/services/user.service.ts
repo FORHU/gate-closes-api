@@ -51,6 +51,12 @@ export default class UserSvc {
   static async setUsernameGender(userId: string, gender: "Male" | "Female", username?: string) {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
+    // Last signup step only (the route has no session): after the password
+    // is set and before the profile is complete. Later changes go through
+    // the authenticated edit-profile route.
+    if (!user.signupCompleted || user.isCompleteProfile) {
+      throw new Error("Invalid step. Username and gender are set at the end of signup.");
+    }
 
     const updateData: TUserUpdateOptions = {
       _id: userId,

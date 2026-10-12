@@ -51,6 +51,7 @@ export default class VerificationCodeRepo {
     if (data.expiresAt !== undefined) setFields.expiresAt = data.expiresAt;
     if (data.resendAfter !== undefined) setFields.resendAfter = data.resendAfter;
     if (data.attempts !== undefined) setFields.attempts = data.attempts;
+    if (data.verifiedAt !== undefined) setFields.verifiedAt = data.verifiedAt;
     if (data.purpose !== undefined) setFields.purpose = data.purpose;
 
     return this.collection().updateOne({ _id: data._id }, { $set: setFields });
