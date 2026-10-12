@@ -21,4 +21,10 @@ router.post("/crawl", requirePermission("airports:manage"), AirportCtrl.crawl);
 
 router.get("/geojson", sessionMiddleware, AirportCtrl.getAllAsGeoJson);
 
+// Dev-build testing only ("Create Airport Here"); never on a production API.
+if (process.env.NODE_ENV !== "production") {
+  router.put("/test", requirePermission("airports:simulate"), AirportCtrl.upsertTestAirport);
+  router.delete("/test", requirePermission("airports:simulate"), AirportCtrl.deleteTestAirport);
+}
+
 export default router;

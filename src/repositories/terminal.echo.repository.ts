@@ -21,6 +21,15 @@ export default class TerminalEchoRepo {
   }
 
   /**
+   * `$match` hiding echoes posted in someone else's test airport (dev-build
+   * "Create Airport Here"): their sender sees them, nobody else does.
+   */
+  static visibleTo(viewerId?: string): Record<string, unknown> {
+    if (!viewerId || !ObjectId.isValid(viewerId)) return { testOwnerId: null };
+    return { $or: [{ testOwnerId: null }, { testOwnerId: new ObjectId(viewerId) }] };
+  }
+
+  /**
    * `$match` for echoes inside a map view, as a plain lng/lat range on the
    * point's coordinates, the same flat rectangle the map shows.
    *
@@ -50,7 +59,7 @@ export default class TerminalEchoRepo {
    * One airport (uses idx_airportIata_createdAt) or a view: max 100.
    * Neither: all, max 200.
    */
-  static async findAllForMap(query: TerminalEchoMapQuery = {}) {
+  static async findAllForMap(query: TerminalEchoMapQuery = {}, viewerId?: string) {
     let pipeline: Record<string, unknown>[];
     if (query.airportIata) {
       pipeline = [
@@ -70,7 +79,9 @@ export default class TerminalEchoRepo {
       pipeline = [{ $sort: { createdAt: -1, _id: -1 } }, { $limit: 200 }];
     }
 
-    return this.collection().aggregate(pipeline).toArray();
+    return this.collection()
+      .aggregate([{ $match: this.visibleTo(viewerId) }, ...pipeline])
+      .toArray();
   }
 
   /**
@@ -82,7 +93,7 @@ export default class TerminalEchoRepo {
   static async countByAirport(): Promise<TerminalEchoAirportCount[]> {
     const rows = await this.collection()
       .aggregate([
-        { $match: { airportIata: { $nin: [null, ""] } } },
+        { $match: { airportIata: { $nin: [null, ""] }, ...this.visibleTo() } },
         {
           $group: {
             _id: "$airportIata",
@@ -229,8 +240,11 @@ export default class TerminalEchoRepo {
     };
   }
 
-  static async findByAirportNameWithFile(airportName?: string) {
-    const matchStage = airportName?.trim() ? [{ $match: this.feedAirportFilter(airportName) }] : [];
+  static async findByAirportNameWithFile(airportName?: string, viewerId?: string) {
+    const matchStage = [
+      { $match: this.visibleTo(viewerId) },
+      ...(airportName?.trim() ? [{ $match: this.feedAirportFilter(airportName) }] : []),
+    ];
     return this.collection()
       .aggregate([
         ...matchStage,

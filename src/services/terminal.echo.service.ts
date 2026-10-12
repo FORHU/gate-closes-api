@@ -1,7 +1,7 @@
 import { Document, ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
-import AirportRepo from "../repositories/airport.repository";
+import AirportSvc from "./airport.service";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
 import { TERMINAL_ECHO_TYPE, type TerminalEchoMapQuery, type TerminalEchoType } from "../const";
@@ -209,7 +209,7 @@ export default class TerminalEchoSvc {
     if (typeof lng !== "number" || typeof lat !== "number") {
       throw new EchoOutsideAirportError();
     }
-    const nearest = await AirportRepo.findNearestWithDistance({ lat, lng });
+    const nearest = await AirportSvc.checkInsideAirport({ lat, lng }, String(userId));
     const canonicalAirportIata = (nearest?.iata || nearest?.icao || "").toUpperCase();
     if (!nearest?.insideRadius || !canonicalAirportIata) {
       throw new EchoOutsideAirportError();
@@ -244,6 +244,7 @@ export default class TerminalEchoSvc {
       location: persistedLocation,
       airportName: resolvedAirportName,
       airportIata: canonicalAirportIata,
+      ...("isTest" in nearest && { testOwnerId: new ObjectId(userId) }),
     });
 
     return {
@@ -254,7 +255,7 @@ export default class TerminalEchoSvc {
   }
 
   static async findByAirportName(airportName?: string, userId?: string): Promise<Document[]> {
-    const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName);
+    const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName, userId);
     if (!userId || !echoes.length) {
       return echoes.map(
         (e) =>
@@ -292,7 +293,7 @@ export default class TerminalEchoSvc {
     userId: string,
     query: TerminalEchoMapQuery = {}
   ): Promise<TerminalEchoMapFeatureSource[]> {
-    const echoes = await TerminalEchoRepo.findAllForMap(query);
+    const echoes = await TerminalEchoRepo.findAllForMap(query, userId);
     if (!echoes.length) return [];
 
     const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
@@ -372,6 +373,8 @@ export default class TerminalEchoSvc {
   static async findOneWithType(userId: string, terminalEchoId: string) {
     const echo = await TerminalEchoRepo.findByIdWithFile(terminalEchoId);
     if (!echo) return null;
+    // Someone else's test-airport echo: as if it didn't exist.
+    if (echo.testOwnerId && String(echo.testOwnerId) !== userId) return null;
 
     const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
     const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(authUserObjectId);

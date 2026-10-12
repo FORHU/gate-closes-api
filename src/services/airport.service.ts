@@ -5,6 +5,7 @@ import { ObjectId } from "mongodb";
 import fs from "fs";
 import * as path from "path";
 import AirportRepo from "../repositories/airport.repository";
+import AirportTestRepo from "../repositories/airport.test.repository";
 import { TAirport } from "../models/airport.model";
 import RedisUtil from "../utils/redis.util";
 
@@ -128,8 +129,28 @@ export default class AirportSvc {
     return mapped;
   }
 
-  static async checkInsideAirport(params: { lat: number; lng: number }) {
+  /**
+   * The nearest airport and whether the point is inside it. The viewer's own
+   * test airport (dev-build "Create Airport Here") wins when they're inside
+   * it; nobody else ever gets it.
+   */
+  static async checkInsideAirport(params: { lat: number; lng: number }, viewerId?: string) {
+    if (viewerId && ObjectId.isValid(viewerId)) {
+      const test = await AirportTestRepo.findNearestForOwner({
+        ownerId: new ObjectId(viewerId),
+        ...params,
+      });
+      if (test?.insideRadius) return test;
+    }
     return AirportRepo.findNearestWithDistance(params);
+  }
+
+  static async createTestAirport(ownerId: string, params: { lat: number; lng: number }) {
+    return AirportTestRepo.upsertForOwner(new ObjectId(ownerId), params.lng, params.lat);
+  }
+
+  static async deleteTestAirport(ownerId: string) {
+    await AirportTestRepo.deleteForOwner(new ObjectId(ownerId));
   }
 
   static async checkInsideAirportByBoundary(params: { lat: number; lng: number }) {
@@ -320,9 +341,31 @@ export default class AirportSvc {
     await RedisUtil.del(GEOJSON_CACHE_KEY).catch(() => undefined);
   }
 
-  static async getAllAsGeoJson() {
+  /** Every airport circle, plus the viewer's own test airport (never cached). */
+  static async getAllAsGeoJson(viewerId?: string) {
+    const shared = await this.getSharedGeoJson();
+    if (!viewerId || !ObjectId.isValid(viewerId)) return shared;
+    const test = await AirportTestRepo.findForOwner(new ObjectId(viewerId));
+    if (!test) return shared;
+    return {
+      ...shared,
+      features: [
+        ...shared.features,
+        {
+          type: "Feature" as const,
+          id: test._id?.toString() ?? test.iata,
+          geometry: this.buildBoundaryFromLocationAndRadius(test),
+          properties: { airport: test.airport, iata: test.iata, country_code: null },
+        },
+      ],
+    };
+  }
+
+  private static async getSharedGeoJson() {
     const cacheKey = GEOJSON_CACHE_KEY;
-    const cached = await RedisUtil.getJson<unknown>(cacheKey);
+    const cached = await RedisUtil.getJson<{ type: "FeatureCollection"; features: unknown[] }>(
+      cacheKey
+    );
     if (cached) return cached;
 
     const airports = await AirportRepo.findAllWithBoundary();

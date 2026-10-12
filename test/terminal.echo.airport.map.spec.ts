@@ -9,6 +9,7 @@ import TerminalEchoCtrl from "../src/controllers/terminal.echo.controller";
 import TerminalEchoSvc, { EchoOutsideAirportError } from "../src/services/terminal.echo.service";
 import TerminalEchoRepo from "../src/repositories/terminal.echo.repository";
 import AirportRepo from "../src/repositories/airport.repository";
+import AirportTestRepo from "../src/repositories/airport.test.repository";
 import FileSvc from "../src/services/file.service";
 
 // Map pins load per airport: zoomed in, `GET /map?airport=MNL`; zoomed out,
@@ -62,6 +63,7 @@ describe("Terminal echo map per airport", () => {
       const seen = stubAggregate([]);
       await TerminalEchoRepo.findAllForMap({ airportIata: "mnl" });
       expect(seen.pipeline).to.deep.equal([
+        { $match: { testOwnerId: null } },
         { $match: { airportIata: "MNL" } },
         { $sort: { createdAt: -1, _id: -1 } },
         { $limit: 100 },
@@ -150,6 +152,7 @@ describe("Terminal echo map per airport", () => {
     };
 
     it("refuses an echo outside the nearest airport's radius", async () => {
+      stub(AirportTestRepo, "findNearestForOwner", async () => null);
       stub(AirportRepo, "findNearestWithDistance", async () => ({
         _id: new ObjectId(),
         iata: "MNL",
@@ -179,6 +182,7 @@ describe("Terminal echo map per airport", () => {
     });
 
     it("refuses an echo when no airport is found", async () => {
+      stub(AirportTestRepo, "findNearestForOwner", async () => null);
       stub(AirportRepo, "findNearestWithDistance", async () => null);
       let thrown: unknown;
       try {
