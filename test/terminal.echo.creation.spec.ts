@@ -52,6 +52,20 @@ describe("TerminalEchoSvc (Server-Side Airport Resolution)", () => {
       };
     });
 
+    const feedRow = {
+      _id: new ObjectId("650000000000000000000020"),
+      airportIata: "SIN",
+      textMessage: "At gate B4 waiting for boarding",
+      file: { fileUrl: "https://example.com/echo.m4a" },
+      user: { username: "traveller" },
+      replyCount: 0,
+    };
+    let reloadedId: unknown = null;
+    stub(TerminalEchoRepo, "findByIdWithFile", async (id: unknown) => {
+      reloadedId = id;
+      return feedRow;
+    });
+
     const result = await TerminalEchoSvc.createTerminalEcho({
       userId: new ObjectId("650000000000000000000001"),
       fileUrl: "https://example.com/echo.m4a",
@@ -67,6 +81,10 @@ describe("TerminalEchoSvc (Server-Side Airport Resolution)", () => {
     expect(result.insertedId.toString()).to.equal("650000000000000000000020");
     expect(result.airportIata).to.equal("SIN");
     expect(result.airportName).to.equal("Singapore Changi Airport");
+
+    // The broadcast payload is the full feed row, not the raw insert result.
+    expect(String(reloadedId)).to.equal("650000000000000000000020");
+    expect(result.echo).to.deep.equal({ ...feedRow, currentUserReactions: [] });
 
     expect(savedEchoDoc).to.exist;
     expect(savedEchoDoc.airportIata).to.equal("SIN");

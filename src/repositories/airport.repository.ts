@@ -60,7 +60,7 @@ export default class AirportRepo {
 
     return this.collection()
       .find(
-        { airport: rx },
+        { $or: [{ airport: rx }, { iata: rx }, { icao: rx }] },
         {
           projection: {
             _id: 0,
@@ -139,6 +139,7 @@ export default class AirportRepo {
       (await this.collection().findOne({ icao: upper }))
     );
   }
+
 
   static async update(airport: TAirportUpdateOptions) {
     try {

@@ -8,6 +8,8 @@ export type TVerificationCode = {
   expiresAt: Date;
   resendAfter: Date;
   attempts?: number;
+  /** Set when a reset_password code is verified; resetting the password requires it. */
+  verifiedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -20,6 +22,7 @@ export type TVerificationCodeUpdateOptions = {
   expiresAt?: Date;
   resendAfter?: Date;
   attempts?: number;
+  verifiedAt?: Date;
 };
 
 export class MVerificationCode implements Partial<TVerificationCode> {

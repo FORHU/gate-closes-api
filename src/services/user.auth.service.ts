@@ -9,6 +9,9 @@ import { createAccessToken, createRefreshToken, verifyRefreshToken } from "../ut
 import RefreshSessionStore from "../utils/refresh.session.store";
 import { GOOGLE_CLIENT_ID } from "../config";
 
+/** Time to set the new password after the reset code is verified. */
+export const RESET_WINDOW_MS = 10 * 60 * 1000;
+
 /**
  * Mints a refresh token that starts a brand-new session family and
  * registers it (best-effort) so reuse detection has a baseline to
@@ -231,16 +234,35 @@ export default class UserAuthSvc {
       throw new Error("Invalid reset code.");
     }
 
+    // The code itself expires in a minute; once verified, the user gets
+    // RESET_WINDOW_MS to choose the new password.
+    const now = new Date();
+    await VerificationCodeRepo.update({
+      _id: record._id,
+      verifiedAt: now,
+      expiresAt: new Date(now.getTime() + RESET_WINDOW_MS),
+    });
+
     return { message: "Code valid. Proceed to set new password." };
   }
 
-  /** Set new password after forgot-password flow. Requires a valid reset_password code to exist (user must have verified code first). */
+  /**
+   * Set new password after forgot-password flow. Only allowed after this
+   * user's reset_password code was verified (and before its window ends);
+   * the code is used up by the reset.
+   */
   static async resetPasswordForgot(userId: string, newPassword: string) {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
+    const record = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "reset_password");
+    if (!record?.verifiedAt || new Date() > record.expiresAt) {
+      throw new Error("Verify the reset code first.");
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await UserAuthRepo.update({ userId, password: hashedPassword });
+    await VerificationCodeRepo.delete(record._id!);
 
     return { message: "Password reset successfully. You can now log in." };
   }
