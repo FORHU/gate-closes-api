@@ -140,7 +140,6 @@ export default class AirportRepo {
     );
   }
 
-
   static async update(airport: TAirportUpdateOptions) {
     try {
       airport._id = new ObjectId(airport._id as string);
