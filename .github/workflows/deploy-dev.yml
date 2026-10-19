@@ -19,6 +19,8 @@ name: Deploy Dev
 #      RABBITMQ_URL come from the host — do NOT set them here.
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
