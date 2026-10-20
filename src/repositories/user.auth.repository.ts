@@ -63,17 +63,14 @@ export default class UserAuthRepo {
     } catch {
       return Promise.reject("Invalid user id.");
     }
-    
+
     const updatedAt = new Date();
 
     const setFields: Record<string, unknown> = { updatedAt };
     if (auth.password != null) setFields.password = auth.password;
     if (auth.provider != null) setFields.provider = auth.provider;
     if (auth.googleId != null) setFields.googleId = auth.googleId;
-    
-    return this.collection().updateOne(
-      { userId: auth.userId },
-      { $set: setFields }
-    );
+
+    return this.collection().updateOne({ userId: auth.userId }, { $set: setFields });
   }
 }

@@ -1,10 +1,18 @@
 import { createTransport } from "nodemailer";
 import * as path from "path";
-import { MAILER_TRANSPORT_HOST, MAILER_TRANSPORT_PORT, MAILER_EMAIL, MAILER_PASSWORD } from "../config";
+import {
+  MAILER_TRANSPORT_HOST,
+  MAILER_TRANSPORT_PORT,
+  MAILER_EMAIL,
+  MAILER_PASSWORD,
+} from "../config";
 
 export type OtpPurpose = "email_verify" | "reset_password";
 
-const OTP_CONFIG: Record<OtpPurpose, { subject: string; headline: string; subtext: string; preheader: string }> = {
+const OTP_CONFIG: Record<
+  OtpPurpose,
+  { subject: string; headline: string; subtext: string; preheader: string }
+> = {
   email_verify: {
     subject: "Verify Your Email - Gate Closes",
     headline: "Verify Your Email Address",
@@ -29,10 +37,10 @@ export async function sendOtpEmail(to: string, otp: string, purpose: OtpPurpose)
       pass: MAILER_PASSWORD,
     },
   });
-    // Resolve PNG paths relative to the compiled file.
-    // Works in dev (src/) and prod (dist/) because we copy assets next to the JS.
-    const logoIconPath = path.join(__dirname, "../assets/gate-closes-logo.png");
-    const logoTextPath = path.join(__dirname, "../assets/gate-closes-text.png");
+  // Resolve PNG paths relative to the compiled file.
+  // Works in dev (src/) and prod (dist/) because we copy assets next to the JS.
+  const logoIconPath = path.join(__dirname, "../assets/gate-closes-logo.png");
+  const logoTextPath = path.join(__dirname, "../assets/gate-closes-text.png");
 
   return transporter.sendMail({
     from: `"noreply" <${MAILER_EMAIL}>`,
@@ -156,14 +164,15 @@ export async function sendOtpEmail(to: string, otp: string, purpose: OtpPurpose)
 
 </body>
 </html>
-`,attachments: [
+`,
+    attachments: [
       {
-        filename: "gate-closes-logo.png",   // ← was "logo-icon.png"
+        filename: "gate-closes-logo.png", // ← was "logo-icon.png"
         path: logoIconPath,
         cid: "logo-icon-png",
       },
       {
-        filename: "gate-closes-text.png",   // ← was "logo-text.png"
+        filename: "gate-closes-text.png", // ← was "logo-text.png"
         path: logoTextPath,
         cid: "logo-text-png",
       },

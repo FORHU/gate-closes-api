@@ -1,16 +1,44 @@
 import { Document, ObjectId } from "mongodb";
 import TerminalEchoRepo from "../repositories/terminal.echo.repository";
 import TerminalEchoReactionRepo from "../repositories/terminal.echo.reaction.repository";
+import AirportSvc from "./airport.service";
 import FileSvc from "./file.service";
 import FlightTicketRepo from "../repositories/flight.ticket.repository";
-import { TERMINAL_ECHO_TYPE, type TerminalEchoMapBounds, type TerminalEchoType } from "../const";
+import { TERMINAL_ECHO_TYPE, type TerminalEchoMapQuery, type TerminalEchoType } from "../const";
+
+/** Thrown when an echo is posted outside every airport's radius. */
+export class EchoOutsideAirportError extends Error {
+  constructor() {
+    super("Echoes can only be posted inside an airport.");
+    this.name = "EchoOutsideAirportError";
+  }
+}
 
 type TerminalEchoMapFeatureSource = {
   _id: ObjectId;
   senderId: ObjectId;
   type: TerminalEchoType;
   location: { type: "Point"; coordinates: [number, number] };
+  createdAt?: Date;
+  listenCount: number;
+  reactionCount: number;
 };
+
+const REACTION_COUNT_FIELDS = [
+  "countReactLike",
+  "countReactLove",
+  "countReactHaha",
+  "countReactWow",
+  "countReactSad",
+  "countReactAngry",
+] as const;
+
+/** Map-pin activity: listens and total reactions (drives the app heatmap). */
+const pinActivity = (echo: Document) => ({
+  createdAt: echo.createdAt as Date | undefined,
+  listenCount: Number(echo.countListens ?? 0),
+  reactionCount: REACTION_COUNT_FIELDS.reduce((sum, field) => sum + Number(echo[field] ?? 0), 0),
+});
 
 export default class TerminalEchoSvc {
   private static isPointGeometry(location: unknown): location is {
@@ -32,13 +60,17 @@ export default class TerminalEchoSvc {
     const features = (echoes ?? [])
       .filter((echo) => this.isPointGeometry(echo?.location))
       .map((echo) => {
-        const { location, _id, type } = echo;
+        const { location, _id, type, createdAt, listenCount, reactionCount } = echo;
         return {
           type: "Feature" as const,
           id: _id?.toString?.() ?? String(_id),
           geometry: location,
+          // No senderId: the map never reveals who posted a pin.
           properties: {
             type: type ?? null,
+            createdAt: createdAt ? new Date(createdAt).toISOString() : null,
+            listenCount,
+            reactionCount,
           },
         };
       });
@@ -56,18 +88,10 @@ export default class TerminalEchoSvc {
     return dd.toISOString().slice(0, 10);
   }
 
-  private static monthDayKey(d?: Date) {
-    if (!d) return "";
-    const dd = d instanceof Date ? d : new Date(d);
-    if (Number.isNaN(dd.getTime())) return "";
-    return dd.toISOString().slice(5, 10);
-  }
-
   private static computeType(params: {
     authTicket: Document | null;
     otherTicket: Document | null;
-  }):
-    TerminalEchoType {
+  }): TerminalEchoType {
     const { authTicket, otherTicket } = params;
 
     if (!authTicket) return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
@@ -100,15 +124,31 @@ export default class TerminalEchoSvc {
       return TERMINAL_ECHO_TYPE.PARALLEL_SOUL;
     }
 
-    // destination_thread: same destination airport, same day (month+day), different flight and different origin
-    const authMonthDay = this.monthDayKey(authTicket.departureDateTime);
-    const otherMonthDay = this.monthDayKey(otherTicket.departureDateTime);
+    // destination_thread: same destination airport, valid arrival window (<= 24h), different flight and different origin
+    const authArrival = authTicket.arrivalDateTime
+      ? new Date(authTicket.arrivalDateTime)
+      : authTicket.departureDateTime
+        ? new Date(authTicket.departureDateTime)
+        : null;
+    const otherArrival = otherTicket.arrivalDateTime
+      ? new Date(otherTicket.arrivalDateTime)
+      : otherTicket.departureDateTime
+        ? new Date(otherTicket.departureDateTime)
+        : null;
+
+    const isWithinDtWindow = Boolean(
+      authArrival &&
+      otherArrival &&
+      !Number.isNaN(authArrival.getTime()) &&
+      !Number.isNaN(otherArrival.getTime()) &&
+      Math.abs(authArrival.getTime() - otherArrival.getTime()) <= 24 * 60 * 60 * 1000
+    );
 
     if (
       authToAirport &&
       otherToAirport &&
       authToAirport === otherToAirport &&
-      authMonthDay === otherMonthDay &&
+      isWithinDtWindow &&
       authFlightNumber !== otherFlightNumber &&
       authFromAirport !== otherFromAirport
     ) {
@@ -127,8 +167,21 @@ export default class TerminalEchoSvc {
     return TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
   }
 
+  /**
+   * Quantizes coordinates to a given decimal precision to protect user
+   * privacy (prevent pinpointing exact bench/seat location inside a terminal).
+   * Default precision 3 gives ~110m resolution at equator.
+   */
+  static quantizeCoordinates(coordinates: [number, number], precision = 3): [number, number] {
+    const factor = Math.pow(10, precision);
+    return [
+      Math.round(coordinates[0] * factor) / factor,
+      Math.round(coordinates[1] * factor) / factor,
+    ];
+  }
+
   static async createTerminalEcho(params: {
-    userId: string | ObjectId;
+    userId: ObjectId | string;
     fileUrl: string;
     fileName: string;
     textMessage?: string;
@@ -137,8 +190,31 @@ export default class TerminalEchoSvc {
     audioDuration?: number;
     waveformData?: number[];
   }) {
-    const { userId, fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } =
-      params;
+    const {
+      userId,
+      fileUrl,
+      fileName,
+      textMessage,
+      location,
+      airportName,
+      audioDuration,
+      waveformData,
+    } = params;
+
+    // Server-authoritative airport resolution (§18.1). Echoes exist only
+    // inside an airport's radius: the map loads pins per airport, so an
+    // echo outside every radius would never be shown. The app checks this
+    // too; the server enforces it.
+    const [lng, lat] = location?.coordinates ?? [];
+    if (typeof lng !== "number" || typeof lat !== "number") {
+      throw new EchoOutsideAirportError();
+    }
+    const nearest = await AirportSvc.checkInsideAirport({ lat, lng }, String(userId));
+    const canonicalAirportIata = (nearest?.iata || nearest?.icao || "").toUpperCase();
+    if (!nearest?.insideRadius || !canonicalAirportIata) {
+      throw new EchoOutsideAirportError();
+    }
+    const resolvedAirportName = nearest.airport || airportName || "";
 
     const fileCreateResult = await FileSvc.create({
       fileUrl,
@@ -149,25 +225,51 @@ export default class TerminalEchoSvc {
       },
     });
 
-    return TerminalEchoRepo.create({
+    // Quantize coordinates to preserve geospatial privacy (§30)
+    let persistedLocation: { type: "Point"; coordinates: [number, number] } = {
+      type: "Point",
+      coordinates: [0, 0],
+    };
+    if (location && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+      persistedLocation = {
+        type: "Point",
+        coordinates: this.quantizeCoordinates(location.coordinates as [number, number], 3),
+      };
+    }
+
+    const inserted = await TerminalEchoRepo.create({
       senderId: new ObjectId(userId),
       fileId: fileCreateResult.insertedId,
       textMessage,
-      location: location ?? { type: "Point", coordinates: [0, 0] },
-      airportName,
+      location: persistedLocation,
+      airportName: resolvedAirportName,
+      airportIata: canonicalAirportIata,
+      ...("isTest" in nearest && { testOwnerId: new ObjectId(userId) }),
     });
+
+    // The feed row as GET /terminal-echo returns it, so socket listeners can
+    // prepend it directly. A new echo has no reactions yet.
+    const created = await TerminalEchoRepo.findByIdWithFile(inserted.insertedId);
+    const echo = created ? { ...created, currentUserReactions: [] as string[] } : null;
+
+    return {
+      ...inserted,
+      airportIata: canonicalAirportIata,
+      airportName: resolvedAirportName,
+      echo,
+    };
   }
 
-  static async findByAirportName(
-    airportName?: string,
-    userId?: string
-  ): Promise<Document[]> {
-    const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName);
+  static async findByAirportName(airportName?: string, userId?: string): Promise<Document[]> {
+    const echoes = await TerminalEchoRepo.findByAirportNameWithFile(airportName, userId);
     if (!userId || !echoes.length) {
-      return echoes.map((e) => ({
-        ...e,
-        currentUserReactions: e.currentUserReactions ?? [],
-      } as Document));
+      return echoes.map(
+        (e) =>
+          ({
+            ...e,
+            currentUserReactions: e.currentUserReactions ?? [],
+          }) as Document
+      );
     }
     const echoIds = echoes.map((e) => e._id);
     const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
@@ -180,37 +282,28 @@ export default class TerminalEchoSvc {
       if (!byEchoId.has(id)) byEchoId.set(id, []);
       byEchoId.get(id)!.push(r.reaction);
     }
-    return echoes.map((e) => ({
-      ...e,
-      currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
-    } as Document));
+    return echoes.map(
+      (e) =>
+        ({
+          ...e,
+          currentUserReactions: byEchoId.get(e._id.toString()) ?? [],
+        }) as Document
+    );
   }
 
   /**
-   * Lean list for map: `_id`, `senderId`, computed `type`, and `location` (GeoJSON for features).
-   * No file join, no reactions.
+   * Lean list for map: `_id`, `senderId`, computed `type`, `location`, plus
+   * `createdAt` and listen/reaction counts. No file join.
    */
   static async findAllWithType(
     userId: string,
-    mapBounds?: TerminalEchoMapBounds
-  ): Promise<
-    Array<{
-      _id: ObjectId;
-      senderId: ObjectId;
-      type: TerminalEchoType;
-      location: { type: "Point"; coordinates: [number, number] };
-    }>
-  > {
-    const echoes = await TerminalEchoRepo.findAllForMap(mapBounds);
+    query: TerminalEchoMapQuery = {}
+  ): Promise<TerminalEchoMapFeatureSource[]> {
+    const echoes = await TerminalEchoRepo.findAllForMap(query, userId);
     if (!echoes.length) return [];
 
-    const authUserObjectId = FlightTicketRepo.parseObjectId(
-      userId,
-      "Invalid user id."
-    );
-    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      authUserObjectId
-    );
+    const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(authUserObjectId);
 
     if (!authTicket) {
       return echoes.map((e) => ({
@@ -218,6 +311,7 @@ export default class TerminalEchoSvc {
         senderId: e.senderId as ObjectId,
         type: TERMINAL_ECHO_TYPE.TERMINAL_ECHO,
         location: e.location,
+        ...pinActivity(e),
       }));
     }
 
@@ -231,13 +325,10 @@ export default class TerminalEchoSvc {
       .filter((id) => id !== authUserObjectId.toString())
       .map((id) => new ObjectId(id));
 
-    const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds(
-      senderIds
-    );
+    const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds(senderIds);
 
     return echoes.map((e) => {
-      const senderIdStr =
-        (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
+      const senderIdStr = (e.senderId as ObjectId | undefined)?.toString?.() ?? "";
 
       let type: TerminalEchoType = TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
       if (senderIdStr && senderIdStr !== authUserObjectId.toString()) {
@@ -250,40 +341,57 @@ export default class TerminalEchoSvc {
         senderId: e.senderId as ObjectId,
         type,
         location: e.location,
+        ...pinActivity(e),
       };
     });
   }
 
-  static async findAllWithTypeAsGeoJson(
-    userId: string,
-    mapBounds?: TerminalEchoMapBounds
-  ) {
-    const echoes = await this.findAllWithType(userId, mapBounds);
+  static async findAllWithTypeAsGeoJson(userId: string, query: TerminalEchoMapQuery = {}) {
+    const echoes = await this.findAllWithType(userId, query);
     return this.toFeatureCollection(echoes);
+  }
+
+  /**
+   * Zoomed-out map: one point per airport with its echo count, so the app
+   * draws a bubble per airport without downloading every pin.
+   */
+  static async airportCountsAsGeoJson() {
+    const rows = await TerminalEchoRepo.countByAirport();
+    return {
+      type: "FeatureCollection" as const,
+      features: rows
+        .filter((r) => this.isPointGeometry(r.location))
+        .map((r) => ({
+          type: "Feature" as const,
+          id: r.airportIata,
+          geometry: r.location as { type: "Point"; coordinates: [number, number] },
+          properties: {
+            airportIata: r.airportIata,
+            airportName: r.airportName,
+            count: r.count,
+            latestAt: r.latestAt ? new Date(r.latestAt).toISOString() : null,
+          },
+        })),
+    };
   }
 
   /** Full echo + file/user/replyCount + computed `type` (GET by id). */
   static async findOneWithType(userId: string, terminalEchoId: string) {
     const echo = await TerminalEchoRepo.findByIdWithFile(terminalEchoId);
     if (!echo) return null;
+    // Someone else's test-airport echo: as if it didn't exist.
+    if (echo.testOwnerId && String(echo.testOwnerId) !== userId) return null;
 
-    const authUserObjectId = FlightTicketRepo.parseObjectId(
-      userId,
-      "Invalid user id."
-    );
-    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(
-      authUserObjectId
-    );
+    const authUserObjectId = FlightTicketRepo.parseObjectId(userId, "Invalid user id.");
+    const authTicket = await FlightTicketRepo.findActiveOrLatestByUserId(authUserObjectId);
 
     let type: TerminalEchoType = TERMINAL_ECHO_TYPE.TERMINAL_ECHO;
     if (authTicket) {
-      const senderIdStr =
-        (echo.senderId as ObjectId | undefined)?.toString?.() ?? "";
+      const senderIdStr = (echo.senderId as ObjectId | undefined)?.toString?.() ?? "";
       if (senderIdStr && senderIdStr !== authUserObjectId.toString()) {
-        const ticketsByUserId =
-          await FlightTicketRepo.findActiveOrLatestByUserIds([
-            new ObjectId(senderIdStr),
-          ]);
+        const ticketsByUserId = await FlightTicketRepo.findActiveOrLatestByUserIds([
+          new ObjectId(senderIdStr),
+        ]);
         const otherTicket = ticketsByUserId.get(senderIdStr) ?? null;
         type = this.computeType({ authTicket, otherTicket });
       }
@@ -295,10 +403,9 @@ export default class TerminalEchoSvc {
     // comes back with no currentUserReactions, so the user's own prior
     // reactions show as un-reacted even though they're still recorded.
     // Matches the same pattern findByAirportName uses for the feed.
-    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(
-      userId,
-      [echo._id as ObjectId]
-    );
+    const reactions = await TerminalEchoReactionRepo.findByUserIdAndTerminalEchoIds(userId, [
+      echo._id as ObjectId,
+    ]);
     const currentUserReactions = reactions.map((r) => r.reaction);
 
     return { ...echo, type, currentUserReactions };
@@ -306,6 +413,11 @@ export default class TerminalEchoSvc {
 
   static async incrementListen(terminalEchoId: string) {
     return TerminalEchoRepo.incrementListen(terminalEchoId);
+  }
+
+  /** Used to scope reply-related broadcasts to the parent echo's airport room. */
+  static async findAirportIataById(terminalEchoId: string): Promise<string | null> {
+    return TerminalEchoRepo.findAirportIataById(terminalEchoId);
   }
 
   static async updateReaction(params: {
@@ -329,4 +441,3 @@ export default class TerminalEchoSvc {
     return { ...result, action };
   }
 }
-

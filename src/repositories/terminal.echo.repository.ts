@@ -1,6 +1,18 @@
-import { ObjectId } from "mongodb";
-import { MTerminalEcho, TTerminalEcho, TTerminalEchoUpdateOptions } from "../models/terminal.echo.model";
-import type { TerminalEchoMapBounds } from "../const";
+import { Document, ObjectId } from "mongodb";
+import {
+  MTerminalEcho,
+  TTerminalEcho,
+  TTerminalEchoUpdateOptions,
+} from "../models/terminal.echo.model";
+import type { TerminalEchoMapBounds, TerminalEchoMapQuery } from "../const";
+
+export type TerminalEchoAirportCount = {
+  airportIata: string;
+  airportName: string | null;
+  count: number;
+  latestAt: Date | null;
+  location: { type: string; coordinates: [number, number] } | null | undefined;
+};
 import { getDB } from "../utils/mongo";
 
 export default class TerminalEchoRepo {
@@ -9,42 +21,110 @@ export default class TerminalEchoRepo {
   }
 
   /**
-   * Terminal echoes for map: no file/user/reply joins.
-   * With bounds: geo filter, latest first, max 100. Without bounds: all, sorted latest first.
+   * `$match` hiding echoes posted in someone else's test airport (dev-build
+   * "Create Airport Here"): their sender sees them, nobody else does.
    */
-  static async findAllForMap(mapBounds?: TerminalEchoMapBounds) {
+  static visibleTo(viewerId?: string): Record<string, unknown> {
+    if (!viewerId || !ObjectId.isValid(viewerId)) return { testOwnerId: null };
+    return { $or: [{ testOwnerId: null }, { testOwnerId: new ObjectId(viewerId) }] };
+  }
+
+  /**
+   * `$match` for echoes inside a map view, as a plain lng/lat range on the
+   * point's coordinates, the same flat rectangle the map shows.
+   *
+   * Not `$geoWithin` with a Polygon: Mongo reads polygon edges as geodesics
+   * and a ring wider than 180° as the smaller complementary region, so a
+   * zoomed-out view (where pins cluster) matched the wrong pins or none.
+   * `west > east` is a view crossing the antimeridian.
+   */
+  static mapBoundsMatch(mapBounds: TerminalEchoMapBounds): Record<string, unknown> {
+    const [[west, south], [east, north]] = mapBounds;
+    const lng = "location.coordinates.0";
+    const lat = "location.coordinates.1";
+    const match: Record<string, unknown> = {
+      "location.type": "Point",
+      [lat]: { $gte: south, $lte: north },
+    };
+    if (west > east) {
+      match.$or = [{ [lng]: { $gte: west } }, { [lng]: { $lte: east } }];
+    } else if (west > -180 || east < 180) {
+      match[lng] = { $gte: west, $lte: east };
+    }
+    return match;
+  }
+
+  /**
+   * Terminal echoes for map: no file/user/reply joins, latest first.
+   * One airport (uses idx_airportIata_createdAt) or a view: max 100.
+   * Neither: all, max 200.
+   */
+  static async findAllForMap(query: TerminalEchoMapQuery = {}, viewerId?: string) {
     let pipeline: Record<string, unknown>[];
-    if (mapBounds) {
-      const [[west, south], [east, north]] = mapBounds;
+    if (query.airportIata) {
       pipeline = [
-        {
-          $match: {
-            location: {
-              $geoWithin: {
-                $geometry: {
-                  type: "Polygon",
-                  coordinates: [
-                    [
-                      [west, south],
-                      [east, south],
-                      [east, north],
-                      [west, north],
-                      [west, south],
-                    ],
-                  ],
-                },
-              },
-            },
-          },
-        },
+        { $match: { airportIata: query.airportIata.toUpperCase() } },
+        { $sort: { createdAt: -1, _id: -1 } },
+        { $limit: 100 },
+      ];
+    } else if (query.bounds) {
+      pipeline = [
+        { $match: this.mapBoundsMatch(query.bounds) },
         { $sort: { createdAt: -1, _id: -1 } },
         { $limit: 100 },
       ];
     } else {
-      pipeline = [{ $sort: { createdAt: -1, _id: -1 } }];
+      // Unbounded requests still get a cap: returning every echo ever posted
+      // grows without limit and is what runs mobile map bridges out of memory.
+      pipeline = [{ $sort: { createdAt: -1, _id: -1 } }, { $limit: 200 }];
     }
 
-    return this.collection().aggregate(pipeline).toArray();
+    return this.collection()
+      .aggregate([{ $match: this.visibleTo(viewerId) }, ...pipeline])
+      .toArray();
+  }
+
+  /**
+   * Echo count per airport for the zoomed-out map: one row per airport
+   * with its name and location from the `airport` collection. An airport
+   * code the collection doesn't know falls back to one of its echoes'
+   * location, so its echoes are still counted on the map.
+   */
+  static async countByAirport(): Promise<TerminalEchoAirportCount[]> {
+    const rows = await this.collection()
+      .aggregate([
+        { $match: { airportIata: { $nin: [null, ""] }, ...this.visibleTo() } },
+        {
+          $group: {
+            _id: "$airportIata",
+            count: { $sum: 1 },
+            latestAt: { $max: "$createdAt" },
+            echoLocation: { $first: "$location" },
+          },
+        },
+        {
+          $lookup: {
+            from: "airport",
+            localField: "_id",
+            foreignField: "iata",
+            pipeline: [{ $project: { _id: 0, airport: 1, location: 1 } }],
+            as: "airport",
+          },
+        },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
+
+    return rows.map((r) => {
+      const airport = (r.airport as { airport?: string; location?: unknown }[])[0];
+      return {
+        airportIata: r._id as string,
+        airportName: airport?.airport ?? null,
+        count: r.count as number,
+        latestAt: (r.latestAt as Date | undefined) ?? null,
+        location: (airport?.location ?? r.echoLocation) as TerminalEchoAirportCount["location"],
+      };
+    });
   }
 
   /** Single echo with file, user, and replyCount (detail view). */
@@ -127,15 +207,44 @@ export default class TerminalEchoRepo {
     return this.collection().insertOne(new MTerminalEcho(echo));
   }
 
+  /** Minimal lookup used to scope reply/reaction broadcasts to the parent echo's airport room. */
+  static async findAirportIataById(_id: string | ObjectId): Promise<string | null> {
+    try {
+      _id = new ObjectId(_id);
+    } catch {
+      return null;
+    }
+    const doc = await this.collection().findOne<{ airportIata?: string }>(
+      { _id },
+      { projection: { airportIata: 1 } }
+    );
+    return doc?.airportIata || null;
+  }
+
   /**
    * Terminal echo feed with file/user/reply joins. Pass airportName to
    * filter to one terminal; omit it to fetch every echo (Feed tab's
    * unfiltered default) — latest first either way.
    */
-  static async findByAirportNameWithFile(airportName?: string) {
-    const matchStage = airportName
-      ? [{ $match: { airportName: new RegExp(airportName, "i") } }]
-      : [];
+  /**
+   * Feed filter for one airport. Clients send either an IATA code (Flutter:
+   * `MNL`) or an airport name (Expo), so match the stored `airportIata`
+   * exactly or the name as literal text. The input is escaped: it is user
+   * text, never a pattern.
+   */
+  static feedAirportFilter(airport: string): Document {
+    const text = airport.trim();
+    const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return {
+      $or: [{ airportIata: text.toUpperCase() }, { airportName: new RegExp(escaped, "i") }],
+    };
+  }
+
+  static async findByAirportNameWithFile(airportName?: string, viewerId?: string) {
+    const matchStage = [
+      { $match: this.visibleTo(viewerId) },
+      ...(airportName?.trim() ? [{ $match: this.feedAirportFilter(airportName) }] : []),
+    ];
     return this.collection()
       .aggregate([
         ...matchStage,

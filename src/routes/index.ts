@@ -5,9 +5,14 @@ import terminalEchoRoutes from "./terminal.echo.route";
 import terminalEchoReplyRoutes from "./terminal.echo.reply.route";
 import s3Routes from "./s3.route";
 import flightTicketRoutes from "./flight.ticket.route";
-import psRoutes from "./ps.route";
-import btRoutes from "./bt.route";
-import dtRoutes from "./dt.route";
+import conversationRoutes from "./conversation.route";
+import offerRoutes from "./offer.route";
+import adminOfferRoutes from "./admin.offer.route";
+import adminUserRoutes from "./admin.user.route";
+import adminRoleRoutes from "./admin.role.route";
+import adminAirportRoutes from "./admin.airport.route";
+import AdminRoleCtrl from "../controllers/admin.role.controller";
+import requirePermission from "../middleware/permission.middleware";
 import sessionMiddleware from "../middleware/valid-session.middleware";
 
 const router = express.Router();
@@ -24,8 +29,17 @@ router.use("/terminal-echo", terminalEchoRoutes);
 router.use("/terminal-echo-reply", terminalEchoReplyRoutes);
 router.use("/airport", sessionMiddleware, airportRoutes);
 router.use("/flight-ticket", sessionMiddleware, flightTicketRoutes);
-router.use("/ps", sessionMiddleware, psRoutes);
-router.use("/bt", sessionMiddleware, btRoutes);
-router.use("/dt", sessionMiddleware, dtRoutes);
+router.use("/conversations", sessionMiddleware, conversationRoutes);
+router.use("/offers", sessionMiddleware, offerRoutes);
+router.use("/admin/offers", sessionMiddleware, adminOfferRoutes);
+router.use("/admin/users", sessionMiddleware, adminUserRoutes);
+router.use("/admin/roles", sessionMiddleware, adminRoleRoutes);
+router.use("/admin/airports", sessionMiddleware, adminAirportRoutes);
+router.get(
+  "/admin/permissions",
+  sessionMiddleware,
+  requirePermission("users:read"),
+  AdminRoleCtrl.listPermissions
+);
 
 export default router;

@@ -19,7 +19,10 @@ export default class TodoRepo {
     }
     const { title, description } = organization;
     const updatedAt = new Date();
-    return this.collection().updateOne({ _id: organization._id }, { $set: { title, description, updatedAt } });
+    return this.collection().updateOne(
+      { _id: organization._id },
+      { $set: { title, description, updatedAt } }
+    );
   }
 
   static async delete(_id: string | ObjectId) {

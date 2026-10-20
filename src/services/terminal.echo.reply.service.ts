@@ -27,7 +27,8 @@ export default class TerminalEchoReplySvc {
     audioDuration?: number;
     waveformData?: number[];
   }) {
-    const { userId, terminalEchoId, fileUrl, fileName, textMessage, audioDuration, waveformData } = params;
+    const { userId, terminalEchoId, fileUrl, fileName, textMessage, audioDuration, waveformData } =
+      params;
 
     let fileCreateResult: Awaited<ReturnType<typeof FileSvc.create>> | null = null;
     if (fileUrl && fileName) {
@@ -55,34 +56,32 @@ export default class TerminalEchoReplySvc {
    * provided (anonymous/public GET requests pass no userId, and every
    * reply comes back with an empty currentUserReactions array).
    */
-  static async findByTerminalEchoId(
-    terminalEchoId: string,
-    userId?: string
-  ): Promise<Document[]> {
-    const replies =
-      await TerminalEchoReplyRepo.findByTerminalEchoIdWithFile(terminalEchoId);
+  static async findByTerminalEchoId(terminalEchoId: string, userId?: string): Promise<Document[]> {
+    const replies = await TerminalEchoReplyRepo.findByTerminalEchoIdWithFile(terminalEchoId);
     if (!userId || !replies.length) {
-      return replies.map((r) => ({
-        ...r,
-        currentUserReactions: r.currentUserReactions ?? [],
-      } as Document));
+      return replies.map(
+        (r) =>
+          ({
+            ...r,
+            currentUserReactions: r.currentUserReactions ?? [],
+          }) as Document
+      );
     }
     const replyIds = replies.map((r) => r._id);
-    const reactions =
-      await TerminalEchoReplyReactionRepo.findByUserIdAndReplyIds(
-        userId,
-        replyIds
-      );
+    const reactions = await TerminalEchoReplyReactionRepo.findByUserIdAndReplyIds(userId, replyIds);
     const byReplyId = new Map<string, string[]>();
     for (const r of reactions) {
       const id = (r.terminalEchoReplyId as ObjectId).toString();
       if (!byReplyId.has(id)) byReplyId.set(id, []);
       byReplyId.get(id)!.push(r.reaction);
     }
-    return replies.map((r) => ({
-      ...r,
-      currentUserReactions: byReplyId.get(r._id.toString()) ?? [],
-    } as Document));
+    return replies.map(
+      (r) =>
+        ({
+          ...r,
+          currentUserReactions: byReplyId.get(r._id.toString()) ?? [],
+        }) as Document
+    );
   }
 
   /**

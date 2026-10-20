@@ -26,11 +26,25 @@ export default (io: Server) => {
 
   nsp.on("connection", (socket) => {
     socket.on("terminal_echo:join_map", ({ room }: { room: string }) => {
-      socket.join(room);
+      if (room) socket.join(room);
     });
 
     socket.on("terminal_echo:leave_map", ({ room }: { room: string }) => {
-      socket.leave(room);
+      if (room) socket.leave(room);
+    });
+
+    socket.on("terminal_echo:join_airport", ({ airportIata }: { airportIata: string }) => {
+      if (airportIata) {
+        const room = `airport:${airportIata.toUpperCase()}`;
+        socket.join(room);
+      }
+    });
+
+    socket.on("terminal_echo:leave_airport", ({ airportIata }: { airportIata: string }) => {
+      if (airportIata) {
+        const room = `airport:${airportIata.toUpperCase()}`;
+        socket.leave(room);
+      }
     });
   });
 };

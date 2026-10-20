@@ -2,9 +2,8 @@ import { Request, Response } from "express";
 import Joi from "joi";
 import AirportSvc from "../services/airport.service";
 import { getErrorMessage } from "../utils/error.util";
-    
-export default class AirportCtrl {
 
+export default class AirportCtrl {
   // GET /airport/search?q=ninoy
   static async searchByName(req: Request, res: Response) {
     const { q } = req.query;
@@ -76,10 +75,10 @@ export default class AirportCtrl {
     }
 
     try {
-      const nearest = await AirportSvc.checkInsideAirport({
-        lat: Number(lat),
-        lng: Number(lng),
-      });
+      const nearest = await AirportSvc.checkInsideAirport(
+        { lat: Number(lat), lng: Number(lng) },
+        req.user?.userId
+      );
       return res.json({ data: nearest });
     } catch (error) {
       return res.status(500).json({ message: getErrorMessage(error) });
@@ -159,10 +158,7 @@ export default class AirportCtrl {
       force: Joi.boolean().optional(),
     });
 
-    const { error, value } = schema.validate(
-      { force },
-      { convert: true }
-    );
+    const { error, value } = schema.validate({ force }, { convert: true });
 
     if (error) {
       return res.status(400).json({ message: error.message });
@@ -195,10 +191,38 @@ export default class AirportCtrl {
     }
   }
 
+  // PUT /airport/test { lat, lng }: the caller's test airport, created or moved here
+  static async upsertTestAirport(req: Request, res: Response) {
+    const schema = Joi.object({
+      lat: Joi.number().min(-90).max(90).required(),
+      lng: Joi.number().min(-180).max(180).required(),
+    });
+    const { error, value } = schema.validate(req.body ?? {});
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+    try {
+      const airport = await AirportSvc.createTestAirport(req.user?.userId, value);
+      return res.json({ data: airport });
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
+    }
+  }
+
+  // DELETE /airport/test
+  static async deleteTestAirport(req: Request, res: Response) {
+    try {
+      await AirportSvc.deleteTestAirport(req.user?.userId);
+      return res.status(204).end();
+    } catch (err) {
+      return res.status(500).json({ message: getErrorMessage(err) });
+    }
+  }
+
   // GET /airport/geojson
   static async getAllAsGeoJson(req: Request, res: Response) {
     try {
-      const geojson = await AirportSvc.getAllAsGeoJson();
+      const geojson = await AirportSvc.getAllAsGeoJson(req.user?.userId);
       return res.json({ data: geojson });
     } catch (err) {
       return res.status(500).json({ message: getErrorMessage(err) });

@@ -10,7 +10,7 @@ Backend for detecting whether a user's device is physically located inside an ai
 The single GeoJSON `Point` marking an airport's reference coordinate. Sourced from crawled airport data.
 
 **Airport Radius**:
-A distance in kilometers (`radiusKm`) approximating an airport's extent, inferred from its size classification (`large_airport` → 15km, `medium_airport` → 8km, `small_airport` → 4km) or runway length as a fallback. This is the basis for the primary inside-airport check.
+A distance in kilometers (`radiusKm`) approximating an airport's own extent, not its neighborhood: `large_airport` → 4 km, `medium_airport` → 2.5 km, `small_airport` → 1.5 km, or by runway length when the type is unknown (`src/domain/airport/airport-scope.ts`). Allows for the reference point being up to ~1 km off. This is the basis for the primary inside-airport check. (Was 15 / 8 / 4 km until 2026-10-06; `npm run airports:clean` resized every stored airport.) An admin with `airports:manage` can set one airport's radius in the admin web app (`/admin/airports`, 0.5-30 km) or reset it to the default; a radius set that way is marked `radiusManual` and kept by imports and `airports:clean`. The map's airport GeoJSON (cached 10 min) is cleared on every change.
 
 **Airport Boundary**:
 A synthetic circular polygon (32-sided, via Turf) generated from Airport Location + Airport Radius. It is *not* a real-world airport perimeter/fence line — no such data is ingested anywhere in this system.
@@ -19,8 +19,11 @@ _Not used by_: the primary `check-inside-airport` endpoint, which checks `distan
 _Avoid_: "geofence" (implies precision this data doesn't have), "airport shape"/"airport footprint" (implies real perimeter data).
 
 **Airport Crawl**:
-The one-time bulk load of airport records from the static `gate-closes.airport.json` export into the `airport` collection, computing each record's Airport Boundary at load time. Insert-if-absent per record (keyed by `iata`, falling back to `icao`) — safe to re-trigger or resume after an interruption, but never updates an already-stored record. Scoped to airports with scheduled service and `type` of `large_airport`/`medium_airport` — the app only cares about "am I at my gate" for commercial airports, not private airfields, heliports, or seaplane bases. A record is skipped entirely (not stored at all) if it's out of scope, or in scope but can't produce a boundary — every airport this process stores is guaranteed to have one. See [ADR-0001](./docs/adr/0001-airport-crawl-import-strategy.md).
+The one-time bulk load of airport records from the static `gate-closes.airport.json` export into the `airport` collection, computing each record's Airport Boundary at load time. Insert-if-absent per record (keyed by `iata`, falling back to `icao`) — safe to re-trigger or resume after an interruption, but never updates an already-stored record. Scoped to airports with scheduled service, `type` of `large_airport`/`medium_airport`, an airline (IATA) code, and a name that isn't a heliport, seaplane base or air base (`isAirlineAirport`) — the app only cares about "am I at my gate" for commercial airports, not private airfields, heliports, or seaplane bases. The source data labels many of those as scheduled medium airports, hence the name and IATA checks. The nearby-airport import uses the same scope. The radius comes from our own sizing, not the source file's `radiusKm`. A record is skipped entirely (not stored at all) if it's out of scope, or in scope but can't produce a boundary — every airport this process stores is guaranteed to have one. See [ADR-0001](./docs/adr/0001-airport-crawl-import-strategy.md).
 _Avoid_: "seed", "sync" (sync implies it refreshes existing data — it doesn't).
+
+**Airport cleanup** (`npm run airports:clean`):
+Brings stored airports in line with the scope and sizing above: removes what isn't an airline airport (copies kept in `airport.removed`), except airports echoes or flight tickets point at, and resizes every circle. Dry run by default; `-- --apply` to change. Safe to re-run (a second run finds nothing to do).
 
 ### User & Profile
 
@@ -39,7 +42,30 @@ The signup-completing step where a user picks their username and gender together
 Authenticated, one-field-at-a-time edits to an existing profile's username or gender, independent of the signup flow. Each is its own endpoint — there is no combined "update profile" endpoint.
 _Avoid_: "update profile" (removed; was a redundant duplicate of Change Username, plus an unused picture field).
 
+### Offers
+
+**Offer**:
+Anything promoted to people at an airport: an ad, a voucher, a lounge pass. `kind` is free text set by the admin, so a new kind needs no deploy; per-kind fields go in `data` (shown to everyone) and `reward` (shown only on claim, e.g. a voucher code). Targets airports by IATA code, or `"*"` for all. Live while `status` is `active` and now is within `startsAt`–`endsAt`.
+_Avoid_: "ad" for the general concept (an ad is one kind of offer), "promo".
+
+**Offer Pin** / **Offer Card**:
+The two placements. A pin sits at a random spot inside 80% of the Airport Radius, fixed per user and offer for the day (seeded), so it doesn't jump while panning. The card is one offer per request, picked at random in proportion to `weight`.
+
+**Claim**:
+Taking an offer's `reward`. Refused (409) when the offer isn't live, `limits.maxClaims` is used up (checked and counted in one atomic update), or the user hit `limits.maxClaimsPerUser`. Views and clicks are tracked too; totals live on the offer (`stats`), raw events in `offer.event` expire after 180 days.
+
+### Access
+
+**Role**:
+A named set of permissions in the `role` collection, edited by super admins in the admin web app (`/admin/roles`). A user has one, stored by name on `user.role`; no field means `user`. Five **system roles** are seeded by `npm run seed:base` (once per environment) when missing (`user`, `user_premium`, `developer`, `admin`, `super_admin`) and never overwritten, so admin edits stick; they can't be deleted. A custom role can be deleted only when no user has it. `super_admin` always has every permission, whatever its stored list says. A user whose role no longer exists gets what `user` has.
+
+**Permission**:
+One thing a role may do (`premium`, `offers:read`, `offers:write`, `users:read`, `users:role`, `roles:manage`, `airports:manage`). Fixed in code (`src/domain/access/permissions.ts`), because each one is checked by a route; a new permission always comes with code. Routes check permissions, never role names. Role permissions are cached 30 s per API instance and cleared on every role change. Nobody can change their own role. `npm run seed:base` also creates one staff test account per role (`superadmin@example.com` …, password in `src/seeders/staff-users.seeder.ts`); a real account is made super admin with `npm run seed:base -- --super-admin <email>`.
+_Avoid_: "admin" for staff in general (developer and admin are different roles).
+
 ## Flagged ambiguities
 
 - **"Boundary" sounds authoritative but is derived, not measured.** Any feature reasoning about boundary accuracy should be reminded it's a circle, not a surveyed airport perimeter.
 - **Signup Completion vs Profile Completion look interchangeable but aren't.** A Google-authenticated user can be Signup Completed with Profile Completion still false. Any gate on "is this user fully set up" needs to check the specific one it means, not assume either implies the other.
+- **Roles are dynamic, permissions are not (decided 2026-10-06).** Super admins can create roles from the fixed permission list, but a new kind of access (a new permission) still needs code. One role per user; several roles per user was left out on purpose.
+- **"Premium" has no payment behind it yet.** `user_premium` is set by a super admin by hand; no feature checks `premium` so far.

@@ -1,5 +1,9 @@
 import { ObjectId } from "mongodb";
-import { MTerminalEchoReply, TTerminalEchoReply, TTerminalEchoReplyUpdateOptions } from "../models/terminal.echo.reply.model";
+import {
+  MTerminalEchoReply,
+  TTerminalEchoReply,
+  TTerminalEchoReplyUpdateOptions,
+} from "../models/terminal.echo.reply.model";
 import { getDB } from "../utils/mongo";
 
 export default class TerminalEchoReplyRepo {
@@ -163,10 +167,8 @@ export default class TerminalEchoReplyRepo {
     const setFields: Record<string, unknown> = { updatedAt };
     if (reply.terminalEchoId !== undefined)
       setFields.terminalEchoId = new ObjectId(reply.terminalEchoId as string);
-    if (reply.senderId !== undefined)
-      setFields.senderId = new ObjectId(reply.senderId as string);
-    if (reply.fileId !== undefined)
-      setFields.fileId = new ObjectId(reply.fileId as string);
+    if (reply.senderId !== undefined) setFields.senderId = new ObjectId(reply.senderId as string);
+    if (reply.fileId !== undefined) setFields.fileId = new ObjectId(reply.fileId as string);
     if (reply.countListens !== undefined) setFields.countListens = reply.countListens;
     if (reply.countReactLike !== undefined) setFields.countReactLike = reply.countReactLike;
     if (reply.countReactLove !== undefined) setFields.countReactLove = reply.countReactLove;

@@ -48,7 +48,24 @@ export class MTerminalEchoReply implements Partial<TTerminalEchoReply> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({ _id = new ObjectId(), terminalEchoId, senderId, fileId, textMessage = "", countListens = 0, countReactLike = 0, countReactLove = 0, countReactHaha = 0, countReactWow = 0, countReactSad = 0, countReactAngry = 0, createdAt = new Date(), updatedAt } = {} as TTerminalEchoReply) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      terminalEchoId,
+      senderId,
+      fileId,
+      textMessage = "",
+      countListens = 0,
+      countReactLike = 0,
+      countReactLove = 0,
+      countReactHaha = 0,
+      countReactWow = 0,
+      countReactSad = 0,
+      countReactAngry = 0,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TTerminalEchoReply
+  ) {
     this._id = _id;
     this.terminalEchoId = terminalEchoId;
     this.senderId = senderId;

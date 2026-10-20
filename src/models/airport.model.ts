@@ -20,6 +20,8 @@ export type TAirport = {
   location?: { type: "Point"; coordinates: [number, number] };
   boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
+  /** Radius set by an admin: imports and `airports:clean` leave it alone. */
+  radiusManual?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -44,6 +46,8 @@ export type TAirportUpdateOptions = {
   location?: { type: "Point"; coordinates: [number, number] };
   boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
+  /** Radius set by an admin: imports and `airports:clean` leave it alone. */
+  radiusManual?: boolean;
 };
 
 export class MAirport implements Partial<TAirport> {
@@ -66,32 +70,37 @@ export class MAirport implements Partial<TAirport> {
   location?: { type: "Point"; coordinates: [number, number] };
   boundary?: { type: "Polygon"; coordinates: number[][][] };
   radiusKm?: number;
+  /** Radius set by an admin: imports and `airports:clean` leave it alone. */
+  radiusManual?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({
-    _id = new ObjectId(),
-    iata,
-    icao,
-    time,
-    countryCode,
-    continent,
-    airport,
-    elevation,
-    type,
-    scheduledService,
-    wikipedia,
-    website,
-    runwayLength,
-    flightradar24Url,
-    radarboxUrl,
-    flightawareUrl,
-    location,
-    boundary,
-    radiusKm,
-    createdAt = new Date(),
-    updatedAt,
-  } = {} as TAirport) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      iata,
+      icao,
+      time,
+      countryCode,
+      continent,
+      airport,
+      elevation,
+      type,
+      scheduledService,
+      wikipedia,
+      website,
+      runwayLength,
+      flightradar24Url,
+      radarboxUrl,
+      flightawareUrl,
+      location,
+      boundary,
+      radiusKm,
+      radiusManual,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TAirport
+  ) {
     this._id = _id;
     this.iata = iata;
     this.icao = icao;
@@ -111,8 +120,8 @@ export class MAirport implements Partial<TAirport> {
     this.location = location;
     this.boundary = boundary;
     this.radiusKm = radiusKm;
+    if (radiusManual) this.radiusManual = radiusManual;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
 }
-

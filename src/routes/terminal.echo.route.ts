@@ -3,13 +3,21 @@ const router = express.Router();
 
 import TerminalEchoCtrl from "../controllers/terminal.echo.controller";
 import sessionMiddleware from "../middleware/valid-session.middleware";
+import { echoCreationRateLimiter } from "../middleware/rate-limiter.middleware";
+import { idempotencyMiddleware } from "../middleware/idempotency.middleware";
 
 router.get("/", sessionMiddleware, TerminalEchoCtrl.search);
 router.get("/map", sessionMiddleware, TerminalEchoCtrl.getMap);
+router.get("/map/counts", sessionMiddleware, TerminalEchoCtrl.getMapCounts);
 router.get("/:id", sessionMiddleware, TerminalEchoCtrl.getById);
-router.post("/", sessionMiddleware, TerminalEchoCtrl.create);
+router.post(
+  "/",
+  sessionMiddleware,
+  echoCreationRateLimiter,
+  idempotencyMiddleware,
+  TerminalEchoCtrl.create
+);
 router.patch("/:id/listen", TerminalEchoCtrl.incrementListen);
 router.patch("/:id/reaction", sessionMiddleware, TerminalEchoCtrl.updateReaction);
 
 export default router;
-

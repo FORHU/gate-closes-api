@@ -1,12 +1,6 @@
 import { ObjectId } from "mongodb";
 
-export type TTerminalEchoReplyReactionType =
-  | "like"
-  | "love"
-  | "haha"
-  | "wow"
-  | "sad"
-  | "angry";
+export type TTerminalEchoReplyReactionType = "like" | "love" | "haha" | "wow" | "sad" | "angry";
 
 export type TTerminalEchoReplyReaction = {
   _id?: ObjectId;
@@ -24,9 +18,7 @@ export type TTerminalEchoReplyReactionQuery = {
   reaction?: TTerminalEchoReplyReactionType;
 };
 
-export class MTerminalEchoReplyReaction
-  implements Partial<TTerminalEchoReplyReaction>
-{
+export class MTerminalEchoReplyReaction implements Partial<TTerminalEchoReplyReaction> {
   _id?: ObjectId;
   terminalEchoReplyId: ObjectId;
   userId: ObjectId;
@@ -34,14 +26,16 @@ export class MTerminalEchoReplyReaction
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({
-    _id = new ObjectId(),
-    terminalEchoReplyId,
-    userId,
-    reaction,
-    createdAt = new Date(),
-    updatedAt,
-  } = {} as TTerminalEchoReplyReaction) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      terminalEchoReplyId,
+      userId,
+      reaction,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TTerminalEchoReplyReaction
+  ) {
     this._id = _id;
     this.terminalEchoReplyId = terminalEchoReplyId;
     this.userId = userId;
@@ -50,4 +44,3 @@ export class MTerminalEchoReplyReaction
     this.updatedAt = updatedAt;
   }
 }
-

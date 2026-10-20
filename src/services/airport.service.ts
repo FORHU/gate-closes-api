@@ -1,13 +1,11 @@
-import {
-  getAirportByIata,
-  getAirportByIcao,
-  findNearbyAirports,
-} from "airport-data-js";
+import { getAirportByIata, getAirportByIcao, findNearbyAirports } from "airport-data-js";
 import * as turf from "@turf/turf";
+import { airportRadiusKm, isAirlineAirport } from "../domain/airport/airport-scope";
 import { ObjectId } from "mongodb";
-import * as fs from "fs";
+import fs from "fs";
 import * as path from "path";
 import AirportRepo from "../repositories/airport.repository";
+import AirportTestRepo from "../repositories/airport.test.repository";
 import { TAirport } from "../models/airport.model";
 import RedisUtil from "../utils/redis.util";
 
@@ -34,15 +32,18 @@ type CrawlAirport = {
   radiusKm?: number;
 };
 
-const AIRPORT_CRAWL_FILE = path.join(
-  __dirname,
-  "..",
-  "assets",
-  "gate-closes.airport.json"
-);
+const AIRPORT_CRAWL_FILE = path.join(__dirname, "..", "assets", "gate-closes.airport.json");
 const AIRPORT_CRAWL_BATCH_SIZE = 500;
 const AIRPORT_CRAWL_ELIGIBLE_TYPES = ["large_airport", "medium_airport"];
 const AIRPORT_SEARCH_LIMIT = 5;
+const GEOJSON_CACHE_KEY = "airport:geojson:v2";
+
+export class AirportNotFoundError extends Error {
+  constructor() {
+    super("Airport not found.");
+    this.name = "AirportNotFoundError";
+  }
+}
 
 type RawAirport = {
   iata?: string;
@@ -65,7 +66,8 @@ type RawAirport = {
 };
 
 export default class AirportSvc {
-  private static buildBoundaryFromLocationAndRadius(params: {
+  /** The 32-sided circle drawn and checked as the airport's area. */
+  static buildBoundaryFromLocationAndRadius(params: {
     location: { type: "Point"; coordinates: [number, number] };
     radiusKm: number;
   }) {
@@ -82,25 +84,18 @@ export default class AirportSvc {
   }
 
   // Fetch nearby airports from airport-data-js, persist them, and return mapped records
-  static async findNearbyAndStore(
-    lat: number,
-    lng: number,
-    radiusKm: number
-  ): Promise<TAirport[]> {
-    const rawAirports = (await findNearbyAirports(
-      lat,
-      lng,
-      radiusKm
-    )) as RawAirport[];
+  static async findNearbyAndStore(lat: number, lng: number, radiusKm: number): Promise<TAirport[]> {
+    const rawAirports = (await findNearbyAirports(lat, lng, radiusKm)) as RawAirport[];
 
-    const mappedAirports: TAirport[] = rawAirports.map((a) =>
-      this.mapRawAirport(a)
-    );
+    // Same scope as the crawl: airline airports only, never heliports etc.
+    const mappedAirports: TAirport[] = rawAirports
+      .map((a) => this.mapRawAirport(a))
+      .filter(
+        (a) => !!a.type && AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(a.type) && isAirlineAirport(a)
+      );
 
     await Promise.all(
-      mappedAirports.map(async (airport) =>
-        AirportRepo.upsertByIataOrIcao(airport)
-      )
+      mappedAirports.map(async (airport) => AirportRepo.upsertByIataOrIcao(airport))
     );
 
     return mappedAirports;
@@ -134,14 +129,31 @@ export default class AirportSvc {
     return mapped;
   }
 
-  static async checkInsideAirport(params: { lat: number; lng: number }) {
+  /**
+   * The nearest airport and whether the point is inside it. The viewer's own
+   * test airport (dev-build "Create Airport Here") wins when they're inside
+   * it; nobody else ever gets it.
+   */
+  static async checkInsideAirport(params: { lat: number; lng: number }, viewerId?: string) {
+    if (viewerId && ObjectId.isValid(viewerId)) {
+      const test = await AirportTestRepo.findNearestForOwner({
+        ownerId: new ObjectId(viewerId),
+        ...params,
+      });
+      if (test?.insideRadius) return test;
+    }
     return AirportRepo.findNearestWithDistance(params);
   }
 
-  static async checkInsideAirportByBoundary(params: {
-    lat: number;
-    lng: number;
-  }) {
+  static async createTestAirport(ownerId: string, params: { lat: number; lng: number }) {
+    return AirportTestRepo.upsertForOwner(new ObjectId(ownerId), params.lng, params.lat);
+  }
+
+  static async deleteTestAirport(ownerId: string) {
+    await AirportTestRepo.deleteForOwner(new ObjectId(ownerId));
+  }
+
+  static async checkInsideAirportByBoundary(params: { lat: number; lng: number }) {
     const { lat, lng } = params;
     const airport = await AirportRepo.findInsideBoundary({ lat, lng });
     if (!airport) return null;
@@ -155,7 +167,11 @@ export default class AirportSvc {
     };
   }
 
-  static async checkInsideSpecificAirport(params: {lat: number; lng: number; airportName: string;}) {
+  static async checkInsideSpecificAirport(params: {
+    lat: number;
+    lng: number;
+    airportName: string;
+  }) {
     return AirportRepo.findNearestForAirport(params);
   }
 
@@ -176,7 +192,8 @@ export default class AirportSvc {
       (record) =>
         record.scheduledService === "TRUE" &&
         !!record.type &&
-        AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(record.type)
+        AIRPORT_CRAWL_ELIGIBLE_TYPES.includes(record.type) &&
+        isAirlineAirport(record)
     );
 
     const airports = eligible
@@ -205,7 +222,8 @@ export default class AirportSvc {
 
   private static mapCrawlAirport(a: CrawlAirport): TAirport {
     const location = a.location;
-    const radiusKm = a.radiusKm;
+    // From our own sizing (airport-scope), not the source file's radius.
+    const radiusKm = airportRadiusKm(a.type, a.runwayLength);
 
     const boundary =
       location && radiusKm && radiusKm > 0
@@ -243,8 +261,7 @@ export default class AirportSvc {
 
     for (const airport of airports) {
       const hasBoundary =
-        airport?.boundary?.type === "Polygon" &&
-        Array.isArray(airport?.boundary?.coordinates);
+        airport?.boundary?.type === "Polygon" && Array.isArray(airport?.boundary?.coordinates);
 
       if (hasBoundary && !force) {
         skippedCount += 1;
@@ -284,9 +301,70 @@ export default class AirportSvc {
     };
   }
 
-  static async getAllAsGeoJson() {
-    const cacheKey = "airport:geojson:v1";
-    const cached = await RedisUtil.getJson<unknown>(cacheKey);
+  /** Admin: one page of airports by code or name, with their radius and default size. */
+  static async listForAdmin(filter: { q?: string; page?: number; limit?: number }) {
+    const { airports, total } = await AirportRepo.listForAdmin(filter);
+    const rows = airports.map((a) => ({
+      ...a,
+      radiusManual: a.radiusManual === true,
+      defaultRadiusKm: airportRadiusKm(a.type, a.runwayLength) ?? null,
+    }));
+    return { airports: rows, total };
+  }
+
+  /**
+   * Admin: sets one airport's radius (km) and redraws its circle, or with
+   * `null` goes back to the default size for its type. A set radius is kept
+   * by imports and `airports:clean`. Clears the map cache so it shows now.
+   */
+  static async setRadius(id: string, radiusKm: number | null) {
+    const airport = await AirportRepo.findById(id);
+    if (!airport) throw new AirportNotFoundError();
+    if (!airport.location) throw new Error("This airport has no location to draw a circle around.");
+    const radius = radiusKm ?? airportRadiusKm(airport.type, airport.runwayLength);
+    if (!radius) throw new Error("No default size for this airport's type; set a radius.");
+    const boundary = this.buildBoundaryFromLocationAndRadius({
+      location: airport.location as { type: "Point"; coordinates: [number, number] },
+      radiusKm: radius,
+    });
+    await AirportRepo.update({
+      _id: airport._id,
+      radiusKm: radius,
+      radiusManual: radiusKm !== null,
+      boundary,
+    });
+    await this.clearGeoJsonCache();
+    return { ...airport, radiusKm: radius, radiusManual: radiusKm !== null };
+  }
+
+  /** The map's airport GeoJSON is cached 10 min; drop it after any change. */
+  static async clearGeoJsonCache() {
+    await RedisUtil.del(GEOJSON_CACHE_KEY).catch(() => undefined);
+  }
+
+  /** Every airport circle, plus the viewer's own test airport (never cached). */
+  static async getAllAsGeoJson(viewerId?: string) {
+    const shared = await this.getSharedGeoJson();
+    if (!viewerId || !ObjectId.isValid(viewerId)) return shared;
+    const test = await AirportTestRepo.findForOwner(new ObjectId(viewerId));
+    if (!test) return shared;
+    return {
+      ...shared,
+      features: [
+        ...shared.features,
+        {
+          type: "Feature" as const,
+          id: test._id?.toString() ?? test.iata,
+          geometry: this.buildBoundaryFromLocationAndRadius(test),
+          properties: { airport: test.airport, iata: test.iata, country_code: null },
+        },
+      ],
+    };
+  }
+
+  private static async getSharedGeoJson() {
+    const cacheKey = GEOJSON_CACHE_KEY;
+    const cached = await RedisUtil.getJson<{ type: string; features: unknown[] }>(cacheKey);
     if (cached) return cached;
 
     const airports = await AirportRepo.findAllWithBoundary();
@@ -294,8 +372,7 @@ export default class AirportSvc {
     const features = airports
       .filter(
         (airport) =>
-          airport?.boundary?.type === "Polygon" &&
-          Array.isArray(airport?.boundary?.coordinates)
+          airport?.boundary?.type === "Polygon" && Array.isArray(airport?.boundary?.coordinates)
       )
       .map((airport) => ({
         type: "Feature" as const,
@@ -303,6 +380,7 @@ export default class AirportSvc {
         geometry: airport.boundary,
         properties: {
           airport: airport.airport ?? null,
+          iata: airport.iata ?? null,
           country_code: airport.countryCode ?? null,
         },
       }));
@@ -311,22 +389,18 @@ export default class AirportSvc {
       type: "FeatureCollection" as const,
       features,
     };
-    
+
     await RedisUtil.setJson(cacheKey, geojson, { ttlSeconds: 60 * 10 });
     return geojson;
   }
 
-  private static toStringOrNull(
-    value?: string | number
-  ): string | null | undefined {
+  private static toStringOrNull(value?: string | number): string | null | undefined {
     if (value === undefined) return undefined;
     const trimmed = String(value).trim();
     return trimmed === "" ? null : trimmed;
   }
 
-  private static toNumberOrNull(
-    value?: string | number
-  ): number | null | undefined {
+  private static toNumberOrNull(value?: string | number): number | null | undefined {
     if (value === undefined) return undefined;
     const trimmed = String(value).trim();
     if (trimmed === "") return null;
@@ -342,10 +416,7 @@ export default class AirportSvc {
     const runwayLength = this.toNumberOrNull(a.runway_length);
 
     const location =
-      latitude !== undefined &&
-      latitude !== null &&
-      longitude !== undefined &&
-      longitude !== null
+      latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null
         ? {
             type: "Point" as const,
             coordinates: [longitude, latitude] as [number, number],
@@ -363,12 +434,8 @@ export default class AirportSvc {
         : undefined;
 
     const airport: TAirport = {
-      iata: a.iata
-        ? this.toStringOrNull(a.iata.toUpperCase()) ?? null
-        : undefined,
-      icao: a.icao
-        ? this.toStringOrNull(a.icao.toUpperCase()) ?? null
-        : undefined,
+      iata: a.iata ? (this.toStringOrNull(a.iata.toUpperCase()) ?? null) : undefined,
+      icao: a.icao ? (this.toStringOrNull(a.icao.toUpperCase()) ?? null) : undefined,
       time: this.toStringOrNull(a.time),
       countryCode: this.toStringOrNull(a.country_code),
       continent: this.toStringOrNull(a.continent),
@@ -390,21 +457,7 @@ export default class AirportSvc {
     return airport;
   }
 
-  private static inferRadiusKm(
-    type?: string,
-    runwayLength?: number
-  ): number | undefined {
-    if (type === "large_airport") return 15;
-    if (type === "medium_airport") return 8;
-    if (type === "small_airport") return 4;
-
-    if (runwayLength !== undefined) {
-      if (runwayLength >= 10000) return 15;
-      if (runwayLength >= 6000) return 8;
-      if (runwayLength > 0) return 4;
-    }
-
-    return undefined;
+  private static inferRadiusKm(type?: string, runwayLength?: number): number | undefined {
+    return airportRadiusKm(type, runwayLength);
   }
 }
-

@@ -7,7 +7,7 @@ export default class S3Svc {
     originalFilename: string,
     buffer: Buffer,
     contentType?: string,
-    sizeOfFile?: number,
+    sizeOfFile?: number
   ) {
     const ext = (S3Svc.getFileExtension(originalFilename) || "bin").toLowerCase();
 
@@ -35,7 +35,7 @@ export default class S3Svc {
     userId: string,
     originalFilename: string,
     contentType?: string,
-    sizeOfFile?: number,
+    sizeOfFile?: number
   ) {
     const ext = (S3Svc.getFileExtension(originalFilename) || "bin").toLowerCase();
 
@@ -58,11 +58,9 @@ export default class S3Svc {
     return { url, key };
   }
 
-  static async generateDownloadUrl(
-    key: string
-  ) {
+  static async generateDownloadUrl(key: string) {
     const url = await getGetObjectPresignedUrl({
-      key
+      key,
     });
 
     return { url, key };
@@ -74,4 +72,3 @@ export default class S3Svc {
     return parts.pop();
   }
 }
-

@@ -11,13 +11,70 @@ export default class AirportRepo {
     return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
+  /**
+   * Admin list, one page at a time. With a query: airports whose IATA/ICAO
+   * code equals it or whose name contains it, exact code matches first.
+   * Without: every airport, radii set by hand first. The database filters,
+   * sorts, counts and skips, so only the requested page leaves it; `_id`
+   * breaks ties so rows never repeat or go missing between pages.
+   */
+  static async listForAdmin(filter: { q?: string; page?: number; limit?: number } = {}) {
+    const page = filter.page ?? 1;
+    const limit = filter.limit ?? 10;
+    const q = filter.q?.trim() ?? "";
+    const code = q.toUpperCase();
+    const match = q
+      ? {
+          $or: [{ iata: code }, { icao: code }, { airport: new RegExp(this.escapeRegex(q), "i") }],
+        }
+      : {};
+    // ponytail: skip-based paging scans past skipped rows; fine for a few
+    // thousand airports, switch to a cursor if this ever gets slow.
+    const [airports, total] = await Promise.all([
+      this.collection()
+        .aggregate([
+          { $match: match },
+          ...(q
+            ? [
+                {
+                  $addFields: {
+                    _exact: {
+                      $cond: [{ $or: [{ $eq: ["$iata", code] }, { $eq: ["$icao", code] }] }, 0, 1],
+                    },
+                  },
+                },
+              ]
+            : []),
+          { $sort: { ...(q ? { _exact: 1 } : {}), radiusManual: -1, type: 1, iata: 1, _id: 1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+          {
+            $project: {
+              airport: 1,
+              iata: 1,
+              icao: 1,
+              countryCode: 1,
+              type: 1,
+              runwayLength: 1,
+              radiusKm: 1,
+              radiusManual: 1,
+              location: 1,
+            },
+          },
+        ])
+        .toArray(),
+      this.collection().countDocuments(match),
+    ]);
+    return { airports, total };
+  }
+
   static async searchByName(q: string, limit: number) {
     const trimmed = q.trim();
     const rx = new RegExp(this.escapeRegex(trimmed), "i");
 
     return this.collection()
       .find(
-        { airport: rx },
+        { $or: [{ airport: rx }, { iata: rx }, { icao: rx }] },
         {
           projection: {
             _id: 0,
@@ -51,8 +108,20 @@ export default class AirportRepo {
     const updatedAt = new Date();
     const doc: Record<string, unknown> = { ...new MAirport({ ...airport, updatedAt }) };
     delete doc._id;
+    // Size and creation date only for a new airport: never overwrite a
+    // radius an admin set, nor when the airport was first stored.
+    const onInsert: Record<string, unknown> = {};
+    for (const key of ["radiusKm", "boundary", "createdAt"]) {
+      if (doc[key] !== undefined) onInsert[key] = doc[key];
+      delete doc[key];
+    }
+    delete doc.radiusManual;
 
-    return this.collection().updateOne(filter, { $set: doc }, { upsert: true });
+    return this.collection().updateOne(
+      filter,
+      { $set: doc, $setOnInsert: onInsert },
+      { upsert: true }
+    );
   }
 
   static async findById(_id: string | ObjectId) {
@@ -112,16 +181,19 @@ export default class AirportRepo {
     if (airport.airport !== undefined) setFields.airport = airport.airport;
     if (airport.elevation !== undefined) setFields.elevation = airport.elevation;
     if (airport.type !== undefined) setFields.type = airport.type;
-    if (airport.scheduledService !== undefined) setFields.scheduledService = airport.scheduledService;
+    if (airport.scheduledService !== undefined)
+      setFields.scheduledService = airport.scheduledService;
     if (airport.wikipedia !== undefined) setFields.wikipedia = airport.wikipedia;
     if (airport.website !== undefined) setFields.website = airport.website;
     if (airport.runwayLength !== undefined) setFields.runwayLength = airport.runwayLength;
-    if (airport.flightradar24Url !== undefined) setFields.flightradar24Url = airport.flightradar24Url;
+    if (airport.flightradar24Url !== undefined)
+      setFields.flightradar24Url = airport.flightradar24Url;
     if (airport.radarboxUrl !== undefined) setFields.radarboxUrl = airport.radarboxUrl;
     if (airport.flightawareUrl !== undefined) setFields.flightawareUrl = airport.flightawareUrl;
     if (airport.location !== undefined) setFields.location = airport.location;
     if (airport.boundary !== undefined) setFields.boundary = airport.boundary;
     if (airport.radiusKm !== undefined) setFields.radiusKm = airport.radiusKm;
+    if (airport.radiusManual !== undefined) setFields.radiusManual = airport.radiusManual;
 
     return this.collection().updateOne({ _id: airport._id }, { $set: setFields });
   }
@@ -174,11 +246,7 @@ export default class AirportRepo {
     return results[0] ?? null;
   }
 
-  static async findNearestForAirport(params: {
-    lat: number;
-    lng: number;
-    airportName: string;
-  }) {
+  static async findNearestForAirport(params: { lat: number; lng: number; airportName: string }) {
     const { lat, lng, airportName } = params;
 
     const results = await this.collection()
@@ -249,10 +317,7 @@ export default class AirportRepo {
     _id: ObjectId,
     boundary: { type: "Polygon"; coordinates: number[][][] }
   ) {
-    return this.collection().updateOne(
-      { _id },
-      { $set: { boundary, updatedAt: new Date() } }
-    );
+    return this.collection().updateOne({ _id }, { $set: { boundary, updatedAt: new Date() } });
   }
 
   static async findAllWithBoundary() {
@@ -266,6 +331,7 @@ export default class AirportRepo {
             _id: 1,
             boundary: 1,
             airport: 1,
+            iata: 1,
             countryCode: 1,
           },
         }
@@ -328,4 +394,3 @@ export default class AirportRepo {
     );
   }
 }
-

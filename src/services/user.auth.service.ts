@@ -5,13 +5,32 @@ import UserAuthRepo from "../repositories/user.auth.repository";
 import UserRepo from "../repositories/user.repository";
 import VerificationCodeRepo from "../repositories/verification.code.repository";
 import { sendOtpEmail } from "./send.otp.service";
-import { createAccessToken, createRefreshToken } from "../utils/jwt";
+import { createAccessToken, createRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import RefreshSessionStore from "../utils/refresh.session.store";
 import { GOOGLE_CLIENT_ID } from "../config";
+
+/** Time to set the new password after the reset code is verified. */
+export const RESET_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Mints a refresh token that starts a brand-new session family and
+ * registers it (best-effort) so reuse detection has a baseline to
+ * compare rotations against. Shared by both login paths so neither
+ * one can drift from the other (see MERGE_HARDENING_PLAN.md Blocker 2).
+ */
+async function issueNewSessionRefreshToken(userId: string, email?: string): Promise<string> {
+  const familyId = RefreshSessionStore.newFamilyId();
+  const refreshToken = createRefreshToken({ userId, email, fam: familyId });
+  const { jti } = verifyRefreshToken(refreshToken);
+  if (jti) {
+    await RefreshSessionStore.registerValid({ jti, userId, familyId });
+  }
+  return refreshToken;
+}
 
 const googleClient = new OAuth2Client();
 
 export default class UserAuthSvc {
-
   static async registerEmailAndSendOtp(email: string) {
     const user = await UserRepo.findByEmail(email);
     let userId: string;
@@ -26,7 +45,10 @@ export default class UserAuthSvc {
         return { userId, signupStep: "set_password" as const };
       }
 
-      const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "email_verify");
+      const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(
+        userId,
+        "email_verify"
+      );
       if (existingCode) await VerificationCodeRepo.delete(existingCode._id!);
     } else {
       const userResult = await UserRepo.createForManualRegister(email);
@@ -130,7 +152,10 @@ export default class UserAuthSvc {
     }
     const userId = String(user._id);
 
-    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "reset_password");
+    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(
+      userId,
+      "reset_password"
+    );
     if (existingCode) await VerificationCodeRepo.delete(existingCode._id!);
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -157,7 +182,10 @@ export default class UserAuthSvc {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
-    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "reset_password");
+    const existingCode = await VerificationCodeRepo.findByUserIdAndPurpose(
+      userId,
+      "reset_password"
+    );
     if (existingCode) {
       await VerificationCodeRepo.delete(existingCode._id!);
     }
@@ -206,17 +234,35 @@ export default class UserAuthSvc {
       throw new Error("Invalid reset code.");
     }
 
+    // The code itself expires in a minute; once verified, the user gets
+    // RESET_WINDOW_MS to choose the new password.
+    const now = new Date();
+    await VerificationCodeRepo.update({
+      _id: record._id,
+      verifiedAt: now,
+      expiresAt: new Date(now.getTime() + RESET_WINDOW_MS),
+    });
+
     return { message: "Code valid. Proceed to set new password." };
   }
 
-  /** Set new password after forgot-password flow. Requires a valid reset_password code to exist (user must have verified code first). */
+  /**
+   * Set new password after forgot-password flow. Only allowed after this
+   * user's reset_password code was verified (and before its window ends);
+   * the code is used up by the reset.
+   */
   static async resetPasswordForgot(userId: string, newPassword: string) {
     const user = await UserRepo.findById(userId);
     if (!user) throw new Error("User not found.");
 
+    const record = await VerificationCodeRepo.findByUserIdAndPurpose(userId, "reset_password");
+    if (!record?.verifiedAt || new Date() > record.expiresAt) {
+      throw new Error("Verify the reset code first.");
+    }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await UserAuthRepo.update({ userId, password: hashedPassword });
+    await VerificationCodeRepo.delete(record._id!);
 
     return { message: "Password reset successfully. You can now log in." };
   }
@@ -254,8 +300,8 @@ export default class UserAuthSvc {
     }
     const userId = String(user._id);
     const accessToken = createAccessToken({ userId, email: user.email });
-    const refreshToken = createRefreshToken({ userId, email: user.email });
-    
+    const refreshToken = await issueNewSessionRefreshToken(userId, user.email);
+
     return {
       user,
       accessToken,
@@ -315,7 +361,7 @@ export default class UserAuthSvc {
 
     const userId = String(user!._id);
     const accessToken = createAccessToken({ userId, email: user!.email });
-    const refreshToken = createRefreshToken({ userId, email: user!.email });
+    const refreshToken = await issueNewSessionRefreshToken(userId, user!.email);
     return {
       user,
       accessToken,

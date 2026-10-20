@@ -27,15 +27,17 @@ export class MUserAuth implements Partial<TUserAuth> {
   createdAt?: Date;
   updatedAt?: Date;
 
-  constructor({
-    _id = new ObjectId(),
-    userId,
-    googleId,
-    provider = "local",
-    password,
-    createdAt = new Date(),
-    updatedAt,
-  } = {} as TUserAuth) {
+  constructor(
+    {
+      _id = new ObjectId(),
+      userId,
+      googleId,
+      provider = "local",
+      password,
+      createdAt = new Date(),
+      updatedAt,
+    } = {} as TUserAuth
+  ) {
     this._id = _id;
     this.userId = userId;
     this.googleId = googleId;

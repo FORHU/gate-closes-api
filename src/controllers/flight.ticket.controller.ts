@@ -9,13 +9,21 @@ export default class FlightTicketCtrl {
   // POST /flight-ticket
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
+    const headerIdempotencyKey = req.header("Idempotency-Key") || req.header("idempotency-key");
 
     const {
       flightNumber,
       fromAirport,
       toAirport,
       departureDateTime,
+      arrivalDateTime,
       returnDateTime,
+      boardingDateTime,
+      terminal,
+      gate,
+      seat,
+      source,
+      idempotencyKey,
     } = req.body;
 
     const schema = Joi.object({
@@ -23,7 +31,14 @@ export default class FlightTicketCtrl {
       fromAirport: Joi.string().trim().required(),
       toAirport: Joi.string().trim().required(),
       departureDateTime: Joi.date().required(),
-      returnDateTime: Joi.date().required(),
+      arrivalDateTime: Joi.date().optional(),
+      returnDateTime: Joi.date().optional(),
+      boardingDateTime: Joi.date().optional(),
+      terminal: Joi.string().trim().allow(null, "").optional(),
+      gate: Joi.string().trim().allow(null, "").optional(),
+      seat: Joi.string().trim().allow(null, "").optional(),
+      source: Joi.string().trim().allow(null, "").optional(),
+      idempotencyKey: Joi.string().trim().allow(null, "").optional(),
     });
 
     const { error, value } = schema.validate(
@@ -32,7 +47,14 @@ export default class FlightTicketCtrl {
         fromAirport,
         toAirport,
         departureDateTime,
+        arrivalDateTime,
         returnDateTime,
+        boardingDateTime,
+        terminal,
+        gate,
+        seat,
+        source,
+        idempotencyKey: idempotencyKey || headerIdempotencyKey,
       },
       { convert: true }
     );
@@ -42,10 +64,7 @@ export default class FlightTicketCtrl {
     }
 
     try {
-      const userObjectId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = FlightTicketRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
       const result = await FlightTicketSvc.create({
         userId: userObjectId,
@@ -53,7 +72,14 @@ export default class FlightTicketCtrl {
         fromAirport: value.fromAirport,
         toAirport: value.toAirport,
         departureDateTime: value.departureDateTime,
+        arrivalDateTime: value.arrivalDateTime,
         returnDateTime: value.returnDateTime,
+        boardingDateTime: value.boardingDateTime,
+        terminal: value.terminal,
+        gate: value.gate,
+        seat: value.seat,
+        source: value.source,
+        idempotencyKey: value.idempotencyKey,
       });
 
       return res.json({ message: result });
@@ -90,7 +116,6 @@ export default class FlightTicketCtrl {
     }
   }
 
-
   // PUT /flight-ticket
   static async update(req: Request, res: Response) {
     const userId = req.user?.userId as string;
@@ -100,20 +125,41 @@ export default class FlightTicketCtrl {
       fromAirport,
       toAirport,
       departureDateTime,
+      arrivalDateTime,
       returnDateTime,
+      boardingDateTime,
+      terminal,
+      gate,
+      seat,
     } = req.body;
 
-  // Fields are marked .optional() because an edit might only change one thing
+    // Fields are marked .optional() because an edit might only change one thing
     const schema = Joi.object({
       flightNumber: Joi.string().trim().optional(),
       fromAirport: Joi.string().trim().optional(),
       toAirport: Joi.string().trim().optional(),
       departureDateTime: Joi.date().optional(),
+      arrivalDateTime: Joi.date().optional(),
       returnDateTime: Joi.date().optional(),
+      boardingDateTime: Joi.date().optional(),
+      terminal: Joi.string().trim().allow(null, "").optional(),
+      gate: Joi.string().trim().allow(null, "").optional(),
+      seat: Joi.string().trim().allow(null, "").optional(),
     });
 
     const { error, value } = schema.validate(
-      { flightNumber, fromAirport, toAirport, departureDateTime, returnDateTime },
+      {
+        flightNumber,
+        fromAirport,
+        toAirport,
+        departureDateTime,
+        arrivalDateTime,
+        returnDateTime,
+        boardingDateTime,
+        terminal,
+        gate,
+        seat,
+      },
       { convert: true, stripUnknown: true }
     );
 
@@ -122,10 +168,7 @@ export default class FlightTicketCtrl {
     }
 
     try {
-      const userObjectId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = FlightTicketRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
       const updatedTicket = await FlightTicketSvc.update(userObjectId, value);
 
@@ -140,10 +183,7 @@ export default class FlightTicketCtrl {
     const userId = req.user?.userId as string;
 
     try {
-      const userObjectId = FlightTicketRepo.parseObjectId(
-        userId,
-        ERROR_MESSAGE.INVALID_USER_ID
-      );
+      const userObjectId = FlightTicketRepo.parseObjectId(userId, ERROR_MESSAGE.INVALID_USER_ID);
 
       await FlightTicketSvc.deleteByUserId(userObjectId);
 
@@ -155,5 +195,3 @@ export default class FlightTicketCtrl {
     }
   }
 }
-
-

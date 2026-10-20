@@ -14,14 +14,16 @@
 import { Request, Response } from "express";
 import Joi from "joi";
 import type { TerminalEchoMapBounds } from "../const";
-import TerminalEchoSvc from "../services/terminal.echo.service";
+import TerminalEchoSvc, { EchoOutsideAirportError } from "../services/terminal.echo.service";
 import { io } from "../app";
+import { broadcastToAirportRoom } from "../events/terminal.echo.broadcast";
 
 export default class TerminalEchoCtrl {
   static async create(req: Request, res: Response) {
     const userId = req.user?.userId as string;
 
-    const { fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } = req.body;
+    const { fileUrl, fileName, textMessage, location, airportName, audioDuration, waveformData } =
+      req.body;
 
     const locationSchema = Joi.object({
       type: Joi.string().valid("Point").required(),
@@ -64,15 +66,26 @@ export default class TerminalEchoCtrl {
         waveformData: value.waveformData,
       });
     } catch (error) {
+      if (error instanceof EchoOutsideAirportError) {
+        return res.status(422).json({ message: error.message });
+      }
       const message = error instanceof Error ? error.message : "Server error.";
       return res.status(500).json({ message });
     }
 
+    const airportIata = (result as { airportIata?: string })?.airportIata;
+
     try {
-      io.of("/terminal-echo").emit("terminal_echo:changed", {
-        type: "create",
-        data: result,
-      });
+      // Send the full feed row, never the raw insert result: the app parses
+      // `data` as an echo and prepends it to the feed.
+      if (result.echo) {
+        broadcastToAirportRoom(io, airportIata, "terminal_echo:changed", {
+          type: "create",
+          data: result.echo,
+        });
+      } else {
+        console.warn("[TerminalEchoCtrl.create] Echo saved but could not be reloaded to broadcast.");
+      }
     } catch (broadcastErr) {
       console.warn(
         "[TerminalEchoCtrl.create] Echo saved successfully, but broadcast failed:",
@@ -83,6 +96,7 @@ export default class TerminalEchoCtrl {
     return res.status(201).json({
       message: "Terminal echo created.",
       insertedId: result.insertedId,
+      airportIata: airportIata || null,
     });
   }
 
@@ -118,9 +132,31 @@ export default class TerminalEchoCtrl {
 
     const q = req.query;
     const boundsKeys = ["west", "south", "east", "north"] as const;
-    const anyBoundsParam = boundsKeys.some(
-      (k) => q[k] !== undefined && String(q[k]).length > 0
-    );
+    const anyBoundsParam = boundsKeys.some((k) => q[k] !== undefined && String(q[k]).length > 0);
+    const airportParam = q.airport !== undefined && String(q.airport).length > 0;
+
+    if (airportParam) {
+      if (anyBoundsParam) {
+        return res.status(400).json({ message: "Pass either airport or bounds, not both." });
+      }
+      const { error, value } = Joi.string()
+        .trim()
+        .uppercase()
+        .pattern(/^[A-Z0-9]{3,4}$/)
+        .validate(q.airport);
+      if (error) {
+        return res.status(400).json({ message: "airport must be an IATA or ICAO code." });
+      }
+      try {
+        const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, {
+          airportIata: value,
+        });
+        return res.json({ data: geojson });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Server error.";
+        return res.status(500).json({ message });
+      }
+    }
 
     let mapBounds: TerminalEchoMapBounds | undefined;
     if (anyBoundsParam) {
@@ -130,9 +166,7 @@ export default class TerminalEchoCtrl {
         east: Joi.number().min(-180).max(180).required(),
         north: Joi.number().min(-90).max(90).required(),
       }).custom((v, helpers) => {
-        if (v.west > v.east) {
-          return helpers.error("any.invalid");
-        }
+        // west > east is allowed: the view crosses the antimeridian.
         if (v.south > v.north) {
           return helpers.error("any.invalid");
         }
@@ -152,10 +186,7 @@ export default class TerminalEchoCtrl {
       if (error) {
         const msg = error.details[0]?.message ?? error.message;
         return res.status(400).json({
-          message:
-            msg.includes("invalid")
-              ? "Bounds must satisfy west ≤ east and south ≤ north."
-              : msg,
+          message: msg.includes("invalid") ? "Bounds must satisfy south ≤ north." : msg,
         });
       }
 
@@ -166,7 +197,20 @@ export default class TerminalEchoCtrl {
     }
 
     try {
-      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, mapBounds);
+      const geojson = await TerminalEchoSvc.findAllWithTypeAsGeoJson(userId, {
+        bounds: mapBounds,
+      });
+      return res.json({ data: geojson });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Server error.";
+      return res.status(500).json({ message });
+    }
+  }
+
+  /** Echo count per airport, one point each, for the zoomed-out map. */
+  static async getMapCounts(_req: Request, res: Response) {
+    try {
+      const geojson = await TerminalEchoSvc.airportCountsAsGeoJson();
       return res.json({ data: geojson });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Server error.";
@@ -220,7 +264,6 @@ export default class TerminalEchoCtrl {
     }
   }
 
-
   // PATCH /terminal-echo/:id/reaction
   static async updateReaction(req: Request, res: Response) {
     const userId = req.user?.userId as string;
@@ -230,9 +273,7 @@ export default class TerminalEchoCtrl {
 
     const schema = Joi.object({
       id: Joi.string().hex().length(24).required(),
-      reaction: Joi.string()
-        .valid("like", "love", "haha", "wow", "sad", "angry")
-        .required(),
+      reaction: Joi.string().valid("like", "love", "haha", "wow", "sad", "angry").required(),
     });
 
     const { error, value } = schema.validate({ id, reaction });
@@ -252,13 +293,16 @@ export default class TerminalEchoCtrl {
       return res.status(500).json({ message });
     }
 
-    // ── Broadcast, best-effort. Mirrors terminal_echo:reply_added's
-    // pattern exactly — the direction ("increment"/"decrement") is
-    // already known (computed by TerminalEchoSvc.updateReaction), so
+    // ── Broadcast, best-effort. The direction ("increment"/"decrement")
+    // is already known (computed by TerminalEchoSvc.updateReaction), so
     // the frontend just applies +1 or -1 accordingly. No guessing, no
-    // computed totals, no extra DB reads. ──
+    // computed totals, no extra DB reads. Scoped to the echo's airport
+    // room — see MERGE_HARDENING_PLAN.md Blocker 1: this used to
+    // broadcast to the entire /terminal-echo namespace regardless of
+    // airport. ──
     try {
-      io.of("/terminal-echo").emit("terminal_echo:reaction_updated", {
+      const airportIata = (result?.value as { airportIata?: string } | undefined)?.airportIata;
+      broadcastToAirportRoom(io, airportIata, "terminal_echo:reaction_updated", {
         terminalEchoId: value.id,
         reactionKey: value.reaction, // e.g. "like" — backend key, not emoji character
         action: result?.action ?? "increment",
